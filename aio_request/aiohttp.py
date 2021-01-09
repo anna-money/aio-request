@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Union
+from typing import Optional, Union, Set
 
 import aiohttp
 from multidict import CIMultiDictProxy, CIMultiDict
@@ -12,14 +12,20 @@ from .utils import empty_close, EMPTY_HEADERS
 
 
 class AioHttpRequestSender(RequestSender):
-    __slots__ = ("_base_url", "_client_session", "_network_errors_code")
+    __slots__ = ("_base_url", "_client_session", "_network_errors_code", "_default_headers")
 
     def __init__(
-        self, base_url: Union[str, URL], client_session: aiohttp.ClientSession, *, network_errors_code: int = 499
+        self,
+        base_url: Union[str, URL],
+        client_session: aiohttp.ClientSession,
+        *,
+        network_errors_code: int = 499,
+        default_headers: Optional[CIMultiDictProxy[set]] = None
     ):
         self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
         self._network_errors_code = network_errors_code
         self._client_session = client_session
+        self._default_headers = default_headers
 
     async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
         try:
@@ -39,10 +45,15 @@ class AioHttpRequestSender(RequestSender):
         except asyncio.TimeoutError:
             return ClosableResponse(408, EMPTY_HEADERS, bytes(), empty_close)
 
-    @staticmethod
-    def _enrich_headers(headers: Optional[CIMultiDictProxy[str]], deadline: Deadline) -> CIMultiDict[str]:
+    def _enrich_headers(self, headers: Optional[CIMultiDictProxy[str]], deadline: Deadline) -> CIMultiDict[str]:
         enriched_headers = CIMultiDict[str](headers) if headers is not None else CIMultiDict[str]()
         enriched_headers.add("X-Request-Deadline", str(deadline))
+        if self._default_headers is not None:
+            for key, value in self._default_headers.items():
+                if key in enriched_headers:
+                    enriched_headers.add(key, value)
+                else:
+                    enriched_headers[key] = value
         return enriched_headers
 
     def _build_url(self, url_or_str: Union[str, URL]) -> URL:
