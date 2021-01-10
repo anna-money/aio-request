@@ -5,8 +5,8 @@ from .models import Response
 
 
 class ResponseVerdict(Enum):
-    ACCEPT = (1,)
-    REJECT = (2,)
+    ACCEPT = 1
+    REJECT = 2
 
 
 class ResponseClassifier(ABC):
