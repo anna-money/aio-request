@@ -1,11 +1,11 @@
 import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Future
-from contextlib import suppress, AbstractAsyncContextManager
+from contextlib import suppress
 from typing import AsyncContextManager, Callable, List, Any, Dict, Set, Union, Optional
 
-from .delays_provider import linear_delays
 from .deadline import Deadline
+from .delays_provider import linear_delays
 from .models import Response, Request
 from .request_sender import RequestSender, ClosableResponse
 from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier
@@ -78,7 +78,7 @@ class _RequestStrategy(RequestStrategy):
         return self._create_strategy(request, deadline)
 
 
-class _SequentialRequestStrategy(AbstractAsyncContextManager[Response]):
+class _SequentialRequestStrategy:
     __slots__ = (
         "_responses",
         "_request_sender",
@@ -134,7 +134,7 @@ class _SequentialRequestStrategy(AbstractAsyncContextManager[Response]):
         return False
 
 
-class _ForkingRequestStrategy(AbstractAsyncContextManager[Response]):
+class _ForkingRequestStrategy:
     __slots__ = (
         "_responses",
         "_request_sender",

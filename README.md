@@ -8,13 +8,13 @@ from aio_request.aiohttp import AioHttpRequestSender
 
 client_session = aiohttp.ClientSession()
 async with client_session:
-    request_strategy_factory = RequestStrategiesFactory(
+    request_strategies_factory = RequestStrategiesFactory(
         AioHttpRequestSender("http://endpoint:8080", client_session)
     )
     request_strategy = MethodBasedStrategy(
         {
-            "GET": request_strategy_factory.forking(),
-            "POST": request_strategy_factory.sequential()
+            "GET": request_strategies_factory.forking(),
+            "POST": request_strategies_factory.sequential()
         }
     )
     async with request_strategy.request(get("/thing"), Deadline.after(seconds=5)) as response:
