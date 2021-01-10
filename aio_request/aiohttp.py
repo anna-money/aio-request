@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Union, Set
+from typing import Optional, Union
 
 import aiohttp
 from multidict import CIMultiDictProxy, CIMultiDict
@@ -20,7 +20,7 @@ class AioHttpRequestSender(RequestSender):
         client_session: aiohttp.ClientSession,
         *,
         network_errors_code: int = 499,
-        default_headers: Optional[CIMultiDictProxy[set]] = None
+        default_headers: Optional[CIMultiDictProxy[str]] = None
     ):
         self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
         self._network_errors_code = network_errors_code
