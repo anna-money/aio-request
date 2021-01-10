@@ -6,5 +6,5 @@ from .delays_provider import linear_delays, constant_delays  # noqa
 from .request_sender import RequestSender, ClosableResponse  # noqa
 from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier  # noqa
 from .requests import get, post  # noqa
-from .strategy import RequestStrategy, RequestStrategiesFactory  # noqa
+from .strategy import RequestStrategy, RequestStrategiesFactory, MethodBasedStrategy  # noqa
 from .deadline import Deadline  # noqa

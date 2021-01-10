@@ -1,1 +1,25 @@
-# aio-cluster
+# aio-request
+
+```python
+import aiohttp
+
+from aio_request import MethodBasedStrategy, RequestStrategiesFactory, get, post, Deadline
+from aio_request.aiohttp import AioHttpRequestSender
+
+client_session = aiohttp.ClientSession()
+async with client_session:
+    request_strategy_factory = RequestStrategiesFactory(
+        AioHttpRequestSender("http://endpoint:8080", client_session)
+    )
+    request_strategy = MethodBasedStrategy(
+        {
+            "GET": request_strategy_factory.forking(),
+            "POST": request_strategy_factory.sequential()
+        }
+    )
+    async with request_strategy.request(get("/thing"), Deadline.after(seconds=5)) as response:
+        pass # process response here
+    
+    async with request_strategy.request(post("/thing", bytes()), Deadline.after(seconds=5)) as response:
+        pass # process response here
+```
