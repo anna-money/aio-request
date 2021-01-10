@@ -4,8 +4,14 @@ from typing import Callable
 DELAY_PROVIDER = Callable[[int], float]
 
 
-def constant_delays(delay: float = 0) -> DELAY_PROVIDER:
-    return lambda _: delay
+def constant_delays(*, delay: float = 0, jitter: float = 0.2) -> DELAY_PROVIDER:
+    def _constant(_: int) -> float:
+        jitter_amount = delay * random() * jitter
+        if random() < 0.5:
+            jitter_amount = -jitter_amount
+        return delay + jitter_amount
+
+    return _constant
 
 
 def linear_delays(
