@@ -1,16 +1,7 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Callable
 
+from .base import Request, ClosableResponse
 from .deadline import Deadline
-from .models import Request, Response
-
-
-@dataclass(frozen=True)
-class ClosableResponse(Response):
-    __slots__ = ("close",)
-
-    close: Callable[[], None]
 
 
 class RequestSender(ABC):

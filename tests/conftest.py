@@ -5,16 +5,14 @@ from queue import Queue
 from typing import Union, List
 
 from aio_request import RequestSender, Request, Deadline, ClosableResponse
-from aio_request.utils import empty_close, EMPTY_HEADERS
+from aio_request.base import StaticResponse
 
 logging.basicConfig(level="DEBUG")
 
 
 @dataclass(frozen=True)
 class TestResponseConfiguration:
-    __slots__ = ("code", "delay_seconds")
-
-    code: int
+    status: int
     delay_seconds: float
 
 
@@ -34,12 +32,12 @@ class TestRequestSender(RequestSender):
         if isinstance(response_or_configuration, TestResponseConfiguration):
             delay_seconds = response_or_configuration.delay_seconds
             if delay_seconds >= deadline.timeout:
-                code = 408
+                status = 408
                 delay_seconds = deadline.timeout
             else:
-                code = response_or_configuration.code
+                status = response_or_configuration.status
             await asyncio.sleep(delay_seconds)
         else:
-            code = response_or_configuration
+            status = response_or_configuration
 
-        return ClosableResponse(code, EMPTY_HEADERS, bytes(), empty_close)
+        return StaticResponse(status=status)
