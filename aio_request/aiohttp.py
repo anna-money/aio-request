@@ -77,7 +77,7 @@ class _AioHttpResponse(ClosableResponse):
 
     @property
     def headers(self) -> CIMultiDictProxy[str]:
-        return self._response.headers  # type: ignore
+        return self._response.headers
 
     async def json(
         self,
@@ -86,7 +86,7 @@ class _AioHttpResponse(ClosableResponse):
         loads: Callable[[str], Any] = json.loads,
         content_type: Optional[str] = "application/json"
     ) -> Any:
-        return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)  # type: ignore
+        return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
 
     async def read(self) -> bytes:
         return await self._response.read()
