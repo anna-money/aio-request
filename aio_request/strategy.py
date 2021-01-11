@@ -4,12 +4,12 @@ from asyncio import Future
 from contextlib import suppress
 from typing import AsyncContextManager, Callable, List, Any, Dict, Set, Union, Optional
 
+from .base import StaticResponse
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .models import Response, Request
-from .request_sender import RequestSender, ClosableResponse
+from .base import Response, Request, ClosableResponse
+from .request_sender import RequestSender
 from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier
-from .utils import empty_close, EMPTY_HEADERS
 
 
 class RequestStrategy(ABC):
@@ -53,11 +53,11 @@ class RequestStrategiesFactory:
             )
         )
 
-    def forking(
+    def parallel(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
-            lambda request, deadline: _ForkingRequestStrategy(
+            lambda request, deadline: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
@@ -113,7 +113,7 @@ class _SequentialRequestStrategy:
     async def __aenter__(self) -> Response:
         for attempt in range(self._attempts_count):
             if self._deadline.expired:
-                return ClosableResponse(408, EMPTY_HEADERS, bytes(), empty_close)
+                return StaticResponse(status=408)
 
             response = await self._request_sender.send(self._request, self._deadline)
             self._responses.append(response)
@@ -130,11 +130,11 @@ class _SequentialRequestStrategy:
         while self._responses:
             response = self._responses.pop()
             with suppress(Exception):
-                response.close()  # type: ignore
+                await response.close()
         return False
 
 
-class _ForkingRequestStrategy:
+class _ParallelRequestStrategy:
     __slots__ = (
         "_responses",
         "_request_sender",
@@ -187,11 +187,11 @@ class _ForkingRequestStrategy:
         while self._responses:
             response = self._responses.pop()
             with suppress(Exception):
-                response.close()  # type: ignore
+                await response.close()
         return False
 
     async def _schedule_request(self, attempt: int) -> ClosableResponse:
         await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         if self._deadline.expired:
-            return ClosableResponse(408, EMPTY_HEADERS, bytes(), empty_close)
+            return StaticResponse(status=408)
         return await self._request_sender.send(self._request, self._deadline)

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from .models import Response
+from .base import Response
 
 
 class ResponseVerdict(Enum):
@@ -18,15 +18,15 @@ class ResponseClassifier(ABC):
 
 
 def is_successful_response(response: Response) -> bool:
-    return 200 <= response.code < 300
+    return 200 <= response.status < 300
 
 
 def is_client_error_response(response: Response) -> bool:
-    return 400 <= response.code < 500
+    return 400 <= response.status < 500
 
 
 def is_server_error_response(response: Response) -> bool:
-    return response.code > 500
+    return response.status > 500
 
 
 class DefaultResponseClassifier(ResponseClassifier):
@@ -38,8 +38,8 @@ class DefaultResponseClassifier(ResponseClassifier):
     def classify(self, response: Response) -> ResponseVerdict:
         if is_server_error_response(response):
             return ResponseVerdict.REJECT
-        if response.code == self._network_errors_code:
+        if response.status == self._network_errors_code:
             return ResponseVerdict.REJECT
-        if response.code == 408:
+        if response.status == 408:
             return ResponseVerdict.REJECT
         return ResponseVerdict.ACCEPT

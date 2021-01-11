@@ -3,7 +3,7 @@ import time
 
 class Deadline:
     @staticmethod
-    def after(*, seconds: float) -> "Deadline":
+    def after_seconds(seconds: float) -> "Deadline":
         return Deadline(time.time() + seconds)
 
     __slots__ = ("_deadline_at",)
