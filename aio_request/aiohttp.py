@@ -13,7 +13,7 @@ from .request_sender import RequestSender
 
 
 class AioHttpRequestSender(RequestSender):
-    __slots__ = ("_base_url", "_client_session", "_network_errors_code", "_default_headers")
+    __slots__ = ("_base_url", "_client_session", "_network_errors_code", "_default_headers", "_buffer_payload")
 
     def __init__(
         self,
@@ -21,12 +21,14 @@ class AioHttpRequestSender(RequestSender):
         client_session: aiohttp.ClientSession,
         *,
         network_errors_code: int = 499,
-        default_headers: Optional[CIMultiDictProxy[str]] = None
+        default_headers: Optional[CIMultiDictProxy[str]] = None,
+        buffer_payload: bool = True,
     ):
         self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
         self._network_errors_code = network_errors_code
         self._client_session = client_session
         self._default_headers = default_headers
+        self._buffer_payload = buffer_payload
 
     async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
         try:
@@ -40,6 +42,8 @@ class AioHttpRequestSender(RequestSender):
                 data=request.body,
                 timeout=deadline.timeout,
             )
+            if self._buffer_payload:
+                await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
             return StaticResponse(status=self._network_errors_code)
@@ -84,7 +88,7 @@ class _AioHttpResponse(ClosableResponse):
         *,
         encoding: Optional[str] = None,
         loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json"
+        content_type: Optional[str] = "application/json",
     ) -> Any:
         return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
 
