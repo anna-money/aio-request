@@ -17,9 +17,9 @@ async with client_session:
             "POST": request_strategies_factory.sequential()
         }
     )
-    async with request_strategy.request(get("/thing"), Deadline.after(seconds=5)) as response:
+    async with request_strategy.request(get("/thing"), Deadline.after_seconds(seconds=5)) as response:
         pass  # process response here
 
-    async with request_strategy.request(post("/thing", bytes()), Deadline.after(seconds=5)) as response:
+    async with request_strategy.request(post("/thing", bytes()), Deadline.after_seconds(seconds=5)) as response:
         pass  # process response here
 ```
