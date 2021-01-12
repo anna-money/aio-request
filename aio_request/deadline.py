@@ -1,19 +1,19 @@
 import time
 import datetime
 
-_INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
+INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
 
 
 class Deadline:
     @staticmethod
-    def after_seconds(seconds: float) -> "Deadline":
-        return Deadline(time.time() + seconds)
+    def from_timeout(timeout: float) -> "Deadline":
+        return Deadline(time.time() + timeout)
 
     __slots__ = ("_deadline_at",)
 
     def __init__(self, deadline_at: float):
-        if deadline_at < _INITIAL_TIMESTAMP:
-            raise RuntimeError(f"Invalid deadline_at {deadline_at}: should be >= {_INITIAL_TIMESTAMP}")
+        if deadline_at < INITIAL_TIMESTAMP:
+            raise RuntimeError(f"Invalid deadline_at {deadline_at}: should be >= {INITIAL_TIMESTAMP}")
 
         self._deadline_at = deadline_at
 

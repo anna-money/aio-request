@@ -35,17 +35,17 @@ class MethodBasedStrategy(RequestStrategy):
 
 
 class RequestStrategiesFactory:
-    __slots__ = ("_request_sender", "_response_classifier", "_default_deadline_seconds")
+    __slots__ = ("_request_sender", "_response_classifier", "_timeout")
 
     def __init__(
         self,
         request_sender: RequestSender,
         response_classifier: Optional[ResponseClassifier] = None,
-        default_deadline_seconds: float = 60 * 5,
+        timeout: float = 60 * 5,
     ):
         self._request_sender = request_sender
         self._response_classifier = response_classifier or DefaultResponseClassifier()
-        self._default_deadline_seconds = default_deadline_seconds
+        self._timeout = timeout
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
@@ -77,9 +77,9 @@ class RequestStrategiesFactory:
 
     def _get_deadline(self, deadline: Optional[Union[float, Deadline]]) -> Deadline:
         if deadline is None:
-            return Deadline.after_seconds(self._default_deadline_seconds)
+            return Deadline.from_timeout(self._timeout)
         if isinstance(deadline, float):
-            return Deadline.after_seconds(deadline)
+            return Deadline.from_timeout(deadline)
         return deadline
 
 
