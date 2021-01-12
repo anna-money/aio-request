@@ -1,4 +1,7 @@
 import time
+import datetime
+
+_INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
 
 
 class Deadline:
@@ -9,6 +12,9 @@ class Deadline:
     __slots__ = ("_deadline_at",)
 
     def __init__(self, deadline_at: float):
+        if deadline_at < _INITIAL_TIMESTAMP:
+            raise RuntimeError(f"Invalid deadline_at {deadline_at}: should be >= {_INITIAL_TIMESTAMP}")
+
         self._deadline_at = deadline_at
 
     @property
