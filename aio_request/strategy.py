@@ -4,7 +4,7 @@ from asyncio import Future
 from contextlib import suppress
 from typing import AsyncContextManager, Callable, List, Any, Dict, Set, Union, Optional
 
-from .base import StaticResponse
+from .base import EmptyResponse
 from .deadline import Deadline
 from .delays_provider import linear_delays
 from .base import Response, Request, ClosableResponse
@@ -113,7 +113,7 @@ class _SequentialRequestStrategy:
     async def __aenter__(self) -> Response:
         for attempt in range(self._attempts_count):
             if self._deadline.expired:
-                return StaticResponse(status=408)
+                return EmptyResponse(status=408)
 
             response = await self._request_sender.send(self._request, self._deadline)
             self._responses.append(response)
@@ -193,5 +193,5 @@ class _ParallelRequestStrategy:
     async def _schedule_request(self, attempt: int) -> ClosableResponse:
         await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         if self._deadline.expired:
-            return StaticResponse(status=408)
+            return EmptyResponse(status=408)
         return await self._request_sender.send(self._request, self._deadline)

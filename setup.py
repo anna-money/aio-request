@@ -4,7 +4,7 @@ import re
 from setuptools import setup, find_packages
 
 install_requires = [
-    'aiohttp>=2.6.0',
+    'aiohttp>=3.7.0',
     "multidict>=4.5,<7.0",
     "yarl>=1.0,<2.0",
 ]
