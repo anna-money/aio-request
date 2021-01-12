@@ -18,7 +18,7 @@ class AioHttpRequestSender(RequestSender):
         "_base_url",
         "_client_session",
         "_network_errors_code",
-        "_default_headers",
+        "_enrich_request_headers",
         "_buffer_payload",
     )
 
@@ -28,13 +28,13 @@ class AioHttpRequestSender(RequestSender):
         client_session: aiohttp.ClientSession,
         *,
         network_errors_code: int = 499,
-        default_headers: Optional[CIMultiDictProxy[str]] = None,
+        enrich_request_headers: Optional[Callable[[CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
     ):
         self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
         self._network_errors_code = network_errors_code
         self._client_session = client_session
-        self._default_headers = default_headers
+        self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
 
     async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
@@ -45,7 +45,7 @@ class AioHttpRequestSender(RequestSender):
             response = await self._client_session.request(
                 request.method,
                 self._build_url(request.url),
-                headers=self._enrich_headers(request.headers, deadline),
+                headers=self._enrich_request_headers_(request.headers, deadline),
                 data=request.body,
                 timeout=deadline.timeout,
             )
@@ -57,15 +57,13 @@ class AioHttpRequestSender(RequestSender):
         except asyncio.TimeoutError:
             return EmptyResponse(status=408)
 
-    def _enrich_headers(self, headers: Optional[CIMultiDictProxy[str]], deadline: Deadline) -> CIMultiDict[str]:
+    def _enrich_request_headers_(
+        self, headers: Optional[CIMultiDictProxy[str]], deadline: Deadline
+    ) -> CIMultiDict[str]:
         enriched_headers = get_headers_to_enrich(headers)
         enriched_headers.add("X-Deadline-Time", str(deadline))
-        if self._default_headers is not None:
-            for key, value in self._default_headers.items():
-                if key in enriched_headers:
-                    enriched_headers.add(key, value)
-                else:
-                    enriched_headers[key] = value
+        if self._enrich_request_headers is not None:
+            self._enrich_request_headers(enriched_headers)
         return enriched_headers
 
     def _build_url(self, url_or_str: Union[str, URL]) -> URL:
