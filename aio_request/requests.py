@@ -12,11 +12,15 @@ def get(url: Union[str, URL], *, headers: Optional[CIMultiDictProxy[str]] = None
     return Request("GET", url, headers, None)
 
 
-def post(url: Union[str, URL], body: bytes, *, headers: Optional[CIMultiDictProxy[str]] = None) -> Request:
+def post(
+    url: Union[str, URL], body: Optional[bytes] = None, *, headers: Optional[CIMultiDictProxy[str]] = None
+) -> Request:
     return Request("POST", url, headers, body)
 
 
-def put(url: Union[str, URL], body: bytes, *, headers: Optional[CIMultiDictProxy[str]] = None) -> Request:
+def put(
+    url: Union[str, URL], body: Optional[bytes] = None, *, headers: Optional[CIMultiDictProxy[str]] = None
+) -> Request:
     return Request("PUT", url, headers, body)
 
 
