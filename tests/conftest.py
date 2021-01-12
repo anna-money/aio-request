@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from queue import Queue
 from typing import Union, List
 
-from aio_request import RequestSender, Request, Deadline, ClosableResponse
-from aio_request.base import StaticResponse
+from aio_request import RequestSender, Request, Deadline, ClosableResponse, EmptyResponse
 
 logging.basicConfig(level="DEBUG")
 
@@ -40,4 +39,4 @@ class TestRequestSender(RequestSender):
         else:
             status = response_or_configuration
 
-        return StaticResponse(status=status)
+        return EmptyResponse(status=status)

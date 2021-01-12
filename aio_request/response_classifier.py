@@ -17,18 +17,6 @@ class ResponseClassifier(ABC):
         ...
 
 
-def is_successful_response(response: Response) -> bool:
-    return 200 <= response.status < 300
-
-
-def is_client_error_response(response: Response) -> bool:
-    return 400 <= response.status < 500
-
-
-def is_server_error_response(response: Response) -> bool:
-    return response.status > 500
-
-
 class DefaultResponseClassifier(ResponseClassifier):
     __slots__ = ("_network_errors_code",)
 
@@ -36,7 +24,7 @@ class DefaultResponseClassifier(ResponseClassifier):
         self._network_errors_code = network_errors_code
 
     def classify(self, response: Response) -> ResponseVerdict:
-        if is_server_error_response(response):
+        if response.is_server_error():
             return ResponseVerdict.REJECT
         if response.status == self._network_errors_code:
             return ResponseVerdict.REJECT

@@ -6,14 +6,21 @@ import aiohttp
 from multidict import CIMultiDictProxy, CIMultiDict
 from yarl import URL
 
+from .base import EmptyResponse, ClosableResponse
 from .base import Request
-from .base import StaticResponse, ClosableResponse
 from .deadline import Deadline
 from .request_sender import RequestSender
+from .utils import get_headers_to_enrich
 
 
 class AioHttpRequestSender(RequestSender):
-    __slots__ = ("_base_url", "_client_session", "_network_errors_code", "_default_headers", "_buffer_payload")
+    __slots__ = (
+        "_base_url",
+        "_client_session",
+        "_network_errors_code",
+        "_default_headers",
+        "_buffer_payload",
+    )
 
     def __init__(
         self,
@@ -46,12 +53,12 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            return StaticResponse(status=self._network_errors_code)
+            return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            return StaticResponse(status=408)
+            return EmptyResponse(status=408)
 
     def _enrich_headers(self, headers: Optional[CIMultiDictProxy[str]], deadline: Deadline) -> CIMultiDict[str]:
-        enriched_headers = CIMultiDict[str](headers) if headers is not None else CIMultiDict[str]()
+        enriched_headers = get_headers_to_enrich(headers)
         enriched_headers.add("X-Deadline-Time", str(deadline))
         if self._default_headers is not None:
             for key, value in self._default_headers.items():

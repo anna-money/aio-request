@@ -50,6 +50,21 @@ class Response(ABC):
     async def text(self, encoding: Optional[str] = None) -> str:
         ...
 
+    def is_informational(self) -> bool:
+        return 100 <= self.status < 200
+
+    def is_successful(self) -> bool:
+        return 200 <= self.status < 300
+
+    def is_redirection(self) -> bool:
+        return 300 <= self.status < 400
+
+    def is_client_error(self) -> bool:
+        return 400 <= self.status < 500
+
+    def is_server_error(self) -> bool:
+        return 500 <= self.status < 600
+
 
 class ClosableResponse(Response):
     __slots__ = ()
@@ -59,11 +74,10 @@ class ClosableResponse(Response):
         ...
 
 
-class StaticResponse(ClosableResponse):
-    __slots__ = ("_status", "_headers")
+class EmptyResponse(ClosableResponse):
+    __slots__ = ("_status",)
 
-    def __init__(self, *, status: int, headers: Optional[CIMultiDictProxy[str]] = None):
-        self._headers = headers or EMPTY_HEADERS
+    def __init__(self, *, status: int):
         self._status = status
 
     @property
@@ -72,7 +86,7 @@ class StaticResponse(ClosableResponse):
 
     @property
     def headers(self) -> CIMultiDictProxy[str]:
-        return self._headers
+        return EMPTY_HEADERS
 
     async def json(
         self,
