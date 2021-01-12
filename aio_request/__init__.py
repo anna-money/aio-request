@@ -1,4 +1,4 @@
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 from .strategy import RequestStrategy  # noqa
 from .base import Request, Response, ClosableResponse, EmptyResponse  # noqa

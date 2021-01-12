@@ -16,7 +16,9 @@ class RequestStrategy(ABC):
     __slots__ = ()
 
     @abstractmethod
-    def request(self, request: Request, deadline: Union[float, Deadline]) -> AsyncContextManager[Response]:
+    def request(
+        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+    ) -> AsyncContextManager[Response]:
         ...
 
 
@@ -26,18 +28,24 @@ class MethodBasedStrategy(RequestStrategy):
     def __init__(self, strategy_by_method: Dict[str, RequestStrategy]):
         self._strategy_by_method = strategy_by_method
 
-    def request(self, request: Request, deadline: Union[float, Deadline]) -> AsyncContextManager[Response]:
+    def request(
+        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+    ) -> AsyncContextManager[Response]:
         return self._strategy_by_method[request.method].request(request, deadline)
 
 
 class RequestStrategiesFactory:
-    __slots__ = ("_request_sender", "_response_classifier")
+    __slots__ = ("_request_sender", "_response_classifier", "_default_deadline_seconds")
 
     def __init__(
-        self, request_sender: RequestSender, response_classifier: Optional[ResponseClassifier] = None,
+        self,
+        request_sender: RequestSender,
+        response_classifier: Optional[ResponseClassifier] = None,
+        default_deadline_seconds: float = 60 * 5,
     ):
-        self._response_classifier = response_classifier or DefaultResponseClassifier()
         self._request_sender = request_sender
+        self._response_classifier = response_classifier or DefaultResponseClassifier()
+        self._default_deadline_seconds = default_deadline_seconds
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
@@ -47,7 +55,7 @@ class RequestStrategiesFactory:
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=deadline if isinstance(deadline, Deadline) else Deadline(deadline),
+                deadline=self._get_deadline(deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
             )
@@ -61,20 +69,31 @@ class RequestStrategiesFactory:
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=deadline if isinstance(deadline, Deadline) else Deadline(deadline),
+                deadline=self._get_deadline(deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
             )
         )
 
+    def _get_deadline(self, deadline: Optional[Union[float, Deadline]]) -> Deadline:
+        if deadline is None:
+            return Deadline.after_seconds(self._default_deadline_seconds)
+        if isinstance(deadline, float):
+            return Deadline.after_seconds(deadline)
+        return deadline
+
 
 class _RequestStrategy(RequestStrategy):
     __slots__ = ("_create_strategy",)
 
-    def __init__(self, create_strategy: Callable[[Request, Union[float, Deadline]], AsyncContextManager[Response]]):
+    def __init__(
+        self, create_strategy: Callable[[Request, Optional[Union[float, Deadline]]], AsyncContextManager[Response]]
+    ):
         self._create_strategy = create_strategy
 
-    def request(self, request: Request, deadline: Union[float, Deadline]) -> AsyncContextManager[Response]:
+    def request(
+        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+    ) -> AsyncContextManager[Response]:
         return self._create_strategy(request, deadline)
 
 
