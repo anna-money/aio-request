@@ -17,7 +17,6 @@ def read(*parts):
 def read_version():
     regexp = re.compile(r"^__version__\W*=\W*\"([\d.abrc]+)\"")
     for line in read("aio_request", "__init__.py").splitlines():
-        print(line)
         match = regexp.match(line)
         if match is not None:
             return match.group(1)
@@ -35,7 +34,9 @@ setup(
     project_urls={},
     author_email="yury.pliner@gmail.com",
     license="MIT",
-    packages=find_packages(),
+    packages=["aio_request"],
+    package_dir={"aio_request": "./aio_request"},
+    package_data={"aio_request": ["py.typed"]},
     install_requires=install_requires,
     include_package_data=True,
 )
