@@ -34,7 +34,7 @@ def post_json(
     *,
     headers: Optional[CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
-    dumps: Callable[[str], Any] = json.loads,
+    dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
     return _built_json_request(
@@ -48,7 +48,7 @@ def put_json(
     *,
     headers: Optional[CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
-    dumps: Callable[[str], Any] = json.loads,
+    dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
     return _built_json_request(
@@ -63,7 +63,7 @@ def _built_json_request(
     *,
     headers: Optional[CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
-    dumps: Callable[[Any], str] = json.loads,
+    dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
     enriched_headers = get_headers_to_enrich(headers)
