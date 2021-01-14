@@ -9,14 +9,15 @@ from yarl import URL
 from .base import EmptyResponse, ClosableResponse
 from .base import Request
 from .deadline import Deadline
+from .log import logger
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
 
 
 class AioHttpRequestSender(RequestSender):
     __slots__ = (
-        "_base_url",
         "_client_session",
+        "_base_url",
         "_network_errors_code",
         "_enrich_request_headers",
         "_buffer_payload",
@@ -24,37 +25,40 @@ class AioHttpRequestSender(RequestSender):
 
     def __init__(
         self,
-        base_url: Union[str, URL],
         client_session: aiohttp.ClientSession,
+        base_url: Union[str, URL],
         *,
         network_errors_code: int = 499,
         enrich_request_headers: Optional[Callable[[CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
     ):
+        self._client_session = client_session
         self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
         self._network_errors_code = network_errors_code
-        self._client_session = client_session
         self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
 
     async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
+        request_method = request.method
+        request_url = self._build_url(request.url)
+        request_headers = self._enrich_request_headers_(request.headers, deadline)
+        request_body = request.body
+
         try:
+            logger.debug("Sending request %s %s with timeout %s", request_method, request_url, deadline.timeout)
             if deadline.expired:
                 raise asyncio.TimeoutError()
-
             response = await self._client_session.request(
-                request.method,
-                self._build_url(request.url),
-                headers=self._enrich_request_headers_(request.headers, deadline),
-                data=request.body,
-                timeout=deadline.timeout,
+                request_method, request_url, headers=request_headers, data=request_body, timeout=deadline.timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
+            logger.warn("Request %s %s has failed", request_method, request_url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
+            logger.warn("Request %s %s has timed out", request_method, request_url)
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
