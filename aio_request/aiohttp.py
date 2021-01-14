@@ -54,10 +54,10 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warn("Request %s %s has failed", request.method, self._build_url(request.url), exc_info=True)
+            logger.warn("Request %s %s has failed", request.method, request.url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warn("Request %s %s has timed out", request.method, self._build_url(request.url))
+            logger.warn("Request %s %s has timed out", request.method, request.url)
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
