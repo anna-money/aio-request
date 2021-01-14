@@ -139,7 +139,14 @@ class _SequentialRequestStrategy:
             if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
                 return response
 
-            await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
+            if attempt + 1 == self._attempts_count:
+                break
+
+            retry_delay = self._delays_provider(attempt + 1)
+            if self._deadline.timeout < retry_delay:
+                break
+
+            await asyncio.sleep(retry_delay)
 
         assert len(self._responses) > 0
 
@@ -174,6 +181,9 @@ class _ParallelRequestStrategy:
         attempts_count: int,
         delays_provider: Callable[[int], float],
     ):
+        if attempts_count < 1:
+            raise RuntimeError("Attempts count should be >= 1")
+
         self._attempts_count = attempts_count
         self._deadline = deadline
         self._request = request
@@ -210,7 +220,8 @@ class _ParallelRequestStrategy:
         return False
 
     async def _schedule_request(self, attempt: int) -> ClosableResponse:
-        await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
+        if attempt > 0:
+            await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         if self._deadline.expired:
             return EmptyResponse(status=408)
         return await self._request_sender.send(self._request, self._deadline)
