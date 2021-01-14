@@ -9,6 +9,7 @@ from yarl import URL
 from .base import EmptyResponse, ClosableResponse
 from .base import Request
 from .deadline import Deadline
+from .log import logger
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
 
@@ -39,9 +40,9 @@ class AioHttpRequestSender(RequestSender):
 
     async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
         try:
+            logger.debug("Sending request %s %s with timeout %s", request.method, request.url, deadline.timeout)
             if deadline.expired:
                 raise asyncio.TimeoutError()
-
             response = await self._client_session.request(
                 request.method,
                 self._build_url(request.url),
@@ -53,8 +54,10 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
+            logger.warn("Request %s %s has failed", request.method, self._build_url(request.url), exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
+            logger.warn("Request %s %s has timed out", request.method, self._build_url(request.url))
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
