@@ -32,7 +32,7 @@ async def test_succeed_response_received_first_slow_request():
 
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([499, 200]), response_classifier=DefaultResponseClassifier(),
+        request_sender=TestRequestSender([489, 200]), response_classifier=DefaultResponseClassifier(),
     )
     forking_strategy = strategies_factory.parallel()
     deadline = Deadline.from_timeout(1)

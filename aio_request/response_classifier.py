@@ -20,7 +20,7 @@ class ResponseClassifier(ABC):
 class DefaultResponseClassifier(ResponseClassifier):
     __slots__ = ("_network_errors_code",)
 
-    def __init__(self, network_errors_code: int = 499):
+    def __init__(self, network_errors_code: int = 489):
         self._network_errors_code = network_errors_code
 
     def classify(self, response: Response) -> ResponseVerdict:

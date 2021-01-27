@@ -28,7 +28,7 @@ class AioHttpRequestSender(RequestSender):
         client_session: aiohttp.ClientSession,
         base_url: Union[str, URL],
         *,
-        network_errors_code: int = 499,
+        network_errors_code: int = 489,
         enrich_request_headers: Optional[Callable[[CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
     ):

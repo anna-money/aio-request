@@ -15,7 +15,7 @@ async def test_timeout_because_of_expiration():
 
 
 async def test_succeed_response_received():
-    strategies_factory = RequestStrategiesFactory(TestRequestSender([499, 200]))
+    strategies_factory = RequestStrategiesFactory(TestRequestSender([489, 200]))
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)
     async with sequential_strategy.request(get("hello"), deadline=deadline) as response:
