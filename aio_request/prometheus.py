@@ -1,9 +1,9 @@
 import asyncio
+import contextlib
 import time
-from contextlib import asynccontextmanager
 from typing import Optional, Union, AsyncContextManager, AsyncIterator
 
-from prometheus_client import Histogram, Counter
+import prometheus_client
 
 from .base import Request, Response
 from .deadline import Deadline
@@ -19,8 +19,8 @@ class PrometheusAwareStrategy(RequestStrategy):
         self,
         request_strategy: RequestStrategy,
         service_name: str,
-        requests_latency_histogram: Histogram,
-        requests_counter: Counter,
+        requests_latency_histogram: prometheus_client.Histogram,
+        requests_counter: prometheus_client.Counter,
     ):
         self._requests_counter = requests_counter
         self._requests_latency_histogram = requests_latency_histogram
@@ -32,7 +32,7 @@ class PrometheusAwareStrategy(RequestStrategy):
     ) -> AsyncContextManager[Response]:
         return self._request(request, deadline)
 
-    @asynccontextmanager
+    @contextlib.asynccontextmanager
     async def _request(
         self, request: Request, deadline: Optional[Union[float, Deadline]] = None
     ) -> AsyncIterator[Response]:

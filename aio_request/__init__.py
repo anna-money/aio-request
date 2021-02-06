@@ -1,5 +1,7 @@
 __version__ = "0.0.9"
 
+from typing import Callable
+
 from .strategy import RequestStrategy  # noqa
 from .base import Request, Response, ClosableResponse, EmptyResponse  # noqa
 from .delays_provider import linear_delays, constant_delays  # noqa
@@ -8,3 +10,5 @@ from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultRes
 from .requests import get, post, put, delete, put_json, post_json  # noqa
 from .strategy import RequestStrategy, RequestStrategiesFactory, MethodBasedStrategy  # noqa
 from .deadline import Deadline  # noqa
+
+RequestStrategyExtender = Callable[[RequestStrategy], RequestStrategy]
