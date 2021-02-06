@@ -7,7 +7,7 @@ black:
 	@black --line-length 120 aio_request tests
 
 isort:
-	@isort --line_length 120 --use_parentheses --combine_as_imports --include_trailing_comma aio_request tests
+	@isort --line-length 120 --use-parentheses --multi-line 3 --combine-as --trailing-comma aio_request tests
 
 mypy:
 	@mypy --strict --ignore-missing-imports aio_request
