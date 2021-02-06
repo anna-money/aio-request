@@ -1,17 +1,19 @@
 import asyncio
 import json
-from typing import Optional, Union, Callable, Any
+from typing import Any, Callable, Optional, Union
 
 import aiohttp
-from multidict import CIMultiDictProxy, CIMultiDict
-from yarl import URL
+import multidict
+import yarl
 
-from .base import EmptyResponse, ClosableResponse
-from .base import Request
+from .base import ClosableResponse, EmptyResponse, Request
 from .deadline import Deadline
 from .log import logger
+from .priority import Priority
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
+
+__all__ = ["AioHttpRequestSender"]
 
 
 class AioHttpRequestSender(RequestSender):
@@ -26,22 +28,22 @@ class AioHttpRequestSender(RequestSender):
     def __init__(
         self,
         client_session: aiohttp.ClientSession,
-        base_url: Union[str, URL],
+        base_url: Union[str, yarl.URL],
         *,
         network_errors_code: int = 489,
-        enrich_request_headers: Optional[Callable[[CIMultiDict[str]], None]] = None,
+        enrich_request_headers: Optional[Callable[[multidict.CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
     ):
         self._client_session = client_session
-        self._base_url = base_url if isinstance(base_url, URL) else URL(base_url)
+        self._base_url = base_url if isinstance(base_url, yarl.URL) else yarl.URL(base_url)
         self._network_errors_code = network_errors_code
         self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
 
-    async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
+    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         request_method = request.method
         request_url = self._build_url(request.url)
-        request_headers = self._enrich_request_headers_(request.headers, deadline)
+        request_headers = self._enrich_request_headers_(request.headers, deadline, priority)
         request_body = request.body
 
         try:
@@ -62,16 +64,17 @@ class AioHttpRequestSender(RequestSender):
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
-        self, headers: Optional[CIMultiDictProxy[str]], deadline: Deadline
-    ) -> CIMultiDict[str]:
+        self, headers: Optional[multidict.CIMultiDictProxy[str]], deadline: Deadline, priority: Priority
+    ) -> multidict.CIMultiDict[str]:
         enriched_headers = get_headers_to_enrich(headers)
-        enriched_headers.add("X-Deadline-Time", str(deadline))
+        enriched_headers.add("X-Deadline-At", str(deadline))
+        enriched_headers.add("X-Request-Priority", str(priority))
         if self._enrich_request_headers is not None:
             self._enrich_request_headers(enriched_headers)
         return enriched_headers
 
-    def _build_url(self, url_or_str: Union[str, URL]) -> URL:
-        url = url_or_str if isinstance(url_or_str, URL) else URL(url_or_str)
+    def _build_url(self, url_or_str: Union[str, yarl.URL]) -> yarl.URL:
+        url = url_or_str if isinstance(url_or_str, yarl.URL) else yarl.URL(url_or_str)
         return url if url.is_absolute() else self._base_url.join(url)
 
 
@@ -89,7 +92,7 @@ class _AioHttpResponse(ClosableResponse):
         return self._response.status
 
     @property
-    def headers(self) -> CIMultiDictProxy[str]:
+    def headers(self) -> multidict.CIMultiDictProxy[str]:
         return self._response.headers
 
     async def json(

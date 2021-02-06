@@ -1,4 +1,4 @@
-from aio_request import RequestStrategiesFactory, DefaultResponseClassifier, linear_delays, get, Deadline
+from aio_request import Deadline, DefaultResponseClassifier, RequestStrategiesFactory, get, linear_delays
 from tests.conftest import TestRequestSender, TestResponseConfiguration
 
 

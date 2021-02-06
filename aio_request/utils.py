@@ -1,10 +1,21 @@
-from typing import Optional
+import contextlib
+from typing import Collection, Optional, Protocol
 
-from multidict import CIMultiDictProxy, CIMultiDict
+import multidict
+
+EMPTY_HEADERS = multidict.CIMultiDictProxy[str](multidict.CIMultiDict[str]())
 
 
-EMPTY_HEADERS = CIMultiDictProxy[str](CIMultiDict[str]())
+def get_headers_to_enrich(headers: Optional[multidict.CIMultiDictProxy[str]]) -> multidict.CIMultiDict[str]:
+    return multidict.CIMultiDict[str](headers) if headers is not None else multidict.CIMultiDict[str]()
 
 
-def get_headers_to_enrich(headers: Optional[CIMultiDictProxy[str]]) -> CIMultiDict[str]:
-    return CIMultiDict[str](headers) if headers is not None else CIMultiDict[str]()
+class Closable(Protocol):
+    async def close(self) -> None:
+        ...
+
+
+async def close(items: Collection[Closable]) -> None:
+    for item in items:
+        with contextlib.suppress(Exception):
+            await item.close()

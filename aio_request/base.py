@@ -1,7 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Optional, Union, Any, Callable
+from typing import Any, Callable, Optional, Union
 
 from multidict import CIMultiDictProxy
 from yarl import URL
@@ -9,14 +8,20 @@ from yarl import URL
 from .utils import EMPTY_HEADERS
 
 
-@dataclass(frozen=True)
 class Request:
     __slots__ = ("method", "url", "headers", "body")
 
-    method: str
-    url: Union[str, URL]
-    headers: Optional[CIMultiDictProxy[str]]
-    body: Optional[bytes]
+    def __init__(
+        self,
+        method: str,
+        url: Union[str, URL],
+        headers: Optional[CIMultiDictProxy[str]] = None,
+        body: Optional[bytes] = None,
+    ):
+        self.method = method
+        self.url = url
+        self.headers = headers
+        self.body = body
 
 
 class Response(ABC):

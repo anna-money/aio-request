@@ -1,4 +1,4 @@
-from random import random
+import random
 from typing import Callable
 
 DELAY_PROVIDER = Callable[[int], float]
@@ -13,8 +13,8 @@ def linear_delays(
 ) -> DELAY_PROVIDER:
     def _linear(attempt: int) -> float:
         delay = min_delay_seconds + attempt * delay_multiplier
-        jitter_amount = delay * random() * jitter
-        if random() < 0.5:
+        jitter_amount = delay * random.random() * jitter
+        if random.random() < 0.5:
             jitter_amount = -jitter_amount
         return delay + jitter_amount
 

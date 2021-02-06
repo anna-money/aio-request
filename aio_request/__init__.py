@@ -1,10 +1,11 @@
 __version__ = "0.0.8"
 
-from .strategy import RequestStrategy  # noqa
-from .base import Request, Response, ClosableResponse, EmptyResponse  # noqa
-from .delays_provider import linear_delays, constant_delays  # noqa
-from .request_sender import RequestSender  # noqa
-from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier  # noqa
-from .requests import get, post, put, delete, put_json, post_json  # noqa
-from .strategy import RequestStrategy, RequestStrategiesFactory, MethodBasedStrategy  # noqa
+from .base import ClosableResponse, EmptyResponse, Request, Response  # noqa
 from .deadline import Deadline  # noqa
+from .delays_provider import constant_delays, linear_delays  # noqa
+from .priority import Priority  # noqa
+from .request_sender import RequestSender  # noqa
+from .requests import delete, get, post, post_json, put, put_json  # noqa
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict  # noqa
+from .strategy import RequestStrategy  # noqa
+from .strategy import MethodBasedStrategy, RequestStrategiesFactory  # noqa
