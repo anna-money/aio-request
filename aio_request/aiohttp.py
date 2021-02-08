@@ -49,7 +49,11 @@ class AioHttpRequestSender(RequestSender):
             if deadline.expired:
                 raise asyncio.TimeoutError()
             response = await self._client_session.request(
-                request_method, request_url, headers=request_headers, data=request_body, timeout=deadline.timeout,
+                request_method,
+                request_url,
+                headers=request_headers,
+                data=request_body,
+                timeout=deadline.timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
