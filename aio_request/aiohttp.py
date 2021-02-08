@@ -13,8 +13,6 @@ from .priority import Priority
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
 
-__all__ = ["AioHttpRequestSender"]
-
 
 class AioHttpRequestSender(RequestSender):
     __slots__ = (
@@ -67,7 +65,7 @@ class AioHttpRequestSender(RequestSender):
         self, headers: Optional[multidict.CIMultiDictProxy[str]], deadline: Deadline, priority: Priority
     ) -> multidict.CIMultiDict[str]:
         enriched_headers = get_headers_to_enrich(headers)
-        enriched_headers.add("X-Deadline-At", str(deadline))
+        enriched_headers.add("X-Request-Deadline-At", str(deadline))
         enriched_headers.add("X-Request-Priority", str(priority))
         if self._enrich_request_headers is not None:
             self._enrich_request_headers(enriched_headers)

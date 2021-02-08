@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = "0.0.8"
+__version__ = "0.0.9f"
 
 from .base import ClosableResponse, EmptyResponse, Request, Response
 from .deadline import Deadline
@@ -9,3 +9,10 @@ from .request_sender import RequestSender
 from .requests import delete, get, post, post_json, put, put_json
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+
+try:
+    import aiohttp
+
+    from .aiohttp import AioHttpRequestSender
+except ImportError:
+    pass
