@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, cast
+from typing import Optional
 
 
 class Priority(str, enum.Enum):
@@ -8,7 +8,7 @@ class Priority(str, enum.Enum):
     LOW = "low"
 
     def __str__(self) -> str:
-        return cast(str, self.value)
+        return self.value
 
     @staticmethod
     def parse(value: Optional[str]) -> "Priority":
