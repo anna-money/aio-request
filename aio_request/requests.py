@@ -1,5 +1,5 @@
 import json
-from typing import Union, Optional, Any, Callable
+from typing import Any, Callable, Optional, Union
 
 from multidict import CIMultiDictProxy
 from yarl import URL

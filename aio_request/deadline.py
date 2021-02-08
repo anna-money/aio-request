@@ -1,5 +1,5 @@
-import time
 import datetime
+import time
 
 INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
 

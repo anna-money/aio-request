@@ -2,9 +2,9 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from queue import Queue
-from typing import Union, List
+from typing import List, Union
 
-from aio_request import RequestSender, Request, Deadline, ClosableResponse, EmptyResponse
+from aio_request import ClosableResponse, Deadline, EmptyResponse, Priority, Request, RequestSender
 
 logging.basicConfig(level="DEBUG")
 
@@ -23,7 +23,7 @@ class TestRequestSender(RequestSender):
         for response in responses:
             self._responses.put(response)
 
-    async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
+    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         if self._responses.empty():
             raise RuntimeError("No response left")
 

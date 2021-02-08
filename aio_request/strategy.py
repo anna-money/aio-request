@@ -1,23 +1,25 @@
+import abc
 import asyncio
-from abc import ABC, abstractmethod
-from asyncio import Future
-from contextlib import suppress
-from typing import AsyncContextManager, Callable, List, Any, Dict, Set, Union, Optional
+from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set, Union
 
-from .base import EmptyResponse
+from .base import ClosableResponse, EmptyResponse, Request, Response
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .base import Response, Request, ClosableResponse
+from .priority import Priority
 from .request_sender import RequestSender
-from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .utils import close
 
 
-class RequestStrategy(ABC):
+class RequestStrategy(abc.ABC):
     __slots__ = ()
 
-    @abstractmethod
+    @abc.abstractmethod
     def request(
-        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+        self,
+        request: Request,
+        deadline: Optional[Union[float, Deadline]] = None,
+        priority: Optional[Union[Priority]] = None,
     ) -> AsyncContextManager[Response]:
         ...
 
@@ -29,35 +31,41 @@ class MethodBasedStrategy(RequestStrategy):
         self._strategy_by_method = strategy_by_method
 
     def request(
-        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+        self,
+        request: Request,
+        deadline: Optional[Union[float, Deadline]] = None,
+        priority: Optional[Union[Priority]] = None,
     ) -> AsyncContextManager[Response]:
         return self._strategy_by_method[request.method].request(request, deadline)
 
 
 class RequestStrategiesFactory:
-    __slots__ = ("_request_sender", "_response_classifier", "_timeout")
+    __slots__ = ("_request_sender", "_response_classifier", "_timeout", "_priority")
 
     def __init__(
         self,
         request_sender: RequestSender,
         response_classifier: Optional[ResponseClassifier] = None,
         timeout: float = 60 * 5,
+        priority: Priority = Priority.NORMAL,
     ):
         self._request_sender = request_sender
         self._response_classifier = response_classifier or DefaultResponseClassifier()
         self._timeout = timeout
+        self._priority = priority
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
-            lambda request, deadline: _SequentialRequestStrategy(
+            lambda request, deadline, priority: _SequentialRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=self._get_deadline(deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
+                priority=priority or self._priority,
             )
         )
 
@@ -65,13 +73,14 @@ class RequestStrategiesFactory:
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
-            lambda request, deadline: _ParallelRequestStrategy(
+            lambda request, deadline, priority: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=self._get_deadline(deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
+                priority=priority or self._priority,
             )
         )
 
@@ -87,14 +96,20 @@ class _RequestStrategy(RequestStrategy):
     __slots__ = ("_create_strategy",)
 
     def __init__(
-        self, create_strategy: Callable[[Request, Optional[Union[float, Deadline]]], AsyncContextManager[Response]]
+        self,
+        create_strategy: Callable[
+            [Request, Optional[Union[float, Deadline]], Optional[Priority]], AsyncContextManager[Response]
+        ],
     ):
         self._create_strategy = create_strategy
 
     def request(
-        self, request: Request, deadline: Optional[Union[float, Deadline]] = None
+        self,
+        request: Request,
+        deadline: Optional[Union[float, Deadline]] = None,
+        priority: Optional[Union[Priority]] = None,
     ) -> AsyncContextManager[Response]:
-        return self._create_strategy(request, deadline)
+        return self._create_strategy(request, deadline, priority)
 
 
 class _SequentialRequestStrategy:
@@ -105,6 +120,7 @@ class _SequentialRequestStrategy:
         "_response_classifier",
         "_attempts_count",
         "_deadline",
+        "_priority",
         "_delays_provider",
     )
 
@@ -115,6 +131,7 @@ class _SequentialRequestStrategy:
         response_classifier: ResponseClassifier,
         request: Request,
         deadline: Deadline,
+        priority: Priority,
         attempts_count: int,
         delays_provider: Callable[[int], float],
     ):
@@ -123,6 +140,7 @@ class _SequentialRequestStrategy:
 
         self._delays_provider = delays_provider
         self._deadline = deadline
+        self._priority = priority
         self._attempts_count = attempts_count
         self._request = request
         self._request_sender = request_sender
@@ -134,7 +152,7 @@ class _SequentialRequestStrategy:
             if self._deadline.expired:
                 return EmptyResponse(status=408)
 
-            response = await self._request_sender.send(self._request, self._deadline)
+            response = await self._request_sender.send(self._request, self._deadline, self._priority)
             self._responses.append(response)
             if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
                 return response
@@ -153,10 +171,7 @@ class _SequentialRequestStrategy:
         return self._responses[-1]
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        while self._responses:
-            response = self._responses.pop()
-            with suppress(Exception):
-                await response.close()
+        await asyncio.shield(close(self._responses))
         return False
 
 
@@ -167,6 +182,7 @@ class _ParallelRequestStrategy:
         "_request",
         "_response_classifier",
         "_deadline",
+        "_priority",
         "_attempts_count",
         "_delays_provider",
     )
@@ -178,6 +194,7 @@ class _ParallelRequestStrategy:
         response_classifier: ResponseClassifier,
         *,
         deadline: Deadline,
+        priority: Priority,
         attempts_count: int,
         delays_provider: Callable[[int], float],
     ):
@@ -186,6 +203,7 @@ class _ParallelRequestStrategy:
 
         self._attempts_count = attempts_count
         self._deadline = deadline
+        self._priority = priority
         self._request = request
         self._request_sender = request_sender
         self._responses: List[ClosableResponse] = []
@@ -193,7 +211,7 @@ class _ParallelRequestStrategy:
         self._delays_provider = delays_provider
 
     async def __aenter__(self) -> Response:
-        pending_tasks: Set[Future[ClosableResponse]] = set()
+        pending_tasks: Set[asyncio.Future[ClosableResponse]] = set()
         for attempt in range(0, self._attempts_count):
             pending_tasks.add(asyncio.create_task(self._schedule_request(attempt)))
 
@@ -213,10 +231,7 @@ class _ParallelRequestStrategy:
         return self._responses[-1]
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        while self._responses:
-            response = self._responses.pop()
-            with suppress(Exception):
-                await response.close()
+        await asyncio.shield(close(self._responses))
         return False
 
     async def _schedule_request(self, attempt: int) -> ClosableResponse:
@@ -224,4 +239,4 @@ class _ParallelRequestStrategy:
             await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         if self._deadline.expired:
             return EmptyResponse(status=408)
-        return await self._request_sender.send(self._request, self._deadline)
+        return await self._request_sender.send(self._request, self._deadline, self._priority)

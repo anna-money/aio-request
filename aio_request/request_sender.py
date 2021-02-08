@@ -1,12 +1,13 @@
-from abc import ABC, abstractmethod
+import abc
 
-from .base import Request, ClosableResponse
+from .base import ClosableResponse, Request
 from .deadline import Deadline
+from .priority import Priority
 
 
-class RequestSender(ABC):
+class RequestSender(abc.ABC):
     __slots__ = ()
 
-    @abstractmethod
-    async def send(self, request: Request, deadline: Deadline) -> ClosableResponse:
+    @abc.abstractmethod
+    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         ...

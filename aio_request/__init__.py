@@ -1,10 +1,18 @@
-__version__ = "0.0.8"
+# flake8: noqa
+__version__ = "0.0.9"
 
-from .strategy import RequestStrategy  # noqa
-from .base import Request, Response, ClosableResponse, EmptyResponse  # noqa
-from .delays_provider import linear_delays, constant_delays  # noqa
-from .request_sender import RequestSender  # noqa
-from .response_classifier import ResponseVerdict, ResponseClassifier, DefaultResponseClassifier  # noqa
-from .requests import get, post, put, delete, put_json, post_json  # noqa
-from .strategy import RequestStrategy, RequestStrategiesFactory, MethodBasedStrategy  # noqa
-from .deadline import Deadline  # noqa
+from .base import ClosableResponse, EmptyResponse, Request, Response
+from .deadline import Deadline
+from .delays_provider import constant_delays, linear_delays
+from .priority import Priority
+from .request_sender import RequestSender
+from .requests import delete, get, post, post_json, put, put_json
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+
+try:
+    import aiohttp
+
+    from .aiohttp import AioHttpRequestSender
+except ImportError:
+    pass
