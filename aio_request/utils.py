@@ -15,7 +15,7 @@ class Closable(Protocol):
         ...
 
 
-async def close(items: Collection[Closable]) -> None:
+async def close_many(items: Collection[Closable]) -> None:
     for item in items:
         with contextlib.suppress(Exception):
             await item.close()

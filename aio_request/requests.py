@@ -1,38 +1,44 @@
 import json
 from typing import Any, Callable, Optional, Union
 
-from multidict import CIMultiDictProxy
-from yarl import URL
+import multidict
+import yarl
 
 from .base import Request
 from .utils import get_headers_to_enrich
 
 
-def get(url: Union[str, URL], *, headers: Optional[CIMultiDictProxy[str]] = None) -> Request:
+def get(url: Union[str, yarl.URL], *, headers: Optional[multidict.CIMultiDictProxy[str]] = None) -> Request:
     return Request("GET", url, headers, None)
 
 
 def post(
-    url: Union[str, URL], body: Optional[bytes] = None, *, headers: Optional[CIMultiDictProxy[str]] = None
+    url: Union[str, yarl.URL],
+    body: Optional[bytes] = None,
+    *,
+    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
 ) -> Request:
     return Request("POST", url, headers, body)
 
 
 def put(
-    url: Union[str, URL], body: Optional[bytes] = None, *, headers: Optional[CIMultiDictProxy[str]] = None
+    url: Union[str, yarl.URL],
+    body: Optional[bytes] = None,
+    *,
+    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
 ) -> Request:
     return Request("PUT", url, headers, body)
 
 
-def delete(url: Union[str, URL], *, headers: Optional[CIMultiDictProxy[str]] = None) -> Request:
+def delete(url: Union[str, yarl.URL], *, headers: Optional[multidict.CIMultiDictProxy[str]] = None) -> Request:
     return Request("DELETE", url, headers, None)
 
 
 def post_json(
-    url: Union[str, URL],
+    url: Union[str, yarl.URL],
     data: Any,
     *,
-    headers: Optional[CIMultiDictProxy[str]] = None,
+    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -43,10 +49,10 @@ def post_json(
 
 
 def put_json(
-    url: Union[str, URL],
+    url: Union[str, yarl.URL],
     data: Any,
     *,
-    headers: Optional[CIMultiDictProxy[str]] = None,
+    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -58,10 +64,10 @@ def put_json(
 
 def _built_json_request(
     method: str,
-    url: Union[str, URL],
+    url: Union[str, yarl.URL],
     data: Any,
     *,
-    headers: Optional[CIMultiDictProxy[str]] = None,
+    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
@@ -71,4 +77,4 @@ def _built_json_request(
 
     body = dumps(data).encode(encoding)
 
-    return Request(method, url, CIMultiDictProxy[str](enriched_headers), body)
+    return Request(method, url, multidict.CIMultiDictProxy[str](enriched_headers), body)

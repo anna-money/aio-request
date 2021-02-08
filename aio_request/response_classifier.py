@@ -1,18 +1,18 @@
-from abc import ABC, abstractmethod
-from enum import Enum
+import abc
+import enum
 
 from .base import Response
 
 
-class ResponseVerdict(Enum):
+class ResponseVerdict(enum.Enum):
     ACCEPT = 1
     REJECT = 2
 
 
-class ResponseClassifier(ABC):
+class ResponseClassifier(abc.ABC):
     __slots__ = ()
 
-    @abstractmethod
+    @abc.abstractmethod
     def classify(self, response: Response) -> ResponseVerdict:
         ...
 

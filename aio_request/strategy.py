@@ -8,7 +8,7 @@ from .delays_provider import linear_delays
 from .priority import Priority
 from .request_sender import RequestSender
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
-from .utils import close
+from .utils import close_many
 
 
 class RequestStrategy(abc.ABC):
@@ -171,7 +171,7 @@ class _SequentialRequestStrategy:
         return self._responses[-1]
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        await asyncio.shield(close(self._responses))
+        await asyncio.shield(close_many(self._responses))
         return False
 
 
@@ -231,7 +231,7 @@ class _ParallelRequestStrategy:
         return self._responses[-1]
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        await asyncio.shield(close(self._responses))
+        await asyncio.shield(close_many(self._responses))
         return False
 
     async def _schedule_request(self, attempt: int) -> ClosableResponse:
