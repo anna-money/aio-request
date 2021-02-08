@@ -3,8 +3,7 @@
 ```python
 import aiohttp
 
-from aio_request import MethodBasedStrategy, RequestStrategiesFactory, get, post, Deadline
-from aio_request.aiohttp import AioHttpRequestSender
+from aio_request import MethodBasedStrategy, RequestStrategiesFactory, get, post, Deadline, AioHttpRequestSender
 
 client_session = aiohttp.ClientSession()
 async with client_session:
