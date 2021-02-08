@@ -1,9 +1,9 @@
+import abc
 import json
-from abc import ABC, abstractmethod
 from typing import Any, Callable, Optional, Union
 
-from multidict import CIMultiDictProxy
-from yarl import URL
+import multidict
+import yarl
 
 from .utils import EMPTY_HEADERS
 
@@ -14,8 +14,8 @@ class Request:
     def __init__(
         self,
         method: str,
-        url: Union[str, URL],
-        headers: Optional[CIMultiDictProxy[str]] = None,
+        url: Union[str, yarl.URL],
+        headers: Optional[multidict.CIMultiDictProxy[str]] = None,
         body: Optional[bytes] = None,
     ):
         self.method = method
@@ -24,20 +24,20 @@ class Request:
         self.body = body
 
 
-class Response(ABC):
+class Response(abc.ABC):
     __slots__ = ()
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def status(self) -> int:
         ...
 
     @property
-    @abstractmethod
-    def headers(self) -> CIMultiDictProxy[str]:
+    @abc.abstractmethod
+    def headers(self) -> multidict.CIMultiDictProxy[str]:
         ...
 
-    @abstractmethod
+    @abc.abstractmethod
     async def json(
         self,
         *,
@@ -47,11 +47,11 @@ class Response(ABC):
     ) -> Any:
         ...
 
-    @abstractmethod
+    @abc.abstractmethod
     async def read(self) -> bytes:
         ...
 
-    @abstractmethod
+    @abc.abstractmethod
     async def text(self, encoding: Optional[str] = None) -> str:
         ...
 
@@ -74,7 +74,7 @@ class Response(ABC):
 class ClosableResponse(Response):
     __slots__ = ()
 
-    @abstractmethod
+    @abc.abstractmethod
     async def close(self) -> None:
         ...
 
@@ -90,7 +90,7 @@ class EmptyResponse(ClosableResponse):
         return self._status
 
     @property
-    def headers(self) -> CIMultiDictProxy[str]:
+    def headers(self) -> multidict.CIMultiDictProxy[str]:
         return EMPTY_HEADERS
 
     async def json(

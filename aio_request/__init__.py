@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = "0.0.9f"
+__version__ = "0.0.9"
 
 from .base import ClosableResponse, EmptyResponse, Request, Response
 from .deadline import Deadline
