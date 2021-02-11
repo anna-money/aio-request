@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from typing import Any, Awaitable, Callable, Optional, Union
 
 import aiohttp
@@ -13,10 +14,11 @@ import yarl
 from .base import ClosableResponse, EmptyResponse, Request
 from .context import set_context
 from .deadline import Deadline
-from .log import logger
 from .priority import Priority
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
+
+logger = logging.getLogger(__package__)
 
 
 class AioHttpRequestSender(RequestSender):
