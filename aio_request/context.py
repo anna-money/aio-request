@@ -1,6 +1,5 @@
 import contextlib
 import contextvars
-import uuid
 from typing import Iterator, Optional, Union, cast
 
 from .deadline import Deadline
@@ -31,7 +30,7 @@ class Context:
         )
 
 
-context_var = contextvars.ContextVar(str(uuid.uuid4()), default=Context())
+context_var = contextvars.ContextVar("aio_request.context", default=Context())
 
 
 @contextlib.contextmanager

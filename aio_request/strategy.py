@@ -3,6 +3,7 @@ import asyncio
 from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set, Union
 
 from .base import ClosableResponse, EmptyResponse, Request, Response
+from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
@@ -57,32 +58,40 @@ class RequestStrategiesFactory:
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
-        return _RequestStrategy(
-            lambda request, deadline, priority: _SequentialRequestStrategy(
+        def _strategy(
+            request: Request, deadline: Optional[Union[Deadline, float]], priority: Optional[Priority]
+        ) -> AsyncContextManager[Response]:
+            context = get_context()
+            return _SequentialRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=self._get_deadline(deadline),
+                deadline=self._get_deadline(context.deadline or deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
-                priority=priority or self._priority,
+                priority=context.priority or priority or self._priority,
             )
-        )
+
+        return _RequestStrategy(_strategy)
 
     def parallel(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
-        return _RequestStrategy(
-            lambda request, deadline, priority: _ParallelRequestStrategy(
+        def _strategy(
+            request: Request, deadline: Optional[Union[Deadline, float]], priority: Optional[Priority]
+        ) -> AsyncContextManager[Response]:
+            context = get_context()
+            return _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=self._get_deadline(deadline),
+                deadline=self._get_deadline(context.deadline or deadline),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._priority,
             )
-        )
+
+        return _RequestStrategy(_strategy)
 
     def _get_deadline(self, deadline: Optional[Union[float, Deadline]]) -> Deadline:
         if deadline is None:
