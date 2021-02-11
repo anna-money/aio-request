@@ -11,10 +11,10 @@ class Priority(str, enum.Enum):
         return self.value
 
     @staticmethod
-    def parse(value: Optional[str]) -> "Priority":
+    def try_parse(value: Optional[str]) -> Optional["Priority"]:
         if value is None:
-            return Priority.NORMAL
+            return None
         try:
             return Priority(value.lower())
         except ValueError:
-            return Priority.NORMAL
+            return None

@@ -1,5 +1,6 @@
 import datetime
 import time
+from typing import Optional
 
 INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
 
@@ -8,6 +9,15 @@ class Deadline:
     @staticmethod
     def from_timeout(timeout: float) -> "Deadline":
         return Deadline(time.time() + timeout)
+
+    @staticmethod
+    def try_parse(value: Optional[str]) -> Optional["Deadline"]:
+        if value is None:
+            return None
+        try:
+            return Deadline(float(value))
+        except ValueError:
+            return None
 
     __slots__ = ("_deadline_at",)
 
