@@ -3,7 +3,7 @@ import datetime
 from typing import Optional
 
 
-@dataclasses.dataclass(frozen=True, order=True)
+@dataclasses.dataclass(init=False, frozen=True, order=True)
 class Deadline:
     @staticmethod
     def from_timeout(seconds: float) -> "Deadline":
@@ -21,6 +21,12 @@ class Deadline:
     __slots__ = ("deadline_at",)
 
     deadline_at: datetime.datetime
+
+    def __init__(self, deadline_at: datetime.datetime):
+        if deadline_at.tzinfo is not None:
+            raise RuntimeError("Deadline should not be zone aware")
+
+        object.__setattr__(self, "deadline_at", deadline_at)
 
     @property
     def timeout(self) -> float:
