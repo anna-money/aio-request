@@ -69,10 +69,10 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warn("Request %s %s has failed", request_method, request_url, exc_info=True)
+            logger.warning("Request %s %s has failed", request_method, request_url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warn("Request %s %s has timed out", request_method, request_url)
+            logger.warning("Request %s %s has timed out", request_method, request_url)
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
@@ -123,8 +123,8 @@ class _AioHttpResponse(ClosableResponse):
         return await self._response.text(encoding=encoding)
 
 
-HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
-MIDDLEWARE = Callable[[aiohttp.web_request.Request, HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
+_HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
+_MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
 
 
 def aiohttp_middleware_factory(
@@ -132,15 +132,17 @@ def aiohttp_middleware_factory(
     default_timeout: float = 5 * 60,
     default_priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-) -> MIDDLEWARE:
+) -> _MIDDLEWARE:
     @aiohttp.web_middlewares.middleware
-    async def middleware(request: aiohttp.web_request.Request, handler: HANDLER) -> aiohttp.web_response.StreamResponse:
+    async def middleware(
+        request: aiohttp.web_request.Request, handler: _HANDLER
+    ) -> aiohttp.web_response.StreamResponse:
         deadline = Deadline.try_parse(request.headers.get("X-Request-Deadline-At")) or Deadline.from_timeout(
             default_timeout
         )
         priority = Priority.try_parse(request.headers.get("X-Request-Priority")) or default_priority
 
-        if deadline.expired or deadline.timeout < low_timeout_threshold:
+        if deadline.expired or deadline.timeout <= low_timeout_threshold:
             return aiohttp.web_response.Response(status=408)
 
         with set_context(deadline=deadline, priority=priority):

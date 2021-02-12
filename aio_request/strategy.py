@@ -19,7 +19,7 @@ class RequestStrategy(abc.ABC):
     def request(
         self,
         request: Request,
-        deadline: Optional[Union[float, Deadline]] = None,
+        deadline: Optional[Deadline] = None,
         priority: Optional[Union[Priority]] = None,
     ) -> AsyncContextManager[Response]:
         ...
@@ -34,10 +34,10 @@ class MethodBasedStrategy(RequestStrategy):
     def request(
         self,
         request: Request,
-        deadline: Optional[Union[float, Deadline]] = None,
+        deadline: Optional[Union[Deadline]] = None,
         priority: Optional[Union[Priority]] = None,
     ) -> AsyncContextManager[Response]:
-        return self._strategy_by_method[request.method].request(request, deadline)
+        return self._strategy_by_method[request.method].request(request, deadline, priority)
 
 
 class RequestStrategiesFactory:
@@ -59,14 +59,14 @@ class RequestStrategiesFactory:
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         def _strategy(
-            request: Request, deadline: Optional[Union[Deadline, float]], priority: Optional[Priority]
+            request: Request, deadline: Optional[Deadline], priority: Optional[Priority]
         ) -> AsyncContextManager[Response]:
             context = get_context()
             return _SequentialRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=self._get_deadline(context.deadline or deadline),
+                deadline=context.deadline or deadline or Deadline.from_timeout(self._timeout),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=context.priority or priority or self._priority,
@@ -78,14 +78,14 @@ class RequestStrategiesFactory:
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         def _strategy(
-            request: Request, deadline: Optional[Union[Deadline, float]], priority: Optional[Priority]
+            request: Request, deadline: Optional[Deadline], priority: Optional[Priority]
         ) -> AsyncContextManager[Response]:
             context = get_context()
             return _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=self._get_deadline(context.deadline or deadline),
+                deadline=context.deadline or deadline or Deadline.from_timeout(self._timeout),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._priority,
@@ -106,17 +106,15 @@ class _RequestStrategy(RequestStrategy):
 
     def __init__(
         self,
-        create_strategy: Callable[
-            [Request, Optional[Union[float, Deadline]], Optional[Priority]], AsyncContextManager[Response]
-        ],
+        create_strategy: Callable[[Request, Optional[Deadline], Optional[Priority]], AsyncContextManager[Response]],
     ):
         self._create_strategy = create_strategy
 
     def request(
         self,
         request: Request,
-        deadline: Optional[Union[float, Deadline]] = None,
-        priority: Optional[Union[Priority]] = None,
+        deadline: Optional[Deadline] = None,
+        priority: Optional[Priority] = None,
     ) -> AsyncContextManager[Response]:
         return self._create_strategy(request, deadline, priority)
 

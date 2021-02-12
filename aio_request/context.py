@@ -1,5 +1,6 @@
 import contextlib
 import contextvars
+import dataclasses
 from typing import Iterator, Optional, Union, cast
 
 from .deadline import Deadline
@@ -8,16 +9,12 @@ from .priority import Priority
 sentinel = object()
 
 
+@dataclasses.dataclass(frozen=True)
 class Context:
     __slots__ = ("deadline", "priority")
 
-    def __init__(
-        self,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Priority] = None,
-    ):
-        self.deadline: Optional[Deadline] = deadline
-        self.priority: Optional[Priority] = priority
+    deadline: Optional[Deadline]
+    priority: Optional[Priority]
 
     def set(
         self,
@@ -30,7 +27,7 @@ class Context:
         )
 
 
-context_var = contextvars.ContextVar("aio_request.context", default=Context())
+context_var = contextvars.ContextVar("aio_request.context", default=Context(None, None))
 
 
 @contextlib.contextmanager
