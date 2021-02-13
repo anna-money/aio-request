@@ -35,7 +35,7 @@ class AioHttpRequestSender(RequestSender):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        service_name: str = "Unknown",
+        service_name: Optional[str] = None,
         network_errors_code: int = 489,
         enrich_request_headers: Optional[Callable[[multidict.CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
@@ -85,7 +85,8 @@ class AioHttpRequestSender(RequestSender):
         self, headers: Optional[multidict.CIMultiDictProxy[str]], deadline: Deadline, priority: Priority
     ) -> multidict.CIMultiDict[str]:
         enriched_headers = get_headers_to_enrich(headers)
-        enriched_headers.add("X-Service-Name", self._service_name)
+        if self._service_name is not None:
+            enriched_headers.add("X-Service-Name", self._service_name)
         enriched_headers.add("X-Request-Deadline-At", str(deadline))
         enriched_headers.add("X-Request-Priority", str(priority))
         if self._enrich_request_headers is not None:
