@@ -43,7 +43,14 @@ class MethodBasedStrategy(RequestStrategy):
 
 
 class RequestStrategiesFactory:
-    __slots__ = ("_request_sender", "_base_url", "_response_classifier", "_default_timeout", "_default_priority")
+    __slots__ = (
+        "_request_sender",
+        "_base_url",
+        "_response_classifier",
+        "_default_timeout",
+        "_default_priority",
+        "_request_enricher",
+    )
 
     def __init__(
         self,
@@ -52,17 +59,20 @@ class RequestStrategiesFactory:
         response_classifier: Optional[ResponseClassifier] = None,
         default_timeout: float = 60,
         default_priority: Priority = Priority.NORMAL,
+        request_enricher: Optional[Callable[[Request], Request]] = None,
     ):
         self._request_sender = request_sender
         self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
         self._response_classifier = response_classifier or DefaultResponseClassifier()
         self._default_timeout = default_timeout
         self._default_priority = default_priority
+        self._request_enricher = request_enricher
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
+            self._request_enricher,
             lambda request, deadline, priority: _SequentialRequestStrategy(
                 request_sender=self._request_sender,
                 base_url=self._base_url,
@@ -72,13 +82,14 @@ class RequestStrategiesFactory:
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._default_priority,
-            )
+            ),
         )
 
     def parallel(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
+            self._request_enricher,
             lambda request, deadline, priority: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 base_url=self._base_url,
@@ -88,17 +99,22 @@ class RequestStrategiesFactory:
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._default_priority,
-            )
+            ),
         )
 
 
 class _RequestStrategy(RequestStrategy):
-    __slots__ = ("_create_strategy",)
+    __slots__ = (
+        "_request_enricher",
+        "_create_strategy",
+    )
 
     def __init__(
         self,
+        request_enricher: Optional[Callable[[Request], Request]],
         create_strategy: Callable[[Request, Optional[Deadline], Optional[Priority]], AsyncContextManager[Response]],
     ):
+        self._request_enricher = request_enricher
         self._create_strategy = create_strategy
 
     def request(
@@ -109,7 +125,8 @@ class _RequestStrategy(RequestStrategy):
     ) -> AsyncContextManager[Response]:
         if request.url.is_absolute():
             raise RuntimeError("Request url should be relative")
-
+        if self._request_enricher is not None:
+            request = self._request_enricher(request)
         context = get_context()
         return self._create_strategy(request, context.deadline or deadline, context.priority or priority)
 

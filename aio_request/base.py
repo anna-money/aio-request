@@ -1,11 +1,11 @@
 import abc
 import json
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import multidict
 import yarl
 
-from .utils import EMPTY_HEADERS
+from .utils import EMPTY_HEADERS, get_headers_to_enrich
 
 
 class Request:
@@ -32,6 +32,16 @@ class Request:
             method=self.method,
             url=base_url.join(self.url),
             headers=self.headers,
+            body=self.body,
+        )
+
+    def update_headers(self, headers: Dict[str, Any]) -> "Request":
+        updated_headers = get_headers_to_enrich(self.headers)
+        updated_headers.update(headers)
+        return Request(
+            method=self.method,
+            url=self.url,
+            headers=multidict.CIMultiDictProxy[str](updated_headers),
             body=self.body,
         )
 

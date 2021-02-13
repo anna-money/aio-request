@@ -15,7 +15,6 @@ from .context import set_context
 from .deadline import Deadline
 from .priority import Priority
 from .request_sender import RequestSender
-from .utils import get_headers_to_enrich
 
 logger = logging.getLogger(__package__)
 
@@ -28,7 +27,6 @@ class AioHttpRequestSender(RequestSender):
         "_enrich_request_headers",
         "_buffer_payload",
         "_low_timeout_threshold",
-        "_add_request_headers",
     )
 
     def __init__(
@@ -37,10 +35,9 @@ class AioHttpRequestSender(RequestSender):
         *,
         service_name: Optional[str] = None,
         network_errors_code: int = 489,
-        enrich_request_headers: Optional[Callable[[multidict.CIMultiDict[str]], None]] = None,
+        enrich_request_headers: bool = True,
         buffer_payload: bool = True,
         low_timeout_threshold: float = 0.005,
-        add_request_headers: bool = True,
     ):
         self._client_session = client_session
         self._service_name = service_name
@@ -48,51 +45,38 @@ class AioHttpRequestSender(RequestSender):
         self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
         self._low_timeout_threshold = low_timeout_threshold
-        self._add_request_headers = add_request_headers
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        method = request.method
-        url = request.url
-        headers = (
-            self._enrich_request_headers_(request.headers, deadline, priority)
-            if self._add_request_headers
-            else request.headers
-        )
-        body = request.body
+        if self._enrich_request_headers:
+            extra_headers = {
+                "X-Request-Deadline-At": str(deadline),
+                "X-Request-Priority": str(priority),
+            }
+            if self._service_name is not None:
+                extra_headers["X-Service-Name"] = self._service_name
+            request = request.update_headers(extra_headers)
 
         try:
-            logger.debug("Sending request %s %s with timeout %s", method, url, deadline.timeout)
+            logger.debug("Sending request %s %s with timeout %s", request.method, request.url, deadline.timeout)
             if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-                logger.warning("Request %s %s has cancelled to low timeout", method, url)
+                logger.warning("Request %s %s has cancelled due to expired deadline", request.method, request.url)
                 return EmptyResponse(status=408)
             response = await self._client_session.request(
-                method,
-                url,
-                headers=headers,
-                data=body,
+                request.method,
+                request.url,
+                headers=request.headers,
+                data=request.body,
                 timeout=deadline.timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warning("Request %s %s has failed", method, url, exc_info=True)
+            logger.warning("Request %s %s has failed", request.method, request.url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warning("Request %s %s has timed out", method, url)
+            logger.warning("Request %s %s has timed out", request.method, request.url)
             return EmptyResponse(status=408)
-
-    def _enrich_request_headers_(
-        self, headers: Optional[multidict.CIMultiDictProxy[str]], deadline: Deadline, priority: Priority
-    ) -> multidict.CIMultiDict[str]:
-        enriched_headers = get_headers_to_enrich(headers)
-        if self._service_name is not None:
-            enriched_headers.add("X-Service-Name", self._service_name)
-        enriched_headers.add("X-Request-Deadline-At", str(deadline))
-        enriched_headers.add("X-Request-Priority", str(priority))
-        if self._enrich_request_headers is not None:
-            self._enrich_request_headers(enriched_headers)
-        return enriched_headers
 
 
 class _AioHttpResponse(ClosableResponse):

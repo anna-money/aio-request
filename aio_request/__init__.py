@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 from .base import ClosableResponse, EmptyResponse, Request, Response
 from .context import get_context, set_context
