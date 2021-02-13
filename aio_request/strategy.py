@@ -2,6 +2,8 @@ import abc
 import asyncio
 from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set, Union
 
+import yarl
+
 from .base import ClosableResponse, EmptyResponse, Request, Response
 from .context import get_context
 from .deadline import Deadline
@@ -41,64 +43,53 @@ class MethodBasedStrategy(RequestStrategy):
 
 
 class RequestStrategiesFactory:
-    __slots__ = ("_request_sender", "_response_classifier", "_timeout", "_priority")
+    __slots__ = ("_request_sender", "_base_url", "_response_classifier", "_default_timeout", "_default_priority")
 
     def __init__(
         self,
         request_sender: RequestSender,
+        base_url: Union[str, yarl.URL],
         response_classifier: Optional[ResponseClassifier] = None,
-        timeout: float = 60 * 5,
-        priority: Priority = Priority.NORMAL,
+        default_timeout: float = 60,
+        default_priority: Priority = Priority.NORMAL,
     ):
         self._request_sender = request_sender
+        self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
         self._response_classifier = response_classifier or DefaultResponseClassifier()
-        self._timeout = timeout
-        self._priority = priority
+        self._default_timeout = default_timeout
+        self._default_priority = default_priority
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
-        def _strategy(
-            request: Request, deadline: Optional[Deadline], priority: Optional[Priority]
-        ) -> AsyncContextManager[Response]:
-            context = get_context()
-            return _SequentialRequestStrategy(
+        return _RequestStrategy(
+            lambda request, deadline, priority: _SequentialRequestStrategy(
                 request_sender=self._request_sender,
+                base_url=self._base_url,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=context.deadline or deadline or Deadline.from_timeout(self._timeout),
+                deadline=deadline or Deadline.from_timeout(self._default_timeout),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
-                priority=context.priority or priority or self._priority,
+                priority=priority or self._default_priority,
             )
-
-        return _RequestStrategy(_strategy)
+        )
 
     def parallel(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
-        def _strategy(
-            request: Request, deadline: Optional[Deadline], priority: Optional[Priority]
-        ) -> AsyncContextManager[Response]:
-            context = get_context()
-            return _ParallelRequestStrategy(
+        return _RequestStrategy(
+            lambda request, deadline, priority: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
+                base_url=self._base_url,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=context.deadline or deadline or Deadline.from_timeout(self._timeout),
+                deadline=deadline or Deadline.from_timeout(self._default_timeout),
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
-                priority=priority or self._priority,
+                priority=priority or self._default_priority,
             )
-
-        return _RequestStrategy(_strategy)
-
-    def _get_deadline(self, deadline: Optional[Union[float, Deadline]]) -> Deadline:
-        if deadline is None:
-            return Deadline.from_timeout(self._timeout)
-        if isinstance(deadline, float):
-            return Deadline.from_timeout(deadline)
-        return deadline
+        )
 
 
 class _RequestStrategy(RequestStrategy):
@@ -116,13 +107,18 @@ class _RequestStrategy(RequestStrategy):
         deadline: Optional[Deadline] = None,
         priority: Optional[Priority] = None,
     ) -> AsyncContextManager[Response]:
-        return self._create_strategy(request, deadline, priority)
+        if request.url.is_absolute():
+            raise RuntimeError("Request url should be relative")
+
+        context = get_context()
+        return self._create_strategy(request, context.deadline or deadline, context.priority or priority)
 
 
 class _SequentialRequestStrategy:
     __slots__ = (
         "_responses",
         "_request_sender",
+        "_base_url",
         "_request",
         "_response_classifier",
         "_attempts_count",
@@ -135,6 +131,7 @@ class _SequentialRequestStrategy:
         self,
         *,
         request_sender: RequestSender,
+        base_url: yarl.URL,
         response_classifier: ResponseClassifier,
         request: Request,
         deadline: Deadline,
@@ -151,6 +148,7 @@ class _SequentialRequestStrategy:
         self._attempts_count = attempts_count
         self._request = request
         self._request_sender = request_sender
+        self._base_url = base_url
         self._responses: List[ClosableResponse] = []
         self._response_classifier = response_classifier
 
@@ -159,7 +157,9 @@ class _SequentialRequestStrategy:
             if self._deadline.expired:
                 return EmptyResponse(status=408)
 
-            response = await self._request_sender.send(self._request, self._deadline, self._priority)
+            response = await self._request_sender.send(
+                self._request.make_absolute(self._base_url), self._deadline, self._priority
+            )
             self._responses.append(response)
             if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
                 return response
@@ -186,6 +186,7 @@ class _ParallelRequestStrategy:
     __slots__ = (
         "_responses",
         "_request_sender",
+        "_base_url",
         "_request",
         "_response_classifier",
         "_deadline",
@@ -197,6 +198,7 @@ class _ParallelRequestStrategy:
     def __init__(
         self,
         request_sender: RequestSender,
+        base_url: yarl.URL,
         request: Request,
         response_classifier: ResponseClassifier,
         *,
@@ -213,6 +215,7 @@ class _ParallelRequestStrategy:
         self._priority = priority
         self._request = request
         self._request_sender = request_sender
+        self._base_url = base_url
         self._responses: List[ClosableResponse] = []
         self._response_classifier = response_classifier
         self._delays_provider = delays_provider
@@ -246,4 +249,26 @@ class _ParallelRequestStrategy:
             await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         if self._deadline.expired:
             return EmptyResponse(status=408)
-        return await self._request_sender.send(self._request, self._deadline, self._priority)
+        return await self._request_sender.send(
+            self._request.make_absolute(self._base_url), self._deadline, self._priority
+        )
+
+
+def setup(
+    *,
+    request_sender: RequestSender,
+    base_url: yarl.URL,
+    attempts_count: int = 3,
+    delays_provider: Callable[[int], float] = linear_delays(),
+    retry_unsafe_methods: bool = True,
+) -> RequestStrategy:
+    factory = RequestStrategiesFactory(request_sender=request_sender, base_url=base_url)
+    unsafe_method_attempts_count = attempts_count if retry_unsafe_methods else 1
+    return MethodBasedStrategy(
+        {
+            "GET": factory.parallel(attempts_count=attempts_count, delays_provider=delays_provider),
+            "POST": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
+            "PUT": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
+            "DELETE": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
+        }
+    )

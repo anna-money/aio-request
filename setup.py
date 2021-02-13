@@ -4,7 +4,6 @@ from pathlib import Path
 from setuptools import setup
 
 install_requires = [
-    "aiohttp>=3.7.0",
     "multidict>=4.5,<7.0",
     "yarl>=1.0,<2.0",
 ]

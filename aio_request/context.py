@@ -27,7 +27,7 @@ class Context:
         )
 
 
-context_var = contextvars.ContextVar("aio_request.context", default=Context(None, None))
+context_var = contextvars.ContextVar("aio_request_context", default=Context(None, None))
 
 
 @contextlib.contextmanager

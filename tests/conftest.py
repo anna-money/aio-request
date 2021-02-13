@@ -71,7 +71,7 @@ async def service(aiohttp_client):
 @pytest.fixture
 async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
-        request_sender = aio_request.AioHttpRequestSender(
-            client_session, f"http://{service.server.host}:{service.server.port}/"
+        request_sender = aio_request.AioHttpRequestSender(client_session)
+        yield aio_request.RequestStrategiesFactory(
+            request_sender=request_sender, base_url=f"http://{service.server.host}:{service.server.port}/"
         )
-        yield aio_request.RequestStrategiesFactory(request_sender)

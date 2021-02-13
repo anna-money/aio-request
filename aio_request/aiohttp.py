@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Awaitable, Callable, Optional, Union
+from typing import Any, Awaitable, Callable, Optional
 
 import aiohttp
 import aiohttp.web_middlewares
@@ -9,7 +9,6 @@ import aiohttp.web_request
 import aiohttp.web_response
 import async_timeout
 import multidict
-import yarl
 
 from .base import ClosableResponse, EmptyResponse, Request
 from .context import set_context
@@ -24,34 +23,41 @@ logger = logging.getLogger(__package__)
 class AioHttpRequestSender(RequestSender):
     __slots__ = (
         "_client_session",
-        "_base_url",
+        "_service_name",
         "_network_errors_code",
         "_enrich_request_headers",
         "_buffer_payload",
         "_low_timeout_threshold",
+        "_add_request_headers",
     )
 
     def __init__(
         self,
         client_session: aiohttp.ClientSession,
-        base_url: Union[str, yarl.URL],
         *,
+        service_name: str = "Unknown",
         network_errors_code: int = 489,
         enrich_request_headers: Optional[Callable[[multidict.CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
         low_timeout_threshold: float = 0.005,
+        add_request_headers: bool = True,
     ):
         self._client_session = client_session
-        self._base_url = base_url if isinstance(base_url, yarl.URL) else yarl.URL(base_url)
+        self._service_name = service_name
         self._network_errors_code = network_errors_code
         self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
         self._low_timeout_threshold = low_timeout_threshold
+        self._add_request_headers = add_request_headers
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         request_method = request.method
-        request_url = self._build_url(request.url)
-        request_headers = self._enrich_request_headers_(request.headers, deadline, priority)
+        request_url = request.url
+        request_headers = (
+            self._enrich_request_headers_(request.headers, deadline, priority)
+            if self._add_request_headers
+            else request.headers
+        )
         request_body = request.body
 
         try:
@@ -79,15 +85,12 @@ class AioHttpRequestSender(RequestSender):
         self, headers: Optional[multidict.CIMultiDictProxy[str]], deadline: Deadline, priority: Priority
     ) -> multidict.CIMultiDict[str]:
         enriched_headers = get_headers_to_enrich(headers)
+        enriched_headers.add("X-Service-Name", self._service_name)
         enriched_headers.add("X-Request-Deadline-At", str(deadline))
         enriched_headers.add("X-Request-Priority", str(priority))
         if self._enrich_request_headers is not None:
             self._enrich_request_headers(enriched_headers)
         return enriched_headers
-
-    def _build_url(self, url_or_str: Union[str, yarl.URL]) -> yarl.URL:
-        url = url_or_str if isinstance(url_or_str, yarl.URL) else yarl.URL(url_or_str)
-        return url if url.is_absolute() else self._base_url.join(url)
 
 
 class _AioHttpResponse(ClosableResponse):
@@ -129,7 +132,7 @@ _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohtt
 
 def aiohttp_middleware_factory(
     *,
-    default_timeout: float = 5 * 60,
+    default_timeout: float = 60,
     default_priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
 ) -> _MIDDLEWARE:

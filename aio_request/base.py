@@ -19,9 +19,21 @@ class Request:
         body: Optional[bytes] = None,
     ):
         self.method = method
-        self.url = url
+        self.url = yarl.URL(url) if isinstance(url, str) else url
         self.headers = headers
         self.body = body
+
+    def make_absolute(self, base_url: yarl.URL) -> "Request":
+        if self.url.is_absolute():
+            raise RuntimeError("Request url should be relative")
+        if not base_url.is_absolute():
+            raise RuntimeError("Base url should be absolute")
+        return Request(
+            method=self.method,
+            url=base_url.join(self.url),
+            headers=self.headers,
+            body=self.body,
+        )
 
 
 class Response(abc.ABC):

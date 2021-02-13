@@ -9,7 +9,7 @@ from .priority import Priority
 from .request_sender import RequestSender
 from .requests import delete, get, post, post_json, put, put_json
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
-from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy, setup
 
 try:
     import aiohttp
