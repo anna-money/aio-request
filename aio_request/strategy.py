@@ -281,6 +281,7 @@ def setup(
     response_classifier: Optional[ResponseClassifier] = None,
     default_timeout: float = 60.0,
     default_priority: Priority = Priority.NORMAL,
+    request_enricher: Optional[Callable[[Request], Request]] = None
 ) -> RequestStrategy:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
@@ -288,6 +289,7 @@ def setup(
         response_classifier=response_classifier,
         default_timeout=default_timeout,
         default_priority=default_priority,
+        request_enricher=request_enricher,
     )
     unsafe_method_attempts_count = attempts_count if retry_unsafe_methods else 1
     return MethodBasedStrategy(
