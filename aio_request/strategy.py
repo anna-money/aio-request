@@ -257,12 +257,21 @@ class _ParallelRequestStrategy:
 def setup(
     *,
     request_sender: RequestSender,
-    base_url: yarl.URL,
+    base_url: Union[str, yarl.URL],
     attempts_count: int = 3,
     delays_provider: Callable[[int], float] = linear_delays(),
     retry_unsafe_methods: bool = True,
+    response_classifier: Optional[ResponseClassifier] = None,
+    default_timeout: float = 60.0,
+    default_priority: Priority = Priority.NORMAL,
 ) -> RequestStrategy:
-    factory = RequestStrategiesFactory(request_sender=request_sender, base_url=base_url)
+    factory = RequestStrategiesFactory(
+        request_sender=request_sender,
+        base_url=base_url,
+        response_classifier=response_classifier,
+        default_timeout=default_timeout,
+        default_priority=default_priority,
+    )
     unsafe_method_attempts_count = attempts_count if retry_unsafe_methods else 1
     return MethodBasedStrategy(
         {

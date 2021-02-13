@@ -51,34 +51,35 @@ class AioHttpRequestSender(RequestSender):
         self._add_request_headers = add_request_headers
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        request_method = request.method
-        request_url = request.url
-        request_headers = (
+        method = request.method
+        url = request.url
+        headers = (
             self._enrich_request_headers_(request.headers, deadline, priority)
             if self._add_request_headers
             else request.headers
         )
-        request_body = request.body
+        body = request.body
 
         try:
-            logger.debug("Sending request %s %s with timeout %s", request_method, request_url, deadline.timeout)
+            logger.debug("Sending request %s %s with timeout %s", method, url, deadline.timeout)
             if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-                raise asyncio.TimeoutError()
+                logger.warning("Request %s %s has cancelled to low timeout", method, url)
+                return EmptyResponse(status=408)
             response = await self._client_session.request(
-                request_method,
-                request_url,
-                headers=request_headers,
-                data=request_body,
+                method,
+                url,
+                headers=headers,
+                data=body,
                 timeout=deadline.timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warning("Request %s %s has failed", request_method, request_url, exc_info=True)
+            logger.warning("Request %s %s has failed", method, url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warning("Request %s %s has timed out", request_method, request_url)
+            logger.warning("Request %s %s has timed out", method, url)
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
