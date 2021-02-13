@@ -1,29 +1,40 @@
+import dataclasses
 import datetime
-import time
-
-INITIAL_TIMESTAMP = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).timestamp()
+from typing import Optional
 
 
+@dataclasses.dataclass(init=False, frozen=True, order=True)
 class Deadline:
     @staticmethod
-    def from_timeout(timeout: float) -> "Deadline":
-        return Deadline(time.time() + timeout)
+    def from_timeout(seconds: float) -> "Deadline":
+        return Deadline(datetime.datetime.utcnow() + datetime.timedelta(seconds=seconds))
 
-    __slots__ = ("_deadline_at",)
+    @staticmethod
+    def try_parse(value: Optional[str]) -> Optional["Deadline"]:
+        if value is None:
+            return None
+        try:
+            return Deadline(datetime.datetime.fromisoformat(value))
+        except ValueError:
+            return None
 
-    def __init__(self, deadline_at: float):
-        if deadline_at < INITIAL_TIMESTAMP:
-            raise RuntimeError(f"Invalid deadline_at {deadline_at}: should be >= {INITIAL_TIMESTAMP}")
+    __slots__ = ("deadline_at",)
 
-        self._deadline_at = deadline_at
+    deadline_at: datetime.datetime
+
+    def __init__(self, deadline_at: datetime.datetime):
+        if deadline_at.tzinfo is not None:
+            raise RuntimeError("Deadline should not be zone aware")
+
+        object.__setattr__(self, "deadline_at", deadline_at)
 
     @property
     def timeout(self) -> float:
-        return max(self._deadline_at - time.time(), 0.001)  # 0 is infinite
+        return max((self.deadline_at - datetime.datetime.utcnow()).total_seconds(), 0.001)  # 0 is infinite
 
     @property
     def expired(self) -> bool:
-        return self._deadline_at - time.time() <= 0
+        return (self.deadline_at - datetime.datetime.utcnow()).total_seconds() <= 0
 
     def __str__(self) -> str:
-        return str(self._deadline_at)
+        return str(self.deadline_at.isoformat())

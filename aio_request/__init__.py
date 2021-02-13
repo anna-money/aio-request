@@ -1,7 +1,8 @@
 # flake8: noqa
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 from .base import ClosableResponse, EmptyResponse, Request, Response
+from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .priority import Priority
@@ -13,6 +14,6 @@ from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStra
 try:
     import aiohttp
 
-    from .aiohttp import AioHttpRequestSender
+    from .aiohttp import AioHttpRequestSender, aiohttp_middleware_factory
 except ImportError:
     pass

@@ -1,17 +1,24 @@
 import asyncio
 import json
-from typing import Any, Callable, Optional, Union
+import logging
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import aiohttp
+import aiohttp.web_middlewares
+import aiohttp.web_request
+import aiohttp.web_response
+import async_timeout
 import multidict
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Request
+from .context import set_context
 from .deadline import Deadline
-from .log import logger
 from .priority import Priority
 from .request_sender import RequestSender
 from .utils import get_headers_to_enrich
+
+logger = logging.getLogger(__package__)
 
 
 class AioHttpRequestSender(RequestSender):
@@ -21,6 +28,7 @@ class AioHttpRequestSender(RequestSender):
         "_network_errors_code",
         "_enrich_request_headers",
         "_buffer_payload",
+        "_low_timeout_threshold",
     )
 
     def __init__(
@@ -31,12 +39,14 @@ class AioHttpRequestSender(RequestSender):
         network_errors_code: int = 489,
         enrich_request_headers: Optional[Callable[[multidict.CIMultiDict[str]], None]] = None,
         buffer_payload: bool = True,
+        low_timeout_threshold: float = 0.005,
     ):
         self._client_session = client_session
         self._base_url = base_url if isinstance(base_url, yarl.URL) else yarl.URL(base_url)
         self._network_errors_code = network_errors_code
         self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
+        self._low_timeout_threshold = low_timeout_threshold
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         request_method = request.method
@@ -46,7 +56,7 @@ class AioHttpRequestSender(RequestSender):
 
         try:
             logger.debug("Sending request %s %s with timeout %s", request_method, request_url, deadline.timeout)
-            if deadline.expired:
+            if deadline.expired or deadline.timeout < self._low_timeout_threshold:
                 raise asyncio.TimeoutError()
             response = await self._client_session.request(
                 request_method,
@@ -59,10 +69,10 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warn("Request %s %s has failed", request_method, request_url, exc_info=True)
+            logger.warning("Request %s %s has failed", request_method, request_url, exc_info=True)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warn("Request %s %s has timed out", request_method, request_url)
+            logger.warning("Request %s %s has timed out", request_method, request_url)
             return EmptyResponse(status=408)
 
     def _enrich_request_headers_(
@@ -111,3 +121,35 @@ class _AioHttpResponse(ClosableResponse):
 
     async def text(self, encoding: Optional[str] = None) -> str:
         return await self._response.text(encoding=encoding)
+
+
+_HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
+_MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
+
+
+def aiohttp_middleware_factory(
+    *,
+    default_timeout: float = 5 * 60,
+    default_priority: Priority = Priority.NORMAL,
+    low_timeout_threshold: float = 0.005,
+) -> _MIDDLEWARE:
+    @aiohttp.web_middlewares.middleware
+    async def middleware(
+        request: aiohttp.web_request.Request, handler: _HANDLER
+    ) -> aiohttp.web_response.StreamResponse:
+        deadline = Deadline.try_parse(request.headers.get("X-Request-Deadline-At")) or Deadline.from_timeout(
+            default_timeout
+        )
+        priority = Priority.try_parse(request.headers.get("X-Request-Priority")) or default_priority
+
+        if deadline.expired or deadline.timeout <= low_timeout_threshold:
+            return aiohttp.web_response.Response(status=408)
+
+        with set_context(deadline=deadline, priority=priority):
+            try:
+                async with async_timeout.timeout(timeout=deadline.timeout):
+                    return await handler(request)
+            except asyncio.TimeoutError:
+                return aiohttp.web_response.Response(status=408)
+
+    return middleware

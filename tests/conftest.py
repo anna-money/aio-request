@@ -4,7 +4,21 @@ from dataclasses import dataclass
 from queue import Queue
 from typing import List, Union
 
-from aio_request import ClosableResponse, Deadline, EmptyResponse, Priority, Request, RequestSender
+import aiohttp.web
+import aiohttp.web_request
+import aiohttp.web_response
+import pytest
+
+import aio_request
+from aio_request import (
+    ClosableResponse,
+    Deadline,
+    EmptyResponse,
+    Priority,
+    Request,
+    RequestSender,
+    aiohttp_middleware_factory,
+)
 
 logging.basicConfig(level="DEBUG")
 
@@ -40,3 +54,24 @@ class TestRequestSender(RequestSender):
             status = response_or_configuration
 
         return EmptyResponse(status=status)
+
+
+@pytest.fixture
+async def service(aiohttp_client):
+    async def handler(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
+        await asyncio.sleep(float(request.query.get("delay", 0)))
+        return aiohttp.web_response.Response()
+
+    app = aiohttp.web.Application(middlewares=[aiohttp_middleware_factory()])
+    app.router.add_get("/get", handler)
+    app.router.add_post("/post", handler)
+    return await aiohttp_client(app)
+
+
+@pytest.fixture
+async def request_strategies_factory(service):
+    async with aiohttp.ClientSession() as client_session:
+        request_sender = aio_request.AioHttpRequestSender(
+            client_session, f"http://{service.server.host}:{service.server.port}/"
+        )
+        yield aio_request.RequestStrategiesFactory(request_sender)

@@ -1,4 +1,9 @@
 import asyncio
+import datetime
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
 
 import pytest
 
@@ -15,4 +20,9 @@ async def test_deadline_expired():
 
 async def test_invalid_deadline_at():
     with pytest.raises(RuntimeError):
-        Deadline(5)
+        Deadline(datetime.datetime.utcnow().replace(tzinfo=zoneinfo.ZoneInfo("UTC")))
+
+
+async def test_parse_str():
+    deadline = Deadline.from_timeout(1)
+    assert deadline == Deadline.try_parse(str(deadline))
