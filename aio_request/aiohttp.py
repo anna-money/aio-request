@@ -22,9 +22,7 @@ logger = logging.getLogger(__package__)
 class AioHttpRequestSender(RequestSender):
     __slots__ = (
         "_client_session",
-        "_service_name",
         "_network_errors_code",
-        "_enrich_request_headers",
         "_buffer_payload",
         "_low_timeout_threshold",
     )
@@ -33,34 +31,21 @@ class AioHttpRequestSender(RequestSender):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        service_name: Optional[str] = None,
         network_errors_code: int = 489,
-        enrich_request_headers: bool = True,
         buffer_payload: bool = True,
-        low_timeout_threshold: float = 0.005,
+        request_enricher: Optional[Callable[[Request], Request]] = None,
     ):
         self._client_session = client_session
-        self._service_name = service_name
         self._network_errors_code = network_errors_code
-        self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
-        self._low_timeout_threshold = low_timeout_threshold
+        self._request_enricher = request_enricher
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        if self._enrich_request_headers:
-            extra_headers = {
-                "X-Request-Deadline-At": str(deadline),
-                "X-Request-Priority": str(priority),
-            }
-            if self._service_name is not None:
-                extra_headers["X-Service-Name"] = self._service_name
-            request = request.update_headers(extra_headers)
+        if self._request_enricher:
+            request = self._request_enricher(request)
 
         try:
             logger.debug("Sending request %s %s with timeout %s", request.method, request.url, deadline.timeout)
-            if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-                logger.warning("Request %s %s has cancelled due to expired deadline", request.method, request.url)
-                return EmptyResponse(status=408)
             response = await self._client_session.request(
                 request.method,
                 request.url,

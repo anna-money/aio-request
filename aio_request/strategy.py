@@ -271,32 +271,71 @@ class _ParallelRequestStrategy:
         )
 
 
+class _RequestSender(RequestSender):
+    __slots__ = ("_request_sender", "_emit_system_headers", "_low_timeout_threshold")
+
+    def __init__(
+        self,
+        *,
+        request_sender: RequestSender,
+        emit_system_headers: bool = True,
+        low_timeout_threshold: float = 0.005,
+    ):
+        self._emit_system_headers = emit_system_headers
+        self._request_sender = request_sender
+        self._low_timeout_threshold = low_timeout_threshold
+
+    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
+        if self._emit_system_headers:
+            request = request.update_headers({
+                "X-Request-Deadline-At": str(deadline),
+                "X-Request-Priority": str(priority),
+            })
+        if deadline.expired or deadline.timeout < self._low_timeout_threshold:
+            return EmptyResponse(status=408)
+        return await self._request_sender.send(request, deadline, priority)
+
+
 def setup(
     *,
     request_sender: RequestSender,
     base_url: Union[str, yarl.URL],
-    attempts_count: int = 3,
-    delays_provider: Callable[[int], float] = linear_delays(),
-    retry_unsafe_methods: bool = True,
+    safe_method_attempts_count: int = 3,
+    unsafe_method_attempts_count: int = 3,
+    safe_method_delays_provider: Callable[[int], float] = linear_delays(),
+    unsafe_method_delays_provider: Callable[[int], float] = linear_delays(),
     response_classifier: Optional[ResponseClassifier] = None,
     default_timeout: float = 60.0,
     default_priority: Priority = Priority.NORMAL,
-    request_enricher: Optional[Callable[[Request], Request]] = None
+    low_timeout_threshold: float = 0.005,
+    emit_system_headers: bool = True,
+    request_enricher: Optional[Callable[[Request], Request]] = None,
 ) -> RequestStrategy:
     factory = RequestStrategiesFactory(
-        request_sender=request_sender,
+        request_sender=_RequestSender(
+            request_sender=request_sender,
+            emit_system_headers=emit_system_headers,
+            low_timeout_threshold=low_timeout_threshold,
+        ),
         base_url=base_url,
         response_classifier=response_classifier,
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
     )
-    unsafe_method_attempts_count = attempts_count if retry_unsafe_methods else 1
     return MethodBasedStrategy(
         {
-            "GET": factory.parallel(attempts_count=attempts_count, delays_provider=delays_provider),
-            "POST": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
-            "PUT": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
-            "DELETE": factory.sequential(attempts_count=unsafe_method_attempts_count, delays_provider=delays_provider),
+            "GET": factory.parallel(
+                attempts_count=safe_method_attempts_count, delays_provider=safe_method_delays_provider
+            ),
+            "POST": factory.sequential(
+                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
+            ),
+            "PUT": factory.sequential(
+                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
+            ),
+            "DELETE": factory.sequential(
+                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
+            ),
         }
     )
