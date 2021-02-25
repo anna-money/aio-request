@@ -1,4 +1,4 @@
-from aio_request import Deadline, DefaultResponseClassifier, RequestStrategiesFactory, get, linear_delays, Priority
+from aio_request import Deadline, DefaultResponseClassifier, Priority, RequestStrategiesFactory, get, linear_delays
 from tests.conftest import FakeRequestSender, FakeResponseConfiguration
 
 

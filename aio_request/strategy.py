@@ -4,8 +4,7 @@ from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set
 
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
-from .context import get_context
+from .base import ClosableResponse, EmptyResponse, Header, Request, Response
 from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
@@ -293,80 +292,3 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
         if attempt > 0:
             await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
         return await self._send_request()
-
-
-class Client:
-    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout")
-
-    def __init__(
-        self,
-        request_strategy: RequestStrategy,
-        *,
-        default_timeout: float = 60,
-        default_priority: Priority = Priority.NORMAL,
-        request_enricher: Optional[Callable[[Request], Request]] = None,
-    ):
-        self._default_priority = default_priority
-        self._default_timeout = default_timeout
-        self._request_enricher = request_enricher
-        self._request_strategy = request_strategy
-
-    def request(
-        self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
-    ) -> AsyncContextManager[Response]:
-        if request.url.is_absolute():
-            raise RuntimeError("Request url should be relative")
-        if self._request_enricher is not None:
-            request = self._request_enricher(request)
-        context = get_context()
-        return self._request_strategy.request(
-            request,
-            context.deadline or deadline or Deadline.from_timeout(self._default_timeout),
-            context.priority or priority or self._default_priority,
-        )
-
-
-def setup(
-    *,
-    request_sender: RequestSender,
-    base_url: Union[str, yarl.URL],
-    safe_method_attempts_count: int = 3,
-    unsafe_method_attempts_count: int = 3,
-    safe_method_delays_provider: Callable[[int], float] = linear_delays(),
-    unsafe_method_delays_provider: Callable[[int], float] = linear_delays(),
-    response_classifier: Optional[ResponseClassifier] = None,
-    default_timeout: float = 60.0,
-    default_priority: Priority = Priority.NORMAL,
-    low_timeout_threshold: float = 0.005,
-    emit_system_headers: bool = True,
-    request_enricher: Optional[Callable[[Request], Request]] = None,
-) -> Client:
-    factory = RequestStrategiesFactory(
-        request_sender=request_sender,
-        base_url=base_url,
-        response_classifier=response_classifier,
-        low_timeout_threshold=low_timeout_threshold,
-        emit_system_headers=emit_system_headers,
-    )
-    request_strategy = MethodBasedStrategy(
-        {
-            Method.GET: factory.parallel(
-                attempts_count=safe_method_attempts_count, delays_provider=safe_method_delays_provider
-            ),
-            Method.POST: factory.sequential(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
-            Method.PUT: factory.sequential(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
-            Method.DELETE: factory.sequential(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
-        }
-    )
-    return Client(
-        request_strategy,
-        default_timeout=default_timeout,
-        default_priority=default_priority,
-        request_enricher=request_enricher,
-    )

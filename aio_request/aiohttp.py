@@ -126,7 +126,7 @@ _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohtt
 
 def aiohttp_middleware_factory(
     *,
-    default_timeout: float = 60,
+    default_timeout: float = 20,
     default_priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
 ) -> _MIDDLEWARE:
