@@ -1,14 +1,14 @@
 from aio_request import Deadline, DefaultResponseClassifier, RequestStrategiesFactory, get, linear_delays
-from tests.conftest import TestRequestSender, TestResponseConfiguration
+from tests.conftest import FakeRequestSender, FakeResponseConfiguration
 
 
 async def test_timeout_because_of_expiration():
     strategies_factory = RequestStrategiesFactory(
-        TestRequestSender(
+        FakeRequestSender(
             [
-                TestResponseConfiguration(status=200, delay_seconds=5),
-                TestResponseConfiguration(status=200, delay_seconds=5),
-                TestResponseConfiguration(status=200, delay_seconds=5),
+                FakeResponseConfiguration(status=200, delay_seconds=5),
+                FakeResponseConfiguration(status=200, delay_seconds=5),
+                FakeResponseConfiguration(status=200, delay_seconds=5),
             ],
         ),
         base_url="http://service.com",
@@ -22,7 +22,7 @@ async def test_timeout_because_of_expiration():
 
 async def test_succeed_response_received_first_slow_request():
     strategies_factory = RequestStrategiesFactory(
-        TestRequestSender([TestResponseConfiguration(status=200, delay_seconds=5), 200]),
+        FakeRequestSender([FakeResponseConfiguration(status=200, delay_seconds=5), 200]),
         base_url="http://service.com",
     )
     forking_strategy = strategies_factory.parallel()
@@ -34,7 +34,7 @@ async def test_succeed_response_received_first_slow_request():
 
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([489, 200]),
+        request_sender=FakeRequestSender([489, 200]),
         response_classifier=DefaultResponseClassifier(),
         base_url="http://service.com",
     )
@@ -47,7 +47,7 @@ async def test_succeed_response_received():
 
 async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([499, 499, 499]),
+        request_sender=FakeRequestSender([499, 499, 499]),
         response_classifier=DefaultResponseClassifier(),
         base_url="http://service.com",
     )

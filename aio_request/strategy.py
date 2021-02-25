@@ -21,8 +21,8 @@ class RequestStrategy(abc.ABC):
     def request(
         self,
         request: Request,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Union[Priority]] = None,
+        deadline: Deadline,
+        priority: Priority = Priority.NORMAL,
     ) -> AsyncContextManager[Response]:
         ...
 
@@ -36,8 +36,8 @@ class MethodBasedStrategy(RequestStrategy):
     def request(
         self,
         request: Request,
-        deadline: Optional[Union[Deadline]] = None,
-        priority: Optional[Union[Priority]] = None,
+        deadline: Deadline,
+        priority: Priority = Priority.NORMAL,
     ) -> AsyncContextManager[Response]:
         return self._strategy_by_method[request.method].request(request, deadline, priority)
 
@@ -47,9 +47,6 @@ class RequestStrategiesFactory:
         "_request_sender",
         "_base_url",
         "_response_classifier",
-        "_default_timeout",
-        "_default_priority",
-        "_request_enricher",
         "_emit_system_headers",
         "_low_timeout_threshold",
     )
@@ -59,18 +56,12 @@ class RequestStrategiesFactory:
         request_sender: RequestSender,
         base_url: Union[str, yarl.URL],
         response_classifier: Optional[ResponseClassifier] = None,
-        default_timeout: float = 60,
-        default_priority: Priority = Priority.NORMAL,
-        request_enricher: Optional[Callable[[Request], Request]] = None,
         emit_system_headers: bool = True,
         low_timeout_threshold: float = 0.005,
     ):
         self._request_sender = request_sender
         self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
         self._response_classifier = response_classifier or DefaultResponseClassifier()
-        self._default_timeout = default_timeout
-        self._default_priority = default_priority
-        self._request_enricher = request_enricher
         self._low_timeout_threshold = low_timeout_threshold
         self._emit_system_headers = emit_system_headers
 
@@ -78,16 +69,15 @@ class RequestStrategiesFactory:
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
-            self._request_enricher,
             lambda request, deadline, priority: _SequentialRequestStrategy(
                 request_sender=self._request_sender,
                 base_url=self._base_url,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=deadline or Deadline.from_timeout(self._default_timeout),
+                deadline=deadline,
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
-                priority=priority or self._default_priority,
+                priority=priority,
                 emit_system_headers=self._emit_system_headers,
                 low_timeout_threshold=self._low_timeout_threshold,
             ),
@@ -97,16 +87,15 @@ class RequestStrategiesFactory:
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
     ) -> RequestStrategy:
         return _RequestStrategy(
-            self._request_enricher,
             lambda request, deadline, priority: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
                 base_url=self._base_url,
                 response_classifier=self._response_classifier,
                 request=request,
-                deadline=deadline or Deadline.from_timeout(self._default_timeout),
+                deadline=deadline,
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
-                priority=priority or self._default_priority,
+                priority=priority,
                 emit_system_headers=self._emit_system_headers,
                 low_timeout_threshold=self._low_timeout_threshold,
             ),
@@ -114,31 +103,21 @@ class RequestStrategiesFactory:
 
 
 class _RequestStrategy(RequestStrategy):
-    __slots__ = (
-        "_request_enricher",
-        "_create_strategy",
-    )
+    __slots__ = ("_create_strategy",)
 
     def __init__(
         self,
-        request_enricher: Optional[Callable[[Request], Request]],
-        create_strategy: Callable[[Request, Optional[Deadline], Optional[Priority]], AsyncContextManager[Response]],
+        create_strategy: Callable[[Request, Deadline, Priority], AsyncContextManager[Response]],
     ):
-        self._request_enricher = request_enricher
         self._create_strategy = create_strategy
 
     def request(
         self,
         request: Request,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Priority] = None,
+        deadline: Deadline,
+        priority: Priority = Priority.NORMAL,
     ) -> AsyncContextManager[Response]:
-        if request.url.is_absolute():
-            raise RuntimeError("Request url should be relative")
-        if self._request_enricher is not None:
-            request = self._request_enricher(request)
-        context = get_context()
-        return self._create_strategy(request, context.deadline or deadline, context.priority or priority)
+        return self._create_strategy(request, deadline, priority)
 
 
 class _RequestStrategyBase(abc.ABC):
@@ -316,6 +295,37 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
         return await self._send_request()
 
 
+class Client:
+    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout")
+
+    def __init__(
+        self,
+        request_strategy: RequestStrategy,
+        *,
+        default_timeout: float = 60,
+        default_priority: Priority = Priority.NORMAL,
+        request_enricher: Optional[Callable[[Request], Request]] = None,
+    ):
+        self._default_priority = default_priority
+        self._default_timeout = default_timeout
+        self._request_enricher = request_enricher
+        self._request_strategy = request_strategy
+
+    def request(
+        self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
+    ) -> AsyncContextManager[Response]:
+        if request.url.is_absolute():
+            raise RuntimeError("Request url should be relative")
+        if self._request_enricher is not None:
+            request = self._request_enricher(request)
+        context = get_context()
+        return self._request_strategy.request(
+            request,
+            context.deadline or deadline or Deadline.from_timeout(self._default_timeout),
+            context.priority or priority or self._default_priority,
+        )
+
+
 def setup(
     *,
     request_sender: RequestSender,
@@ -330,18 +340,15 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-) -> RequestStrategy:
+) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
         base_url=base_url,
         response_classifier=response_classifier,
-        default_timeout=default_timeout,
-        default_priority=default_priority,
-        request_enricher=request_enricher,
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
     )
-    return MethodBasedStrategy(
+    request_strategy = MethodBasedStrategy(
         {
             Method.GET: factory.parallel(
                 attempts_count=safe_method_attempts_count, delays_provider=safe_method_delays_provider
@@ -356,4 +363,10 @@ def setup(
                 attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
             ),
         }
+    )
+    return Client(
+        request_strategy,
+        default_timeout=default_timeout,
+        default_priority=default_priority,
+        request_enricher=request_enricher,
     )

@@ -16,15 +16,15 @@ logging.basicConfig(level="DEBUG")
 
 
 @dataclass(frozen=True)
-class TestResponseConfiguration:
+class FakeResponseConfiguration:
     status: int
     delay_seconds: float
 
 
-class TestRequestSender(RequestSender):
+class FakeRequestSender(RequestSender):
     __slots__ = ("_responses",)
 
-    def __init__(self, responses: List[Union[int, TestResponseConfiguration]]):
+    def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
         self._responses = Queue()
         for response in responses:
             self._responses.put(response)
@@ -34,7 +34,7 @@ class TestRequestSender(RequestSender):
             raise RuntimeError("No response left")
 
         response_or_configuration = self._responses.get_nowait()
-        if isinstance(response_or_configuration, TestResponseConfiguration):
+        if isinstance(response_or_configuration, FakeResponseConfiguration):
             delay_seconds = response_or_configuration.delay_seconds
             if delay_seconds >= timeout:
                 status = 408
