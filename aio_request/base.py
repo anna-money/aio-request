@@ -8,6 +8,19 @@ import yarl
 from .utils import EMPTY_HEADERS, get_headers_to_enrich
 
 
+class Method:
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+
+
+class Header:
+    CONTENT_TYPE = multidict.istr("Content-Type")
+    X_REQUEST_DEADLINE_AT = multidict.istr("X-Request-Deadline-At")
+    X_REQUEST_PRIORITY = multidict.istr("X-Request-Priority")
+
+
 class Request:
     __slots__ = ("method", "url", "headers", "body")
 

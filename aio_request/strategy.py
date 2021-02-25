@@ -4,7 +4,7 @@ from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set
 
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Request, Response
+from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
@@ -287,10 +287,12 @@ class _RequestSender(RequestSender):
 
     async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
         if self._emit_system_headers:
-            request = request.update_headers({
-                "X-Request-Deadline-At": str(deadline),
-                "X-Request-Priority": str(priority),
-            })
+            request = request.update_headers(
+                {
+                    Header.X_REQUEST_DEADLINE_AT: str(deadline),
+                    Header.X_REQUEST_PRIORITY: str(priority),
+                }
+            )
         if deadline.expired or deadline.timeout < self._low_timeout_threshold:
             return EmptyResponse(status=408)
         return await self._request_sender.send(request, deadline, priority)
@@ -325,16 +327,16 @@ def setup(
     )
     return MethodBasedStrategy(
         {
-            "GET": factory.parallel(
+            Method.GET: factory.parallel(
                 attempts_count=safe_method_attempts_count, delays_provider=safe_method_delays_provider
             ),
-            "POST": factory.sequential(
+            Method.POST: factory.sequential(
                 attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
             ),
-            "PUT": factory.sequential(
+            Method.PUT: factory.sequential(
                 attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
             ),
-            "DELETE": factory.sequential(
+            Method.DELETE: factory.sequential(
                 attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
             ),
         }

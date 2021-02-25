@@ -1,7 +1,7 @@
 # flake8: noqa
 __version__ = "0.0.15"
 
-from .base import ClosableResponse, EmptyResponse, Request, Response
+from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays

@@ -10,7 +10,7 @@ import aiohttp.web_response
 import async_timeout
 import multidict
 
-from .base import ClosableResponse, EmptyResponse, Request
+from .base import ClosableResponse, EmptyResponse, Header, Request
 from .context import set_context
 from .deadline import Deadline
 from .priority import Priority
@@ -57,7 +57,16 @@ class AioHttpRequestSender(RequestSender):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warning("Request %s %s has failed", request.method, request.url, exc_info=True)
+            logger.warning(
+                "Request %s %s has failed",
+                request.method,
+                request.url,
+                exc_info=True,
+                extra={
+                    "aio_request_method": request.method,
+                    "aio_request_url": request.url,
+                },
+            )
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
             logger.warning("Request %s %s has timed out", request.method, request.url)
@@ -111,10 +120,10 @@ def aiohttp_middleware_factory(
     async def middleware(
         request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
-        deadline = Deadline.try_parse(request.headers.get("X-Request-Deadline-At")) or Deadline.from_timeout(
+        deadline = Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT)) or Deadline.from_timeout(
             default_timeout
         )
-        priority = Priority.try_parse(request.headers.get("X-Request-Priority")) or default_priority
+        priority = Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY)) or default_priority
 
         if deadline.expired or deadline.timeout <= low_timeout_threshold:
             return aiohttp.web_response.Response(status=408)
