@@ -24,7 +24,6 @@ class AioHttpRequestSender(RequestSender):
         "_client_session",
         "_network_errors_code",
         "_buffer_payload",
-        "_low_timeout_threshold",
     )
 
     def __init__(
@@ -33,25 +32,30 @@ class AioHttpRequestSender(RequestSender):
         *,
         network_errors_code: int = 489,
         buffer_payload: bool = True,
-        request_enricher: Optional[Callable[[Request], Request]] = None,
     ):
         self._client_session = client_session
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
-        self._request_enricher = request_enricher
 
-    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        if self._request_enricher:
-            request = self._request_enricher(request)
-
+    async def send(self, request: Request, timeout: float) -> ClosableResponse:
         try:
-            logger.debug("Sending request %s %s with timeout %s", request.method, request.url, deadline.timeout)
+            logger.debug(
+                "Sending request %s %s with timeout %s",
+                request.method,
+                request.url,
+                timeout,
+                extra={
+                    "aio_request_method": request.method,
+                    "aio_request_url": request.url,
+                    "aio_request_timeout": timeout,
+                },
+            )
             response = await self._client_session.request(
                 request.method,
                 request.url,
                 headers=request.headers,
                 data=request.body,
-                timeout=deadline.timeout,
+                timeout=timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
@@ -69,7 +73,17 @@ class AioHttpRequestSender(RequestSender):
             )
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warning("Request %s %s has timed out", request.method, request.url)
+            logger.warning(
+                "Request %s %s has timed out after %s",
+                request.method,
+                request.url,
+                timeout,
+                extra={
+                    "aio_request_method": request.method,
+                    "aio_request_url": request.url,
+                    "aio_request_timeout": timeout,
+                },
+            )
             return EmptyResponse(status=408)
 
 

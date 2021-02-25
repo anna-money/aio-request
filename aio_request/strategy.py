@@ -50,6 +50,8 @@ class RequestStrategiesFactory:
         "_default_timeout",
         "_default_priority",
         "_request_enricher",
+        "_emit_system_headers",
+        "_low_timeout_threshold",
     )
 
     def __init__(
@@ -60,6 +62,8 @@ class RequestStrategiesFactory:
         default_timeout: float = 60,
         default_priority: Priority = Priority.NORMAL,
         request_enricher: Optional[Callable[[Request], Request]] = None,
+        emit_system_headers: bool = True,
+        low_timeout_threshold: float = 0.005,
     ):
         self._request_sender = request_sender
         self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
@@ -67,6 +71,8 @@ class RequestStrategiesFactory:
         self._default_timeout = default_timeout
         self._default_priority = default_priority
         self._request_enricher = request_enricher
+        self._low_timeout_threshold = low_timeout_threshold
+        self._emit_system_headers = emit_system_headers
 
     def sequential(
         self, *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
@@ -82,6 +88,8 @@ class RequestStrategiesFactory:
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._default_priority,
+                emit_system_headers=self._emit_system_headers,
+                low_timeout_threshold=self._low_timeout_threshold,
             ),
         )
 
@@ -99,6 +107,8 @@ class RequestStrategiesFactory:
                 attempts_count=attempts_count,
                 delays_provider=delays_provider,
                 priority=priority or self._default_priority,
+                emit_system_headers=self._emit_system_headers,
+                low_timeout_threshold=self._low_timeout_threshold,
             ),
         )
 
@@ -131,83 +141,123 @@ class _RequestStrategy(RequestStrategy):
         return self._create_strategy(request, context.deadline or deadline, context.priority or priority)
 
 
-class _SequentialRequestStrategy:
+class _RequestStrategyBase(abc.ABC):
     __slots__ = (
-        "_responses",
         "_request_sender",
         "_base_url",
         "_request",
-        "_response_classifier",
-        "_attempts_count",
         "_deadline",
         "_priority",
-        "_delays_provider",
+        "_responses",
+        "_low_timeout_threshold",
+        "_emit_system_headers",
     )
 
     def __init__(
         self,
-        *,
         request_sender: RequestSender,
+        *,
         base_url: yarl.URL,
-        response_classifier: ResponseClassifier,
         request: Request,
         deadline: Deadline,
         priority: Priority,
-        attempts_count: int,
-        delays_provider: Callable[[int], float],
+        emit_system_headers: bool,
+        low_timeout_threshold: float,
     ):
-        if attempts_count < 1:
-            raise RuntimeError("Attempts count should be >= 1")
-
-        self._delays_provider = delays_provider
-        self._deadline = deadline
+        self._low_timeout_threshold = low_timeout_threshold
+        self._emit_system_headers = emit_system_headers
         self._priority = priority
-        self._attempts_count = attempts_count
+        self._deadline = deadline
         self._request = request
-        self._request_sender = request_sender
         self._base_url = base_url
+        self._request_sender = request_sender
         self._responses: List[ClosableResponse] = []
-        self._response_classifier = response_classifier
 
+    @abc.abstractmethod
     async def __aenter__(self) -> Response:
-        for attempt in range(self._attempts_count):
-            if self._deadline.expired:
-                return EmptyResponse(status=408)
-
-            response = await self._request_sender.send(
-                self._request.make_absolute(self._base_url), self._deadline, self._priority
-            )
-            self._responses.append(response)
-            if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
-                return response
-
-            if attempt + 1 == self._attempts_count:
-                break
-
-            retry_delay = self._delays_provider(attempt + 1)
-            if self._deadline.timeout < retry_delay:
-                break
-
-            await asyncio.sleep(retry_delay)
-
-        assert len(self._responses) > 0
-
-        return self._responses[-1]
+        pass
 
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
         await asyncio.shield(close_many(self._responses))
         return False
 
+    async def _send_request(self) -> Response:
+        if self._deadline.expired or self._deadline.timeout < self._low_timeout_threshold:
+            response: ClosableResponse = EmptyResponse(status=408)
+        else:
+            request = self._request.make_absolute(self._base_url)
+            if self._emit_system_headers:
+                request = request.update_headers(
+                    {
+                        Header.X_REQUEST_DEADLINE_AT: str(self._deadline),
+                        Header.X_REQUEST_PRIORITY: str(self._priority),
+                    }
+                )
+            response = await self._request_sender.send(request, self._deadline.timeout)
+        self._responses.append(response)
+        return response
 
-class _ParallelRequestStrategy:
+    @property
+    def _last_response(self) -> Response:
+        assert len(self._responses) > 0
+
+        return self._responses[-1]
+
+
+class _SequentialRequestStrategy(_RequestStrategyBase):
     __slots__ = (
-        "_responses",
-        "_request_sender",
-        "_base_url",
-        "_request",
         "_response_classifier",
-        "_deadline",
-        "_priority",
+        "_attempts_count",
+        "_delays_provider",
+    )
+
+    def __init__(
+        self,
+        *,
+        request_sender: RequestSender,
+        base_url: yarl.URL,
+        response_classifier: ResponseClassifier,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
+        attempts_count: int,
+        delays_provider: Callable[[int], float],
+        emit_system_headers: bool,
+        low_timeout_threshold: float,
+    ):
+        super().__init__(
+            request_sender,
+            base_url=base_url,
+            request=request,
+            deadline=deadline,
+            priority=priority,
+            emit_system_headers=emit_system_headers,
+            low_timeout_threshold=low_timeout_threshold,
+        )
+        if attempts_count < 1:
+            raise RuntimeError("Attempts count should be >= 1")
+
+        self._response_classifier = response_classifier
+        self._delays_provider = delays_provider
+        self._attempts_count = attempts_count
+
+    async def __aenter__(self) -> Response:
+        for attempt in range(self._attempts_count):
+            response = await self._send_request()
+            if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
+                return response
+            if attempt + 1 == self._attempts_count:
+                break
+            retry_delay = self._delays_provider(attempt + 1)
+            if self._deadline.timeout < retry_delay:
+                break
+            await asyncio.sleep(retry_delay)
+        return self._last_response
+
+
+class _ParallelRequestStrategy(_RequestStrategyBase):
+    __slots__ = (
+        "_response_classifier",
         "_attempts_count",
         "_delays_provider",
     )
@@ -223,22 +273,27 @@ class _ParallelRequestStrategy:
         priority: Priority,
         attempts_count: int,
         delays_provider: Callable[[int], float],
+        emit_system_headers: bool = True,
+        low_timeout_threshold: float = 0.005,
     ):
+        super().__init__(
+            request_sender,
+            base_url=base_url,
+            request=request,
+            deadline=deadline,
+            priority=priority,
+            emit_system_headers=emit_system_headers,
+            low_timeout_threshold=low_timeout_threshold,
+        )
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
-        self._attempts_count = attempts_count
-        self._deadline = deadline
-        self._priority = priority
-        self._request = request
-        self._request_sender = request_sender
-        self._base_url = base_url
-        self._responses: List[ClosableResponse] = []
         self._response_classifier = response_classifier
+        self._attempts_count = attempts_count
         self._delays_provider = delays_provider
 
     async def __aenter__(self) -> Response:
-        pending_tasks: Set[asyncio.Future[ClosableResponse]] = set()
+        pending_tasks: Set[asyncio.Future[Response]] = set()
         for attempt in range(0, self._attempts_count):
             pending_tasks.add(asyncio.create_task(self._schedule_request(attempt)))
 
@@ -247,55 +302,18 @@ class _ParallelRequestStrategy:
                 completed_tasks, pending_tasks = await asyncio.wait(pending_tasks, return_when=asyncio.FIRST_COMPLETED)
                 for completed_task in completed_tasks:
                     response = await completed_task
-                    self._responses.append(response)
                     if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
                         return response
         finally:
             for pending_task in pending_tasks:
                 pending_task.cancel()
 
-        assert len(self._responses) > 0
-        return self._responses[-1]
+        return self._last_response
 
-    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        await asyncio.shield(close_many(self._responses))
-        return False
-
-    async def _schedule_request(self, attempt: int) -> ClosableResponse:
+    async def _schedule_request(self, attempt: int) -> Response:
         if attempt > 0:
             await asyncio.sleep(min(self._delays_provider(attempt), self._deadline.timeout))
-        if self._deadline.expired:
-            return EmptyResponse(status=408)
-        return await self._request_sender.send(
-            self._request.make_absolute(self._base_url), self._deadline, self._priority
-        )
-
-
-class _RequestSender(RequestSender):
-    __slots__ = ("_request_sender", "_emit_system_headers", "_low_timeout_threshold")
-
-    def __init__(
-        self,
-        *,
-        request_sender: RequestSender,
-        emit_system_headers: bool = True,
-        low_timeout_threshold: float = 0.005,
-    ):
-        self._emit_system_headers = emit_system_headers
-        self._request_sender = request_sender
-        self._low_timeout_threshold = low_timeout_threshold
-
-    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        if self._emit_system_headers:
-            request = request.update_headers(
-                {
-                    Header.X_REQUEST_DEADLINE_AT: str(deadline),
-                    Header.X_REQUEST_PRIORITY: str(priority),
-                }
-            )
-        if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-            return EmptyResponse(status=408)
-        return await self._request_sender.send(request, deadline, priority)
+        return await self._send_request()
 
 
 def setup(
@@ -314,16 +332,14 @@ def setup(
     request_enricher: Optional[Callable[[Request], Request]] = None,
 ) -> RequestStrategy:
     factory = RequestStrategiesFactory(
-        request_sender=_RequestSender(
-            request_sender=request_sender,
-            emit_system_headers=emit_system_headers,
-            low_timeout_threshold=low_timeout_threshold,
-        ),
+        request_sender=request_sender,
         base_url=base_url,
         response_classifier=response_classifier,
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
+        low_timeout_threshold=low_timeout_threshold,
+        emit_system_headers=emit_system_headers,
     )
     return MethodBasedStrategy(
         {

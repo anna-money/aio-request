@@ -10,15 +10,7 @@ import aiohttp.web_response
 import pytest
 
 import aio_request
-from aio_request import (
-    ClosableResponse,
-    Deadline,
-    EmptyResponse,
-    Priority,
-    Request,
-    RequestSender,
-    aiohttp_middleware_factory,
-)
+from aio_request import ClosableResponse, EmptyResponse, Request, RequestSender, aiohttp_middleware_factory
 
 logging.basicConfig(level="DEBUG")
 
@@ -37,16 +29,16 @@ class TestRequestSender(RequestSender):
         for response in responses:
             self._responses.put(response)
 
-    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
+    async def send(self, request: Request, timeout: float) -> ClosableResponse:
         if self._responses.empty():
             raise RuntimeError("No response left")
 
         response_or_configuration = self._responses.get_nowait()
         if isinstance(response_or_configuration, TestResponseConfiguration):
             delay_seconds = response_or_configuration.delay_seconds
-            if delay_seconds >= deadline.timeout:
+            if delay_seconds >= timeout:
                 status = 408
-                delay_seconds = deadline.timeout
+                delay_seconds = timeout
             else:
                 status = response_or_configuration.status
             await asyncio.sleep(delay_seconds)
