@@ -95,6 +95,7 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
+    metrics: Optional[Metrics] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
@@ -124,4 +125,5 @@ def setup(
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
+        metrics=metrics,
     )
