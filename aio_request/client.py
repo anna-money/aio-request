@@ -9,24 +9,24 @@ from .base import Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .metrics import Metrics, NoMetrics
+from .metrics import MetricsCollector, NoMetricsCollector
 from .priority import Priority
 from .request_sender import RequestSender
 from .response_classifier import ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
 
 
-def create_default_metrics() -> Metrics:
+def create_default_metrics() -> MetricsCollector:
     try:
-        from .prometheus import PrometheusMetrics
+        from .prometheus import PrometheusMetricsCollector
 
-        return PrometheusMetrics()
+        return PrometheusMetricsCollector()
     except ImportError:
-        return NoMetrics()
+        return NoMetricsCollector()
 
 
 class Client:
-    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout", "_metrics")
+    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout", "_metrics_provider")
 
     def __init__(
         self,
@@ -35,13 +35,13 @@ class Client:
         default_timeout: float = 20,
         default_priority: Priority = Priority.NORMAL,
         request_enricher: Optional[Callable[[Request], Request]] = None,
-        metrics: Optional[Metrics] = None,
+        metrics_collector: Optional[MetricsCollector] = None,
     ):
         self._default_priority = default_priority
         self._default_timeout = default_timeout
         self._request_enricher = request_enricher
         self._request_strategy = request_strategy
-        self._metrics = metrics or create_default_metrics()
+        self._metrics_provider = metrics_collector or create_default_metrics()
 
     def request(
         self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
@@ -54,30 +54,30 @@ class Client:
     ) -> AsyncIterator[Response]:
         if request.url.is_absolute():
             raise RuntimeError("Request url should be relative")
+
         if self._request_enricher is not None:
             request = self._request_enricher(request)
         context = get_context()
-
         response_ctx = self._request_strategy.request(
             request,
             context.deadline or deadline or Deadline.from_timeout(self._default_timeout),
             context.priority or priority or self._default_priority,
         )
         started_at = time.perf_counter()
-        has_cancelled_during_request = True
+        has_cancelled_during_request_sending = True
         try:
             async with response_ctx as response:
                 elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics.collect(request, response, elapsed)
+                self._metrics_provider.collect(request, response, elapsed)
                 try:
                     yield response
                 except asyncio.CancelledError:
-                    has_cancelled_during_request = False
+                    has_cancelled_during_request_sending = False
                     raise
         except asyncio.CancelledError:
-            if has_cancelled_during_request:
+            if has_cancelled_during_request_sending:
                 elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics.collect(request, None, elapsed)
+                self._metrics_provider.collect(request, None, elapsed)
             raise
 
 
@@ -95,7 +95,7 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics: Optional[Metrics] = None,
+    metrics: Optional[MetricsCollector] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
@@ -125,5 +125,5 @@ def setup(
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
-        metrics=metrics,
+        metrics_collector=metrics,
     )

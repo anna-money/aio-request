@@ -3,7 +3,7 @@ from typing import Optional
 import prometheus_client
 
 from .base import Request, Response
-from .metrics import Metrics
+from .metrics import MetricsCollector
 
 requests_counter = prometheus_client.Counter(
     name="aio_request_status_code",
@@ -16,7 +16,7 @@ requests_latency_histogram = prometheus_client.Histogram(
 )
 
 
-class PrometheusMetrics(Metrics):
+class PrometheusMetricsCollector(MetricsCollector):
     __slots__ = ()
 
     def collect(self, request: Request, response: Optional[Response], elapsed_seconds: float) -> None:

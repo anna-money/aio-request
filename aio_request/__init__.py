@@ -6,7 +6,7 @@ from .client import Client, setup
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
-from .metrics import Metrics
+from .metrics import MetricsCollector
 from .priority import Priority
 from .request_sender import RequestSender
 from .requests import delete, get, post, post_json, put, put_json
@@ -23,6 +23,6 @@ except ImportError:
 try:
     import prometheus_client
 
-    from .prometheus import PrometheusMetrics
+    from .prometheus import PrometheusMetricsCollector
 except ImportError:
     pass
