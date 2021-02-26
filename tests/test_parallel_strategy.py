@@ -12,6 +12,7 @@ async def test_timeout_because_of_expiration():
             ],
         ),
         service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     forking_strategy = strategies_factory.parallel()
     deadline = Deadline.from_timeout(1)
@@ -24,6 +25,7 @@ async def test_succeed_response_received_first_slow_request():
     strategies_factory = RequestStrategiesFactory(
         FakeRequestSender([FakeResponseConfiguration(status=200, delay_seconds=5), 200]),
         service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     forking_strategy = strategies_factory.parallel()
     deadline = Deadline.from_timeout(1)

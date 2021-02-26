@@ -19,6 +19,7 @@ async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
         request_sender=FakeRequestSender([489, 200]),
         service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)
@@ -31,6 +32,7 @@ async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
         request_sender=FakeRequestSender([499, 499, 499]),
         service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)
