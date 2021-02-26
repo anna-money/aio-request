@@ -8,13 +8,13 @@ import aiohttp.web
 import aiohttp.web_request
 import aiohttp.web_response
 import pytest
+import yarl
 
 import aio_request
 from aio_request import (
     ClosableResponse,
-    Deadline,
+    DefaultResponseClassifier,
     EmptyResponse,
-    Priority,
     Request,
     RequestSender,
     aiohttp_middleware_factory,
@@ -24,29 +24,29 @@ logging.basicConfig(level="DEBUG")
 
 
 @dataclass(frozen=True)
-class TestResponseConfiguration:
+class FakeResponseConfiguration:
     status: int
     delay_seconds: float
 
 
-class TestRequestSender(RequestSender):
+class FakeRequestSender(RequestSender):
     __slots__ = ("_responses",)
 
-    def __init__(self, responses: List[Union[int, TestResponseConfiguration]]):
+    def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
         self._responses = Queue()
         for response in responses:
             self._responses.put(response)
 
-    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
+    async def send(self, endpoint_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if self._responses.empty():
             raise RuntimeError("No response left")
 
         response_or_configuration = self._responses.get_nowait()
-        if isinstance(response_or_configuration, TestResponseConfiguration):
+        if isinstance(response_or_configuration, FakeResponseConfiguration):
             delay_seconds = response_or_configuration.delay_seconds
-            if delay_seconds >= deadline.timeout:
+            if delay_seconds >= timeout:
                 status = 408
-                delay_seconds = deadline.timeout
+                delay_seconds = timeout
             else:
                 status = response_or_configuration.status
             await asyncio.sleep(delay_seconds)
@@ -73,5 +73,7 @@ async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
         request_sender = aio_request.AioHttpRequestSender(client_session)
         yield aio_request.RequestStrategiesFactory(
-            request_sender=request_sender, base_url=f"http://{service.server.host}:{service.server.port}/"
+            request_sender=request_sender,
+            service_url=f"http://{service.server.host}:{service.server.port}/",
+            response_classifier=DefaultResponseClassifier(),
         )

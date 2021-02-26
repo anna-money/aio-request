@@ -1,11 +1,11 @@
-from aio_request import Deadline, DefaultResponseClassifier, RequestStrategiesFactory, get, linear_delays
-from tests.conftest import TestRequestSender, TestResponseConfiguration
+from aio_request import Deadline, DefaultResponseClassifier, Priority, RequestStrategiesFactory, get, linear_delays
+from tests.conftest import FakeRequestSender, FakeResponseConfiguration
 
 
 async def test_timeout_because_of_expiration():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([TestResponseConfiguration(status=200, delay_seconds=5)]),
-        base_url="http://service.com",
+        request_sender=FakeRequestSender([FakeResponseConfiguration(status=200, delay_seconds=5)]),
+        service_url="http://service.com",
         response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential(attempts_count=3, delays_provider=linear_delays())
@@ -17,20 +17,22 @@ async def test_timeout_because_of_expiration():
 
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([489, 200]),
-        base_url="http://service.com",
+        request_sender=FakeRequestSender([489, 200]),
+        service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)
-    async with sequential_strategy.request(get("hello"), deadline=deadline) as response:
+    async with sequential_strategy.request(get("hello"), deadline=deadline, priority=Priority.NORMAL) as response:
         assert response.status == 200
         assert not deadline.expired
 
 
 async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=TestRequestSender([499, 499, 499]),
-        base_url="http://service.com",
+        request_sender=FakeRequestSender([499, 499, 499]),
+        service_url="http://service.com",
+        response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)

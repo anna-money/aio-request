@@ -26,4 +26,4 @@ async def test_invalid_deadline_at():
 
 async def test_parse_str():
     deadline = Deadline.from_timeout(1)
-    assert deadline == Deadline.try_parse(str(deadline))
+    assert deadline.deadline_at == Deadline.try_parse(str(deadline)).deadline_at

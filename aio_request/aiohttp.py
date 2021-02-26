@@ -9,12 +9,14 @@ import aiohttp.web_request
 import aiohttp.web_response
 import async_timeout
 import multidict
+import yarl
 
-from .base import ClosableResponse, EmptyResponse, Request
+from .base import ClosableResponse, EmptyResponse, Header, Request
 from .context import set_context
 from .deadline import Deadline
 from .priority import Priority
 from .request_sender import RequestSender
+from .utils import substitute_path_parameters
 
 logger = logging.getLogger(__package__)
 
@@ -22,60 +24,76 @@ logger = logging.getLogger(__package__)
 class AioHttpRequestSender(RequestSender):
     __slots__ = (
         "_client_session",
-        "_service_name",
         "_network_errors_code",
-        "_enrich_request_headers",
         "_buffer_payload",
-        "_low_timeout_threshold",
     )
 
     def __init__(
         self,
         client_session: aiohttp.ClientSession,
         *,
-        service_name: Optional[str] = None,
         network_errors_code: int = 489,
-        enrich_request_headers: bool = True,
         buffer_payload: bool = True,
-        low_timeout_threshold: float = 0.005,
     ):
         self._client_session = client_session
-        self._service_name = service_name
         self._network_errors_code = network_errors_code
-        self._enrich_request_headers = enrich_request_headers
         self._buffer_payload = buffer_payload
-        self._low_timeout_threshold = low_timeout_threshold
 
-    async def send(self, request: Request, deadline: Deadline, priority: Priority) -> ClosableResponse:
-        if self._enrich_request_headers:
-            extra_headers = {
-                "X-Request-Deadline-At": str(deadline),
-                "X-Request-Priority": str(priority),
-            }
-            if self._service_name is not None:
-                extra_headers["X-Service-Name"] = self._service_name
-            request = request.update_headers(extra_headers)
+    async def send(self, endpoint_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+        if not endpoint_url.is_absolute():
+            raise RuntimeError("Base url should be absolute")
+
+        method = request.method
+        url = substitute_path_parameters(endpoint_url.join(request.url), request.path_parameters)
+        headers = request.headers
+        body = request.body
 
         try:
-            logger.debug("Sending request %s %s with timeout %s", request.method, request.url, deadline.timeout)
-            if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-                logger.warning("Request %s %s has cancelled due to expired deadline", request.method, request.url)
-                return EmptyResponse(status=408)
+            logger.debug(
+                "Sending request %s %s with timeout %s",
+                method,
+                url,
+                timeout,
+                extra={
+                    "aio_request_method": method,
+                    "aio_request_url": url,
+                    "aio_request_timeout": timeout,
+                },
+            )
             response = await self._client_session.request(
-                request.method,
-                request.url,
-                headers=request.headers,
-                data=request.body,
-                timeout=deadline.timeout,
+                method,
+                url,
+                headers=headers,
+                data=body,
+                timeout=timeout,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
-            logger.warning("Request %s %s has failed", request.method, request.url, exc_info=True)
+            logger.warning(
+                "Request %s %s has failed",
+                method,
+                url,
+                exc_info=True,
+                extra={
+                    "aio_request_method": method,
+                    "aio_request_url": url,
+                },
+            )
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
-            logger.warning("Request %s %s has timed out", request.method, request.url)
+            logger.warning(
+                "Request %s %s has timed out after %s",
+                method,
+                url,
+                timeout,
+                extra={
+                    "aio_request_method": method,
+                    "aio_request_url": url,
+                    "aio_request_timeout": timeout,
+                },
+            )
             return EmptyResponse(status=408)
 
 
@@ -118,7 +136,7 @@ _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohtt
 
 def aiohttp_middleware_factory(
     *,
-    default_timeout: float = 60,
+    default_timeout: float = 20,
     default_priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
 ) -> _MIDDLEWARE:
@@ -126,10 +144,10 @@ def aiohttp_middleware_factory(
     async def middleware(
         request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
-        deadline = Deadline.try_parse(request.headers.get("X-Request-Deadline-At")) or Deadline.from_timeout(
+        deadline = Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT)) or Deadline.from_timeout(
             default_timeout
         )
-        priority = Priority.try_parse(request.headers.get("X-Request-Priority")) or default_priority
+        priority = Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY)) or default_priority
 
         if deadline.expired or deadline.timeout <= low_timeout_threshold:
             return aiohttp.web_response.Response(status=408)
