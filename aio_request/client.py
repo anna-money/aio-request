@@ -17,8 +17,13 @@ from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStra
 
 
 class Client:
-    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout",
-                 "_metrics_collector")
+    __slots__ = (
+        "_request_strategy",
+        "_request_enricher",
+        "_default_priority",
+        "_default_timeout",
+        "_metrics_collector",
+    )
 
     def __init__(
         self,
