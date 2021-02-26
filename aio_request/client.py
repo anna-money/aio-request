@@ -17,7 +17,8 @@ from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStra
 
 
 class Client:
-    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout", "_metrics_provider")
+    __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout",
+                 "_metrics_collector")
 
     def __init__(
         self,
@@ -32,7 +33,7 @@ class Client:
         self._default_timeout = default_timeout
         self._request_enricher = request_enricher
         self._request_strategy = request_strategy
-        self._metrics_provider = metrics_collector
+        self._metrics_collector = metrics_collector
 
     def request(
         self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
@@ -59,7 +60,7 @@ class Client:
         try:
             async with response_ctx as response:
                 elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics_provider.collect(request, response, elapsed)
+                self._metrics_collector.collect(request, response, elapsed)
                 try:
                     yield response
                 except asyncio.CancelledError:
@@ -68,7 +69,7 @@ class Client:
         except asyncio.CancelledError:
             if has_cancelled_during_request_sending:
                 elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics_provider.collect(request, None, elapsed)
+                self._metrics_collector.collect(request, None, elapsed)
             raise
 
 
