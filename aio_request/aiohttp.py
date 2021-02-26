@@ -9,12 +9,14 @@ import aiohttp.web_request
 import aiohttp.web_response
 import async_timeout
 import multidict
+import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
 from .context import set_context
 from .deadline import Deadline
 from .priority import Priority
 from .request_sender import RequestSender
+from .utils import substitute_path_parameters
 
 logger = logging.getLogger(__package__)
 
@@ -37,24 +39,32 @@ class AioHttpRequestSender(RequestSender):
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
 
-    async def send(self, request: Request, timeout: float) -> ClosableResponse:
+    async def send(self, base_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+        if not base_url.is_absolute():
+            raise RuntimeError("Base url should be absolute")
+
+        method = request.method
+        url = substitute_path_parameters(base_url.join(request.url), request.path_parameters)
+        headers = request.headers
+        body = request.body
+
         try:
             logger.debug(
                 "Sending request %s %s with timeout %s",
-                request.method,
-                request.url,
+                method,
+                url,
                 timeout,
                 extra={
-                    "aio_request_method": request.method,
-                    "aio_request_url": request.url,
+                    "aio_request_method": method,
+                    "aio_request_url": url,
                     "aio_request_timeout": timeout,
                 },
             )
             response = await self._client_session.request(
-                request.method,
-                request.url,
-                headers=request.headers,
-                data=request.body,
+                method,
+                url,
+                headers=headers,
+                data=body,
                 timeout=timeout,
             )
             if self._buffer_payload:
@@ -63,24 +73,24 @@ class AioHttpRequestSender(RequestSender):
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed",
-                request.method,
-                request.url,
+                method,
+                url,
                 exc_info=True,
                 extra={
-                    "aio_request_method": request.method,
-                    "aio_request_url": request.url,
+                    "aio_request_method": method,
+                    "aio_request_url": url,
                 },
             )
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
-                request.method,
-                request.url,
+                method,
+                url,
                 timeout,
                 extra={
-                    "aio_request_method": request.method,
-                    "aio_request_url": request.url,
+                    "aio_request_method": method,
+                    "aio_request_url": url,
                     "aio_request_timeout": timeout,
                 },
             )

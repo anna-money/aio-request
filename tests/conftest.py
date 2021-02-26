@@ -8,6 +8,7 @@ import aiohttp.web
 import aiohttp.web_request
 import aiohttp.web_response
 import pytest
+import yarl
 
 import aio_request
 from aio_request import ClosableResponse, EmptyResponse, Request, RequestSender, aiohttp_middleware_factory
@@ -29,7 +30,7 @@ class FakeRequestSender(RequestSender):
         for response in responses:
             self._responses.put(response)
 
-    async def send(self, request: Request, timeout: float) -> ClosableResponse:
+    async def send(self, base_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if self._responses.empty():
             raise RuntimeError("No response left")
 

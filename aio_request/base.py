@@ -1,6 +1,6 @@
 import abc
 import json
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional
 
 import multidict
 import yarl
@@ -22,31 +22,24 @@ class Header:
 
 
 class Request:
-    __slots__ = ("method", "url", "headers", "body")
+    __slots__ = ("method", "url", "headers", "body", "path_parameters")
 
     def __init__(
         self,
         method: str,
-        url: Union[str, yarl.URL],
+        url: yarl.URL,
         headers: Optional[multidict.CIMultiDictProxy[str]] = None,
         body: Optional[bytes] = None,
+        path_parameters: Optional[Dict[str, Any]] = None,
     ):
+        if url.is_absolute():
+            raise RuntimeError("Request url should be relative")
+
         self.method = method
-        self.url = yarl.URL(url) if isinstance(url, str) else url
+        self.url = url
         self.headers = headers
         self.body = body
-
-    def make_absolute(self, base_url: yarl.URL) -> "Request":
-        if self.url.is_absolute():
-            raise RuntimeError("Request url should be relative")
-        if not base_url.is_absolute():
-            raise RuntimeError("Base url should be absolute")
-        return Request(
-            method=self.method,
-            url=base_url.join(self.url),
-            headers=self.headers,
-            body=self.body,
-        )
+        self.path_parameters = path_parameters
 
     def update_headers(self, headers: Dict[str, Any]) -> "Request":
         updated_headers = get_headers_to_enrich(self.headers)

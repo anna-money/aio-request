@@ -9,7 +9,7 @@ from .base import Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .metrics import MetricsCollector, NoMetricsCollector
+from .metrics_collector import MetricsCollector, NoMetricsCollector
 from .priority import Priority
 from .request_sender import RequestSender
 from .response_classifier import ResponseClassifier

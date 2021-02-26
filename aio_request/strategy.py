@@ -163,7 +163,7 @@ class _RequestStrategyBase(abc.ABC):
         if self._deadline.expired or self._deadline.timeout < self._low_timeout_threshold:
             response: ClosableResponse = EmptyResponse(status=408)
         else:
-            request = self._request.make_absolute(self._base_url)
+            request = self._request
             if self._emit_system_headers:
                 request = request.update_headers(
                     {
@@ -171,7 +171,7 @@ class _RequestStrategyBase(abc.ABC):
                         Header.X_REQUEST_PRIORITY: str(self._priority),
                     }
                 )
-            response = await self._request_sender.send(request, self._deadline.timeout)
+            response = await self._request_sender.send(self._base_url, request, self._deadline.timeout)
         self._responses.append(response)
         return response
 

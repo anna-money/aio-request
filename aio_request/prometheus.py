@@ -3,16 +3,18 @@ from typing import Optional
 import prometheus_client
 
 from .base import Request, Response
-from .metrics import MetricsCollector
+from .metrics_collector import MetricsCollector
 
 requests_counter = prometheus_client.Counter(
-    name="aio_request_status_code",
-    documentation="Response status codes",
-    labelnames=("method", "host", "path", "status"),
+    name="aio_request_status",
+    documentation="Response status",
+    labelnames=("aio_request_method", "aio_request_host", "aio_request_path", "aio_request_status"),
 )
 
 requests_latency_histogram = prometheus_client.Histogram(
-    name="aio_request_latency", documentation="Response latencies", labelnames=("method", "host", "path", "status")
+    name="aio_request_latency",
+    documentation="Request latencies",
+    labelnames=("aio_request_method", "aio_request_host", "aio_request_path", "aio_request_status"),
 )
 
 
