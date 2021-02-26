@@ -16,7 +16,7 @@ from .response_classifier import ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
 
 
-def create_default_metrics() -> MetricsCollector:
+def create_default_metrics_collector() -> MetricsCollector:
     try:
         from .prometheus import PrometheusMetricsCollector
 
@@ -41,7 +41,7 @@ class Client:
         self._default_timeout = default_timeout
         self._request_enricher = request_enricher
         self._request_strategy = request_strategy
-        self._metrics_provider = metrics_collector or create_default_metrics()
+        self._metrics_provider = metrics_collector
 
     def request(
         self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
@@ -95,7 +95,7 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics: Optional[MetricsCollector] = None,
+    metrics_collector: Optional[MetricsCollector] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
@@ -125,5 +125,5 @@ def setup(
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
-        metrics_collector=metrics,
+        metrics_collector=metrics_collector or create_default_metrics_collector(),
     )
