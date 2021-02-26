@@ -5,7 +5,7 @@ from tests.conftest import FakeRequestSender, FakeResponseConfiguration
 async def test_timeout_because_of_expiration():
     strategies_factory = RequestStrategiesFactory(
         request_sender=FakeRequestSender([FakeResponseConfiguration(status=200, delay_seconds=5)]),
-        base_url="http://service.com",
+        service_url="http://service.com",
         response_classifier=DefaultResponseClassifier(),
     )
     sequential_strategy = strategies_factory.sequential(attempts_count=3, delays_provider=linear_delays())
@@ -18,7 +18,7 @@ async def test_timeout_because_of_expiration():
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
         request_sender=FakeRequestSender([489, 200]),
-        base_url="http://service.com",
+        service_url="http://service.com",
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)
@@ -30,7 +30,7 @@ async def test_succeed_response_received():
 async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
         request_sender=FakeRequestSender([499, 499, 499]),
-        base_url="http://service.com",
+        service_url="http://service.com",
     )
     sequential_strategy = strategies_factory.sequential()
     deadline = Deadline.from_timeout(1)

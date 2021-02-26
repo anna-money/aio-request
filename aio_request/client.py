@@ -16,15 +16,6 @@ from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
 
 
-def create_default_metrics_collector() -> MetricsCollector:
-    try:
-        from .prometheus import PrometheusMetricsCollector
-
-        return PrometheusMetricsCollector()
-    except ImportError:
-        return NoMetricsCollector()
-
-
 class Client:
     __slots__ = ("_request_strategy", "_request_enricher", "_default_priority", "_default_timeout", "_metrics_provider")
 
@@ -35,7 +26,7 @@ class Client:
         default_timeout: float = 20,
         default_priority: Priority = Priority.NORMAL,
         request_enricher: Optional[Callable[[Request], Request]] = None,
-        metrics_collector: Optional[MetricsCollector] = None,
+        metrics_collector: MetricsCollector,
     ):
         self._default_priority = default_priority
         self._default_timeout = default_timeout
@@ -84,7 +75,8 @@ class Client:
 def setup(
     *,
     request_sender: RequestSender,
-    base_url: Union[str, yarl.URL],
+    service_url: Union[str, yarl.URL],
+    service_name: str = "unknown",
     safe_method_attempts_count: int = 3,
     unsafe_method_attempts_count: int = 3,
     safe_method_delays_provider: Callable[[int], float] = linear_delays(),
@@ -95,11 +87,11 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics_collector: Optional[MetricsCollector] = None,
+    metrics_collector: Optional[Callable[[str], MetricsCollector]] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
-        base_url=base_url,
+        service_url=service_url,
         response_classifier=response_classifier or DefaultResponseClassifier(),
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
@@ -125,5 +117,5 @@ def setup(
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
-        metrics_collector=metrics_collector or create_default_metrics_collector(),
+        metrics_collector=(metrics_collector or NoMetricsCollector)(service_name),
     )

@@ -44,7 +44,7 @@ class MethodBasedStrategy(RequestStrategy):
 class RequestStrategiesFactory:
     __slots__ = (
         "_request_sender",
-        "_base_url",
+        "service_url",
         "_response_classifier",
         "_emit_system_headers",
         "_low_timeout_threshold",
@@ -53,13 +53,13 @@ class RequestStrategiesFactory:
     def __init__(
         self,
         request_sender: RequestSender,
-        base_url: Union[str, yarl.URL],
+        service_url: Union[str, yarl.URL],
         response_classifier: ResponseClassifier,
         emit_system_headers: bool = True,
         low_timeout_threshold: float = 0.005,
     ):
         self._request_sender = request_sender
-        self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
+        self.service_url = yarl.URL(service_url) if isinstance(service_url, str) else service_url
         self._response_classifier = response_classifier
         self._low_timeout_threshold = low_timeout_threshold
         self._emit_system_headers = emit_system_headers
@@ -70,7 +70,7 @@ class RequestStrategiesFactory:
         return _RequestStrategy(
             lambda request, deadline, priority: _SequentialRequestStrategy(
                 request_sender=self._request_sender,
-                base_url=self._base_url,
+                service_url=self.service_url,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=deadline,
@@ -88,7 +88,7 @@ class RequestStrategiesFactory:
         return _RequestStrategy(
             lambda request, deadline, priority: _ParallelRequestStrategy(
                 request_sender=self._request_sender,
-                base_url=self._base_url,
+                service_url=self.service_url,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=deadline,
@@ -122,7 +122,7 @@ class _RequestStrategy(RequestStrategy):
 class _RequestStrategyBase(abc.ABC):
     __slots__ = (
         "_request_sender",
-        "_base_url",
+        "_service_url",
         "_request",
         "_deadline",
         "_priority",
@@ -135,7 +135,7 @@ class _RequestStrategyBase(abc.ABC):
         self,
         request_sender: RequestSender,
         *,
-        base_url: yarl.URL,
+        service_url: yarl.URL,
         request: Request,
         deadline: Deadline,
         priority: Priority,
@@ -147,7 +147,7 @@ class _RequestStrategyBase(abc.ABC):
         self._priority = priority
         self._deadline = deadline
         self._request = request
-        self._base_url = base_url
+        self._service_url = service_url
         self._request_sender = request_sender
         self._responses: List[ClosableResponse] = []
 
@@ -171,7 +171,7 @@ class _RequestStrategyBase(abc.ABC):
                         Header.X_REQUEST_PRIORITY: str(self._priority),
                     }
                 )
-            response = await self._request_sender.send(self._base_url, request, self._deadline.timeout)
+            response = await self._request_sender.send(self._service_url, request, self._deadline.timeout)
         self._responses.append(response)
         return response
 
@@ -193,7 +193,7 @@ class _SequentialRequestStrategy(_RequestStrategyBase):
         self,
         *,
         request_sender: RequestSender,
-        base_url: yarl.URL,
+        service_url: yarl.URL,
         response_classifier: ResponseClassifier,
         request: Request,
         deadline: Deadline,
@@ -205,7 +205,7 @@ class _SequentialRequestStrategy(_RequestStrategyBase):
     ):
         super().__init__(
             request_sender,
-            base_url=base_url,
+            service_url=service_url,
             request=request,
             deadline=deadline,
             priority=priority,
@@ -243,7 +243,7 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
     def __init__(
         self,
         request_sender: RequestSender,
-        base_url: yarl.URL,
+        service_url: yarl.URL,
         request: Request,
         response_classifier: ResponseClassifier,
         *,
@@ -256,7 +256,7 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
     ):
         super().__init__(
             request_sender,
-            base_url=base_url,
+            service_url=service_url,
             request=request,
             deadline=deadline,
             priority=priority,

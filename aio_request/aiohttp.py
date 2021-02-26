@@ -39,12 +39,12 @@ class AioHttpRequestSender(RequestSender):
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
 
-    async def send(self, base_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
-        if not base_url.is_absolute():
+    async def send(self, endpoint_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+        if not endpoint_url.is_absolute():
             raise RuntimeError("Base url should be absolute")
 
         method = request.method
-        url = substitute_path_parameters(base_url.join(request.url), request.path_parameters)
+        url = substitute_path_parameters(endpoint_url.join(request.url), request.path_parameters)
         headers = request.headers
         body = request.body
 
