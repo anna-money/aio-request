@@ -49,9 +49,6 @@ class Client:
     async def _request(
         self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
     ) -> AsyncIterator[Response]:
-        if request.url.is_absolute():
-            raise RuntimeError("Request url should be relative")
-
         if self._request_enricher is not None:
             request = self._request_enricher(request)
         context = get_context()
