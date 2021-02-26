@@ -11,8 +11,14 @@ import pytest
 import yarl
 
 import aio_request
-from aio_request import ClosableResponse, EmptyResponse, Request, RequestSender, aiohttp_middleware_factory, \
-    DefaultResponseClassifier
+from aio_request import (
+    ClosableResponse,
+    DefaultResponseClassifier,
+    EmptyResponse,
+    Request,
+    RequestSender,
+    aiohttp_middleware_factory,
+)
 
 logging.basicConfig(level="DEBUG")
 
