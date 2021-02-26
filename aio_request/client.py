@@ -12,7 +12,7 @@ from .delays_provider import linear_delays
 from .metrics_collector import MetricsCollector, NoMetricsCollector
 from .priority import Priority
 from .request_sender import RequestSender
-from .response_classifier import ResponseClassifier
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
 
 
@@ -100,7 +100,7 @@ def setup(
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
         base_url=base_url,
-        response_classifier=response_classifier,
+        response_classifier=response_classifier or DefaultResponseClassifier(),
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
     )

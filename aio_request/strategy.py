@@ -1,6 +1,6 @@
 import abc
 import asyncio
-from typing import Any, AsyncContextManager, Callable, Dict, List, Optional, Set, Union
+from typing import Any, AsyncContextManager, Callable, Dict, List, Set, Union
 
 import yarl
 
@@ -9,7 +9,7 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
 from .request_sender import RequestSender
-from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .response_classifier import ResponseClassifier, ResponseVerdict
 from .utils import close_many
 
 
@@ -54,13 +54,13 @@ class RequestStrategiesFactory:
         self,
         request_sender: RequestSender,
         base_url: Union[str, yarl.URL],
-        response_classifier: Optional[ResponseClassifier] = None,
+        response_classifier: ResponseClassifier,
         emit_system_headers: bool = True,
         low_timeout_threshold: float = 0.005,
     ):
         self._request_sender = request_sender
         self._base_url = yarl.URL(base_url) if isinstance(base_url, str) else base_url
-        self._response_classifier = response_classifier or DefaultResponseClassifier()
+        self._response_classifier = response_classifier
         self._low_timeout_threshold = low_timeout_threshold
         self._emit_system_headers = emit_system_headers
 
