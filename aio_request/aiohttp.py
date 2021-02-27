@@ -15,36 +15,32 @@ from .base import ClosableResponse, EmptyResponse, Header, Request
 from .context import set_context
 from .deadline import Deadline
 from .priority import Priority
-from .request_sender import RequestSender
+from .transport import Transport
 from .utils import substitute_path_parameters
 
 logger = logging.getLogger(__package__)
 
 
-class AioHttpRequestSender(RequestSender):
-    __slots__ = (
-        "_client_session",
-        "_network_errors_code",
-        "_buffer_payload",
-    )
+class AioHttpTransport(Transport):
+    __slots__ = ("_client_session", "_network_errors_code", "_buffer_payload")
 
     def __init__(
-        self,
-        client_session: aiohttp.ClientSession,
-        *,
-        network_errors_code: int = 489,
-        buffer_payload: bool = True,
+            self,
+            client_session: aiohttp.ClientSession,
+            *,
+            network_errors_code: int = 489,
+            buffer_payload: bool = True,
     ):
         self._client_session = client_session
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
 
-    async def send(self, endpoint_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
-        if not endpoint_url.is_absolute():
+    async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+        if not endpoint.is_absolute():
             raise RuntimeError("Base url should be absolute")
 
         method = request.method
-        url = substitute_path_parameters(endpoint_url.join(request.url), request.path_parameters)
+        url = substitute_path_parameters(endpoint.join(request.url), request.path_parameters)
         headers = request.headers
         body = request.body
 
@@ -115,11 +111,11 @@ class _AioHttpResponse(ClosableResponse):
         return self._response.headers
 
     async def json(
-        self,
-        *,
-        encoding: Optional[str] = None,
-        loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+            self,
+            *,
+            encoding: Optional[str] = None,
+            loads: Callable[[str], Any] = json.loads,
+            content_type: Optional[str] = "application/json",
     ) -> Any:
         return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
 
@@ -135,14 +131,14 @@ _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohtt
 
 
 def aiohttp_middleware_factory(
-    *,
-    default_timeout: float = 20,
-    default_priority: Priority = Priority.NORMAL,
-    low_timeout_threshold: float = 0.005,
+        *,
+        default_timeout: float = 20,
+        default_priority: Priority = Priority.NORMAL,
+        low_timeout_threshold: float = 0.005,
 ) -> _MIDDLEWARE:
     @aiohttp.web_middlewares.middleware
     async def middleware(
-        request: aiohttp.web_request.Request, handler: _HANDLER
+            request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
         deadline = Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT)) or Deadline.from_timeout(
             default_timeout

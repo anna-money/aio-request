@@ -8,7 +8,7 @@ from .base import ClosableResponse, EmptyResponse, Header, Request, Response
 from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
-from .request_sender import RequestSender
+from .transport import Transport
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .utils import close_many
 
@@ -43,8 +43,8 @@ class MethodBasedStrategy(RequestStrategy):
 
 class RequestStrategiesFactory:
     __slots__ = (
-        "_request_sender",
-        "service_url",
+        "_transport",
+        "_endpoint",
         "_response_classifier",
         "_emit_system_headers",
         "_low_timeout_threshold",
@@ -52,14 +52,14 @@ class RequestStrategiesFactory:
 
     def __init__(
         self,
-        request_sender: RequestSender,
-        service_url: Union[str, yarl.URL],
+        transport: Transport,
+        endpoint: Union[str, yarl.URL],
         response_classifier: ResponseClassifier,
         emit_system_headers: bool = True,
         low_timeout_threshold: float = 0.005,
     ):
-        self._request_sender = request_sender
-        self.service_url = yarl.URL(service_url) if isinstance(service_url, str) else service_url
+        self._transport = transport
+        self._endpoint = yarl.URL(endpoint) if isinstance(endpoint, str) else endpoint
         self._response_classifier = response_classifier
         self._low_timeout_threshold = low_timeout_threshold
         self._emit_system_headers = emit_system_headers
@@ -69,8 +69,8 @@ class RequestStrategiesFactory:
     ) -> RequestStrategy:
         return _RequestStrategy(
             lambda request, deadline, priority: _SequentialRequestStrategy(
-                request_sender=self._request_sender,
-                service_url=self.service_url,
+                transport=self._transport,
+                endpoint=self._endpoint,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=deadline,
@@ -87,8 +87,8 @@ class RequestStrategiesFactory:
     ) -> RequestStrategy:
         return _RequestStrategy(
             lambda request, deadline, priority: _ParallelRequestStrategy(
-                request_sender=self._request_sender,
-                service_url=self.service_url,
+                transport=self._transport,
+                endpoint=self._endpoint,
                 response_classifier=self._response_classifier,
                 request=request,
                 deadline=deadline,
@@ -122,7 +122,7 @@ class _RequestStrategy(RequestStrategy):
 class _RequestStrategyBase(abc.ABC):
     __slots__ = (
         "_request_sender",
-        "_service_url",
+        "_endpoint",
         "_request",
         "_deadline",
         "_priority",
@@ -133,9 +133,9 @@ class _RequestStrategyBase(abc.ABC):
 
     def __init__(
         self,
-        request_sender: RequestSender,
         *,
-        service_url: yarl.URL,
+        transport: Transport,
+        endpoint: yarl.URL,
         request: Request,
         deadline: Deadline,
         priority: Priority,
@@ -147,8 +147,8 @@ class _RequestStrategyBase(abc.ABC):
         self._priority = priority
         self._deadline = deadline
         self._request = request
-        self._service_url = service_url
-        self._request_sender = request_sender
+        self._endpoint = endpoint
+        self._request_sender = transport
         self._responses: List[ClosableResponse] = []
 
     @abc.abstractmethod
@@ -171,7 +171,7 @@ class _RequestStrategyBase(abc.ABC):
                         Header.X_REQUEST_PRIORITY: str(self._priority),
                     }
                 )
-            response = await self._request_sender.send(self._service_url, request, self._deadline.timeout)
+            response = await self._request_sender.send(self._endpoint, request, self._deadline.timeout)
         self._responses.append(response)
         return response
 
@@ -192,8 +192,8 @@ class _SequentialRequestStrategy(_RequestStrategyBase):
     def __init__(
         self,
         *,
-        request_sender: RequestSender,
-        service_url: yarl.URL,
+        transport: Transport,
+        endpoint: yarl.URL,
         response_classifier: ResponseClassifier,
         request: Request,
         deadline: Deadline,
@@ -204,8 +204,8 @@ class _SequentialRequestStrategy(_RequestStrategyBase):
         low_timeout_threshold: float,
     ):
         super().__init__(
-            request_sender,
-            service_url=service_url,
+            transport=transport,
+            endpoint=endpoint,
             request=request,
             deadline=deadline,
             priority=priority,
@@ -242,8 +242,8 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
 
     def __init__(
         self,
-        request_sender: RequestSender,
-        service_url: yarl.URL,
+        transport: Transport,
+        endpoint: yarl.URL,
         request: Request,
         response_classifier: ResponseClassifier,
         *,
@@ -255,8 +255,8 @@ class _ParallelRequestStrategy(_RequestStrategyBase):
         low_timeout_threshold: float = 0.005,
     ):
         super().__init__(
-            request_sender,
-            service_url=service_url,
+            transport=transport,
+            endpoint=endpoint,
             request=request,
             deadline=deadline,
             priority=priority,

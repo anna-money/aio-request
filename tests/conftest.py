@@ -16,7 +16,7 @@ from aio_request import (
     DefaultResponseClassifier,
     EmptyResponse,
     Request,
-    RequestSender,
+    Transport,
     aiohttp_middleware_factory,
 )
 
@@ -29,7 +29,7 @@ class FakeResponseConfiguration:
     delay_seconds: float
 
 
-class FakeRequestSender(RequestSender):
+class FakeRequestSender(Transport):
     __slots__ = ("_responses",)
 
     def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
@@ -37,7 +37,7 @@ class FakeRequestSender(RequestSender):
         for response in responses:
             self._responses.put(response)
 
-    async def send(self, endpoint_url: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+    async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if self._responses.empty():
             raise RuntimeError("No response left")
 
@@ -71,9 +71,9 @@ async def service(aiohttp_client):
 @pytest.fixture
 async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
-        request_sender = aio_request.AioHttpRequestSender(client_session)
+        request_sender = aio_request.AioHttpTransport(client_session)
         yield aio_request.RequestStrategiesFactory(
-            request_sender=request_sender,
-            service_url=f"http://{service.server.host}:{service.server.port}/",
+            transport=request_sender,
+            endpoint=f"http://{service.server.host}:{service.server.port}/",
             response_classifier=DefaultResponseClassifier(),
         )

@@ -11,7 +11,7 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .metrics import ClientMetricsCollector, NoMetricsCollector
 from .priority import Priority
-from .request_sender import RequestSender
+from .transport import Transport
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
 
@@ -90,8 +90,8 @@ class Client:
 
 def setup(
     *,
-    request_sender: RequestSender,
-    service_url: Union[str, yarl.URL],
+    transport: Transport,
+    endpoint: Union[str, yarl.URL],
     service_name: str = "unknown",
     safe_method_attempts_count: int = 3,
     unsafe_method_attempts_count: int = 3,
@@ -106,8 +106,8 @@ def setup(
     metrics_collector: Optional[Callable[[str], ClientMetricsCollector]] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
-        request_sender=request_sender,
-        service_url=service_url,
+        transport=transport,
+        endpoint=endpoint,
         response_classifier=response_classifier or DefaultResponseClassifier(),
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
