@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Mapping, Optional, Union
 
 import multidict
 import yarl
@@ -12,9 +12,9 @@ def get(
     url: Union[str, yarl.URL],
     *,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
+    path_parameters: Optional[Mapping[str, str]] = None,
 ) -> Request:
-    return build_request(Method.GET, url, headers=headers, path_parameters=path_parameters)
+    return build_request(Method.GET, url, path_parameters=path_parameters, headers=headers)
 
 
 def post(
@@ -22,9 +22,9 @@ def post(
     body: Optional[bytes] = None,
     *,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
+    path_parameters: Optional[Mapping[str, str]] = None,
 ) -> Request:
-    return build_request(Method.POST, url, headers=headers, body=body, path_parameters=path_parameters)
+    return build_request(Method.POST, url, path_parameters=path_parameters, headers=headers, body=body)
 
 
 def put(
@@ -32,31 +32,39 @@ def put(
     body: Optional[bytes] = None,
     *,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
+    path_parameters: Optional[Mapping[str, str]] = None,
 ) -> Request:
-    return build_request(Method.PUT, url, headers=headers, body=body, path_parameters=path_parameters)
+    return build_request(Method.PUT, url, path_parameters=path_parameters, headers=headers, body=body)
 
 
 def delete(
     url: Union[str, yarl.URL],
     *,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
+    path_parameters: Optional[Mapping[str, str]] = None,
 ) -> Request:
-    return build_request(Method.DELETE, url, headers=headers, path_parameters=path_parameters)
+    return build_request(Method.DELETE, url, path_parameters=path_parameters, headers=headers)
 
 
 def post_json(
     url: Union[str, yarl.URL],
     data: Any,
     *,
+    path_parameters: Optional[Mapping[str, str]] = None,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
     return build_json_request(
-        Method.POST, url, data, headers=headers, encoding=encoding, dumps=dumps, content_type=content_type
+        Method.POST,
+        url,
+        data,
+        path_parameters=path_parameters,
+        headers=headers,
+        encoding=encoding,
+        dumps=dumps,
+        content_type=content_type,
     )
 
 
@@ -64,13 +72,21 @@ def put_json(
     url: Union[str, yarl.URL],
     data: Any,
     *,
+    path_parameters: Optional[Mapping[str, str]] = None,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
     return build_json_request(
-        Method.PUT, url, data, headers=headers, encoding=encoding, dumps=dumps, content_type=content_type
+        Method.PUT,
+        url,
+        data,
+        path_parameters=path_parameters,
+        headers=headers,
+        encoding=encoding,
+        dumps=dumps,
+        content_type=content_type,
     )
 
 
@@ -79,8 +95,8 @@ def build_json_request(
     url: Union[str, yarl.URL],
     data: Any,
     *,
+    path_parameters: Optional[Mapping[str, str]] = None,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
     encoding: str = "utf-8",
     dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
@@ -103,9 +119,9 @@ def build_request(
     method: str,
     url: Union[str, yarl.URL],
     *,
+    path_parameters: Optional[Mapping[str, str]] = None,
     headers: Optional[multidict.CIMultiDictProxy[str]] = None,
     body: Optional[bytes] = None,
-    path_parameters: Optional[Dict[str, Any]] = None,
 ) -> Request:
     return Request(
         method=method,

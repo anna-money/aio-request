@@ -1,6 +1,6 @@
 import abc
 import json
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Mapping, Optional, Union
 
 import multidict
 import yarl
@@ -22,26 +22,34 @@ class Header:
 
 
 class Request:
-    __slots__ = ("method", "url", "headers", "body", "path_parameters")
+    __slots__ = (
+        "method",
+        "url",
+        "path_parameters",
+        "headers",
+        "body",
+    )
 
     def __init__(
         self,
         method: str,
         url: yarl.URL,
+        path_parameters: Optional[Mapping[str, str]] = None,
         headers: Optional[multidict.CIMultiDictProxy[str]] = None,
         body: Optional[bytes] = None,
-        path_parameters: Optional[Dict[str, Any]] = None,
     ):
         if url.is_absolute():
             raise RuntimeError("Request url should be relative")
 
         self.method = method
+        self.path_parameters = path_parameters
         self.url = url
         self.headers = headers
         self.body = body
-        self.path_parameters = path_parameters
 
-    def update_headers(self, headers: Dict[str, Any]) -> "Request":
+    def update_headers(
+        self, headers: Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str]]
+    ) -> "Request":
         updated_headers = get_headers_to_enrich(self.headers)
         updated_headers.update(headers)
         return Request(
