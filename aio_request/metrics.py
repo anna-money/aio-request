@@ -4,7 +4,7 @@ from typing import Optional
 from .base import Request, Response
 
 
-class MetricsCollector(abc.ABC):
+class ClientMetricsCollector(abc.ABC):
     __slots__ = ("_service_name",)
 
     def __init__(self, service_name: str):
@@ -15,7 +15,7 @@ class MetricsCollector(abc.ABC):
         pass
 
 
-class NoMetricsCollector(MetricsCollector):
+class NoMetricsCollector(ClientMetricsCollector):
     __slots__ = ()
 
     def collect(self, request: Request, response: Optional[Response], elapsed_seconds: float) -> None:

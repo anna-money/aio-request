@@ -9,7 +9,7 @@ from .base import Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .metrics_collector import MetricsCollector, NoMetricsCollector
+from .metrics import ClientMetricsCollector, NoMetricsCollector
 from .priority import Priority
 from .request_sender import RequestSender
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
@@ -32,7 +32,7 @@ class Client:
         default_timeout: float,
         default_priority: Priority,
         request_enricher: Optional[Callable[[Request], Request]],
-        metrics_collector: MetricsCollector,
+        metrics_collector: ClientMetricsCollector,
     ):
         self._default_priority = default_priority
         self._default_timeout = default_timeout
@@ -103,7 +103,7 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics_collector: Optional[Callable[[str], MetricsCollector]] = None,
+    metrics_collector: Optional[Callable[[str], ClientMetricsCollector]] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=request_sender,
