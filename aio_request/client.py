@@ -54,8 +54,8 @@ class Client:
         context = get_context()
         response_ctx = self._request_strategy.request(
             request,
-            context.deadline or deadline or Deadline.from_timeout(self._default_timeout),
-            context.priority or priority or self._default_priority,
+            deadline or context.deadline or Deadline.from_timeout(self._default_timeout),
+            self.normalize_priority(priority or self._default_priority, context.priority),
         )
         started_at = time.perf_counter()
         has_cancelled_during_request_sending = True
@@ -73,6 +73,19 @@ class Client:
                 elapsed = max(0.0, time.perf_counter() - started_at)
                 self._metrics_collector.collect(request, None, elapsed)
             raise
+
+    @staticmethod
+    def normalize_priority(priority: "Priority", context_priority: Optional["Priority"]) -> "Priority":
+        if context_priority is None:
+            return priority
+
+        if priority == Priority.LOW and context_priority == Priority.HIGH:
+            return Priority.NORMAL
+
+        if priority == Priority.HIGH and context_priority == Priority.LOW:
+            return Priority.NORMAL
+
+        return priority
 
 
 def setup(
