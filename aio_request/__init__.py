@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .client import Client, setup

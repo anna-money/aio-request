@@ -55,6 +55,7 @@ class Request:
         return Request(
             method=self.method,
             url=self.url,
+            path_parameters=self.path_parameters,
             headers=multidict.CIMultiDictProxy[str](updated_headers),
             body=self.body,
         )
