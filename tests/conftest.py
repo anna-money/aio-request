@@ -15,6 +15,7 @@ from aio_request import (
     ClosableResponse,
     DefaultResponseClassifier,
     EmptyResponse,
+    NoopMetricsProvider,
     Request,
     RequestSender,
     Transport,
@@ -72,9 +73,11 @@ async def service(aiohttp_client):
 @pytest.fixture
 async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
-        request_sender = aio_request.AioHttpTransport(client_session)
         yield aio_request.RequestStrategiesFactory(
-            request_sender=RequestSender(request_sender),
+            request_sender=RequestSender(
+                transport=aio_request.AioHttpTransport(client_session),
+                metrics_provider=NoopMetricsProvider(),
+            ),
             endpoint=f"http://{service.server.host}:{service.server.port}/",
             response_classifier=DefaultResponseClassifier(),
         )

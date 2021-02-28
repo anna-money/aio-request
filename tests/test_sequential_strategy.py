@@ -4,6 +4,7 @@ import contextlib
 from aio_request import (
     Deadline,
     DefaultResponseClassifier,
+    NoopMetricsProvider,
     Priority,
     RequestSender,
     RequestStrategiesFactory,
@@ -15,7 +16,10 @@ from tests.conftest import FakeResponseConfiguration, FakeTransport
 
 async def test_timeout_because_of_expiration():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(FakeTransport([FakeResponseConfiguration(status=200, delay_seconds=5)])),
+        request_sender=RequestSender(
+            transport=FakeTransport([FakeResponseConfiguration(status=200, delay_seconds=5)]),
+            metrics_provider=NoopMetricsProvider(),
+        ),
         endpoint="http://service.com",
         response_classifier=DefaultResponseClassifier(),
     )
@@ -28,7 +32,10 @@ async def test_timeout_because_of_expiration():
 
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(FakeTransport([489, 200])),
+        request_sender=RequestSender(
+            transport=FakeTransport([489, 200]),
+            metrics_provider=NoopMetricsProvider(),
+        ),
         endpoint="http://service.com",
         response_classifier=DefaultResponseClassifier(),
     )
@@ -41,7 +48,10 @@ async def test_succeed_response_received():
 
 async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(FakeTransport([499, 499, 499])),
+        request_sender=RequestSender(
+            transport=FakeTransport([499, 499, 499]),
+            metrics_provider=NoopMetricsProvider(),
+        ),
         endpoint="http://service.com",
         response_classifier=DefaultResponseClassifier(),
     )
@@ -56,7 +66,8 @@ async def test_cancellation():
     async def send_request():
         strategies_factory = RequestStrategiesFactory(
             request_sender=RequestSender(
-                FakeTransport([489, FakeResponseConfiguration(status=200, delay_seconds=100)])
+                transport=FakeTransport([489, FakeResponseConfiguration(status=200, delay_seconds=100)]),
+                metrics_provider=NoopMetricsProvider(),
             ),
             endpoint="http://service.com",
             response_classifier=DefaultResponseClassifier(),

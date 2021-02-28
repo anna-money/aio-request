@@ -1,22 +1,28 @@
+import asyncio
+import time
+
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
 from .deadline import Deadline
+from .metrics import MetricsProvider
 from .priority import Priority
 from .transport import Transport
 
 
 class RequestSender:
-    __slots__ = ("_transport", "_low_timeout_threshold", "_emit_system_headers")
+    __slots__ = ("_transport", "_metrics_provider", "_low_timeout_threshold", "_emit_system_headers")
 
     def __init__(
         self,
-        transport: Transport,
         *,
+        transport: Transport,
+        metrics_provider: MetricsProvider,
         emit_system_headers: bool = True,
         low_timeout_threshold: float = 0.05,
     ):
         self._transport = transport
+        self._metrics_provider = metrics_provider
         self._emit_system_headers = emit_system_headers
         self._low_timeout_threshold = low_timeout_threshold
 
@@ -33,4 +39,23 @@ class RequestSender:
                     Header.X_REQUEST_PRIORITY: str(priority),
                 }
             )
-        return await self._transport.send(endpoint, request, deadline.timeout)
+
+        started_at = time.perf_counter()
+        try:
+            response = await self._transport.send(endpoint, request, deadline.timeout)
+            self._capture_metrics(endpoint, request, response.status, started_at)
+            return response
+        except asyncio.CancelledError:
+            self._capture_metrics(endpoint, request, 499, started_at)
+            raise
+
+    def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
+        tags = {
+            "aio_request_endpoint": endpoint.human_repr(),
+            "aio_request_method": request.method,
+            "aio_request_path": request.url.path,
+            "aio_request_status": str(status),
+        }
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        self._metrics_provider.increment_counter("aio_request_status", tags)
+        self._metrics_provider.observe_value("aio_request_latency", tags, elapsed)

@@ -1,7 +1,4 @@
-import asyncio
-import contextlib
-import time
-from typing import AsyncContextManager, AsyncIterator, Callable, Optional, Union
+from typing import AsyncContextManager, Callable, Optional, Union
 
 import yarl
 
@@ -9,7 +6,7 @@ from .base import Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .metrics import ClientMetricsCollector, NoMetricsCollector
+from .metrics import MetricsProvider, NoopMetricsProvider
 from .priority import Priority
 from .request_sender import RequestSender
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
@@ -23,7 +20,6 @@ class Client:
         "_request_enricher",
         "_default_priority",
         "_default_timeout",
-        "_metrics_collector",
     )
 
     def __init__(
@@ -33,47 +29,23 @@ class Client:
         default_timeout: float,
         default_priority: Priority,
         request_enricher: Optional[Callable[[Request], Request]],
-        metrics_collector: ClientMetricsCollector,
     ):
         self._default_priority = default_priority
         self._default_timeout = default_timeout
         self._request_enricher = request_enricher
         self._request_strategy = request_strategy
-        self._metrics_collector = metrics_collector
 
     def request(
         self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
     ) -> AsyncContextManager[Response]:
-        return self._request(request, deadline=deadline, priority=priority)
-
-    @contextlib.asynccontextmanager
-    async def _request(
-        self, request: Request, *, deadline: Optional[Deadline] = None, priority: Optional[Priority] = None
-    ) -> AsyncIterator[Response]:
         if self._request_enricher is not None:
             request = self._request_enricher(request)
         context = get_context()
-        response_ctx = self._request_strategy.request(
+        return self._request_strategy.request(
             request,
             deadline or context.deadline or Deadline.from_timeout(self._default_timeout),
             self.normalize_priority(priority or self._default_priority, context.priority),
         )
-        started_at = time.perf_counter()
-        has_cancelled_during_request_sending = True
-        try:
-            async with response_ctx as response:
-                elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics_collector.collect(request, response, elapsed)
-                try:
-                    yield response
-                except asyncio.CancelledError:
-                    has_cancelled_during_request_sending = False
-                    raise
-        except asyncio.CancelledError:
-            if has_cancelled_during_request_sending:
-                elapsed = max(0.0, time.perf_counter() - started_at)
-                self._metrics_collector.collect(request, None, elapsed)
-            raise
 
     @staticmethod
     def normalize_priority(priority: "Priority", context_priority: Optional["Priority"]) -> "Priority":
@@ -93,7 +65,6 @@ def setup(
     *,
     transport: Transport,
     endpoint: Union[str, yarl.URL],
-    service_name: str = "unknown",
     safe_method_attempts_count: int = 3,
     unsafe_method_attempts_count: int = 3,
     safe_method_delays_provider: Callable[[int], float] = linear_delays(delay_multiplier=0.1),
@@ -104,11 +75,14 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics_collector: Optional[Callable[[str], ClientMetricsCollector]] = None,
+    metrics_provider: Optional[MetricsProvider] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
         request_sender=RequestSender(
-            transport, low_timeout_threshold=low_timeout_threshold, emit_system_headers=emit_system_headers
+            transport=transport,
+            metrics_provider=metrics_provider or NoopMetricsProvider(),
+            low_timeout_threshold=low_timeout_threshold,
+            emit_system_headers=emit_system_headers,
         ),
         endpoint=endpoint,
         response_classifier=response_classifier or DefaultResponseClassifier(),
@@ -134,5 +108,4 @@ def setup(
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,
-        metrics_collector=(metrics_collector or NoMetricsCollector)(service_name),
     )

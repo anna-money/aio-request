@@ -1,22 +1,24 @@
 import abc
-from typing import Optional
-
-from .base import Request, Response
+from typing import Dict
 
 
-class ClientMetricsCollector(abc.ABC):
-    __slots__ = ("_service_name",)
-
-    def __init__(self, service_name: str):
-        self._service_name = service_name
+class MetricsProvider(abc.ABC):
+    __slots__ = ()
 
     @abc.abstractmethod
-    def collect(self, request: Request, response: Optional[Response], elapsed_seconds: float) -> None:
+    def increment_counter(self, name: str, tags: Dict[str, str], value: float = 1) -> None:
+        pass
+
+    @abc.abstractmethod
+    def observe_value(self, name: str, tags: Dict[str, str], value: float) -> None:
         pass
 
 
-class NoMetricsCollector(ClientMetricsCollector):
+class NoopMetricsProvider(MetricsProvider):
     __slots__ = ()
 
-    def collect(self, request: Request, response: Optional[Response], elapsed_seconds: float) -> None:
+    def increment_counter(self, name: str, tags: Dict[str, str], value: float = 1) -> None:
+        pass
+
+    def observe_value(self, name: str, tags: Dict[str, str], value: float) -> None:
         pass
