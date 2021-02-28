@@ -12,6 +12,7 @@ on:
 
 jobs:
   test:
+    name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
