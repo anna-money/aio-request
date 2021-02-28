@@ -29,7 +29,7 @@ setup(
     description="Various strategies for sending requests",
     platforms=["macOS", "POSIX", "Windows"],
     author="Yury Pliner",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     project_urls={},
     author_email="yury.pliner@gmail.com",
     license="MIT",
