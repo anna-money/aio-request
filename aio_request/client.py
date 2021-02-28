@@ -11,9 +11,10 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .metrics import ClientMetricsCollector, NoMetricsCollector
 from .priority import Priority
-from .transport import Transport
+from .request_sender import RequestSender
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+from .transport import Transport
 
 
 class Client:
@@ -27,8 +28,8 @@ class Client:
 
     def __init__(
         self,
-        request_strategy: RequestStrategy,
         *,
+        request_strategy: RequestStrategy,
         default_timeout: float,
         default_priority: Priority,
         request_enricher: Optional[Callable[[Request], Request]],
@@ -106,11 +107,11 @@ def setup(
     metrics_collector: Optional[Callable[[str], ClientMetricsCollector]] = None,
 ) -> Client:
     factory = RequestStrategiesFactory(
-        transport=transport,
+        request_sender=RequestSender(
+            transport, low_timeout_threshold=low_timeout_threshold, emit_system_headers=emit_system_headers
+        ),
         endpoint=endpoint,
         response_classifier=response_classifier or DefaultResponseClassifier(),
-        low_timeout_threshold=low_timeout_threshold,
-        emit_system_headers=emit_system_headers,
     )
     request_strategy = MethodBasedStrategy(
         {
@@ -129,7 +130,7 @@ def setup(
         }
     )
     return Client(
-        request_strategy,
+        request_strategy=request_strategy,
         default_timeout=default_timeout,
         default_priority=default_priority,
         request_enricher=request_enricher,

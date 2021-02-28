@@ -25,11 +25,11 @@ class AioHttpTransport(Transport):
     __slots__ = ("_client_session", "_network_errors_code", "_buffer_payload")
 
     def __init__(
-            self,
-            client_session: aiohttp.ClientSession,
-            *,
-            network_errors_code: int = 489,
-            buffer_payload: bool = True,
+        self,
+        client_session: aiohttp.ClientSession,
+        *,
+        network_errors_code: int = 489,
+        buffer_payload: bool = True,
     ):
         self._client_session = client_session
         self._network_errors_code = network_errors_code
@@ -111,11 +111,11 @@ class _AioHttpResponse(ClosableResponse):
         return self._response.headers
 
     async def json(
-            self,
-            *,
-            encoding: Optional[str] = None,
-            loads: Callable[[str], Any] = json.loads,
-            content_type: Optional[str] = "application/json",
+        self,
+        *,
+        encoding: Optional[str] = None,
+        loads: Callable[[str], Any] = json.loads,
+        content_type: Optional[str] = "application/json",
     ) -> Any:
         return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
 
@@ -131,14 +131,14 @@ _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohtt
 
 
 def aiohttp_middleware_factory(
-        *,
-        default_timeout: float = 20,
-        default_priority: Priority = Priority.NORMAL,
-        low_timeout_threshold: float = 0.005,
+    *,
+    default_timeout: float = 20,
+    default_priority: Priority = Priority.NORMAL,
+    low_timeout_threshold: float = 0.005,
 ) -> _MIDDLEWARE:
     @aiohttp.web_middlewares.middleware
     async def middleware(
-            request: aiohttp.web_request.Request, handler: _HANDLER
+        request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
         deadline = Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT)) or Deadline.from_timeout(
             default_timeout

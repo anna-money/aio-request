@@ -1,5 +1,6 @@
+import asyncio
 import contextlib
-from typing import Any, Collection, Dict, Mapping, Optional, Protocol, Union
+from typing import Any, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union
 
 import multidict
 import yarl
@@ -18,10 +19,35 @@ class Closable(Protocol):
         ...
 
 
-async def close_many(items: Collection[Closable]) -> None:
+TClosable = TypeVar("TClosable", bound=Closable)
+
+
+async def _close(item: TClosable) -> None:
+    with contextlib.suppress(Exception):
+        await item.close()
+
+
+async def close_futures(items: Collection[asyncio.Future[TClosable]]) -> None:
     for item in items:
-        with contextlib.suppress(Exception):
-            await item.close()
+        if item.cancelled():
+            continue
+        try:
+            await _close(await item)
+        except asyncio.CancelledError:
+            if not item.cancelled():
+                raise
+
+
+async def close(items: Collection[TClosable]) -> None:
+    for item in items:
+        await _close(item)
+
+
+async def cancel_futures(futures: Collection[asyncio.Future[TClosable]]) -> None:
+    for future in futures:
+        if future.done():
+            continue
+        future.cancel()
 
 
 def substitute_path_parameters(url: yarl.URL, parameters: Optional[Mapping[str, str]] = None) -> yarl.URL:

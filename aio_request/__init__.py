@@ -8,10 +8,11 @@ from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .metrics import ClientMetricsCollector
 from .priority import Priority
-from .transport import Transport
+from .request_sender import RequestSender
 from .requests import delete, get, post, post_json, put, put_json
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+from .transport import Transport
 
 try:
     import aiohttp

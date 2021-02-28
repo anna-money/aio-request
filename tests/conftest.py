@@ -16,6 +16,7 @@ from aio_request import (
     DefaultResponseClassifier,
     EmptyResponse,
     Request,
+    RequestSender,
     Transport,
     aiohttp_middleware_factory,
 )
@@ -29,7 +30,7 @@ class FakeResponseConfiguration:
     delay_seconds: float
 
 
-class FakeRequestSender(Transport):
+class FakeTransport(Transport):
     __slots__ = ("_responses",)
 
     def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
@@ -73,7 +74,7 @@ async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
         request_sender = aio_request.AioHttpTransport(client_session)
         yield aio_request.RequestStrategiesFactory(
-            transport=request_sender,
+            request_sender=RequestSender(request_sender),
             endpoint=f"http://{service.server.host}:{service.server.port}/",
             response_classifier=DefaultResponseClassifier(),
         )
