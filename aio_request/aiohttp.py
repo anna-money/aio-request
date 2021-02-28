@@ -40,7 +40,7 @@ class AioHttpTransport(Transport):
             raise RuntimeError("Base url should be absolute")
 
         method = request.method
-        url = substitute_path_parameters(endpoint.join(request.url), request.path_parameters)
+        url = endpoint.join(substitute_path_parameters(request.url, request.path_parameters))
         headers = request.headers
         body = request.body
 

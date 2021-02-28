@@ -13,6 +13,9 @@ from aio_request.utils import substitute_path_parameters
         (yarl.URL("{a}/do"), {"a": "1"}, yarl.URL("1/do")),
         (yarl.URL("{a}/{b}"), {"a": "1", "b": "2"}, yarl.URL("1/2")),
         (yarl.URL("{a}/do?b=2"), {"a": "1"}, yarl.URL("1/do?b=2")),
+        (yarl.URL("do/{a}"), {"a": "1"}, yarl.URL("do/1")),
+        (yarl.URL("https://site.com/"), {}, yarl.URL("https://site.com/")),
+        (yarl.URL("https://site.com/{a}"), {"a": "1"}, yarl.URL("https://site.com:443/1")),
     ],
 )
 def test_substitute_path_parameters(url: yarl.URL, parameters: Optional[Dict[str, str]], result: yarl.URL) -> None:

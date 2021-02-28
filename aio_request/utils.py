@@ -60,7 +60,6 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[Mapping[str, 
 
     build_parameters: Dict[str, Any] = dict(
         scheme=url.scheme,
-        authority=url.authority,
         user=url.user,
         password=url.password,
         host=url.host,
