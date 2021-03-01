@@ -51,10 +51,10 @@ class RequestSender:
 
     def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
         tags = {
-            "aio_request_endpoint": endpoint.human_repr(),
-            "aio_request_method": request.method,
-            "aio_request_path": request.url.path,
-            "aio_request_status": str(status),
+            "request_endpoint": endpoint.human_repr(),
+            "request_method": request.method,
+            "request_path": request.url.path,
+            "response_status": str(status),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
         self._metrics_provider.increment_counter("aio_request_status", tags)

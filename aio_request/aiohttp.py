@@ -51,9 +51,9 @@ class AioHttpTransport(Transport):
                 url,
                 timeout,
                 extra={
-                    "aio_request_method": method,
-                    "aio_request_url": url,
-                    "aio_request_timeout": timeout,
+                    "request_method": method,
+                    "request_url": url,
+                    "request_timeout": timeout,
                 },
             )
             response = await self._client_session.request(
@@ -73,8 +73,8 @@ class AioHttpTransport(Transport):
                 url,
                 exc_info=True,
                 extra={
-                    "aio_request_method": method,
-                    "aio_request_url": url,
+                    "request_method": method,
+                    "request_url": url,
                 },
             )
             return EmptyResponse(status=self._network_errors_code)
@@ -85,9 +85,9 @@ class AioHttpTransport(Transport):
                 url,
                 timeout,
                 extra={
-                    "aio_request_method": method,
-                    "aio_request_url": url,
-                    "aio_request_timeout": timeout,
+                    "request_method": method,
+                    "request_url": url,
+                    "request_timeout": timeout,
                 },
             )
             return EmptyResponse(status=408)
