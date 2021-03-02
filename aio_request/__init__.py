@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = "0.0.22"
+__version__ = "0.0.23"
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .client import Client, setup
@@ -24,6 +24,6 @@ except ImportError:
 try:
     import prometheus_client
 
-    from .prometheus import PrometheusMetricsProvider
+    from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
 except ImportError:
     pass
