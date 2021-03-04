@@ -29,8 +29,6 @@ class AioHttpTransport(Transport):
         "_client_session",
         "_metrics_provider",
         "_network_errors_code",
-        "_cancelled_errors_code",
-        "_timeout_error_code",
         "_buffer_payload",
     )
 
@@ -40,15 +38,11 @@ class AioHttpTransport(Transport):
         *,
         metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
         network_errors_code: int = 489,
-        cancelled_errors_code: int = 409,
-        timeout_error_code: int = 408,
         buffer_payload: bool = True,
     ):
         self._client_session = client_session
         self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code
-        self._cancelled_errors_code = cancelled_errors_code
-        self._timeout_error_code = timeout_error_code
         self._buffer_payload = buffer_payload
 
     async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
@@ -98,7 +92,7 @@ class AioHttpTransport(Transport):
             self._capture_metrics(endpoint, request, self._network_errors_code, started_at)
             return EmptyResponse(status=self._network_errors_code)
         except asyncio.CancelledError:
-            self._capture_metrics(endpoint, request, self._cancelled_errors_code, started_at)
+            self._capture_metrics(endpoint, request, 499, started_at)
             raise
         except asyncio.TimeoutError:
             logger.warning(
@@ -112,8 +106,8 @@ class AioHttpTransport(Transport):
                     "request_timeout": timeout,
                 },
             )
-            self._capture_metrics(endpoint, request, self._timeout_error_code, started_at)
-            return EmptyResponse(status=self._timeout_error_code)
+            self._capture_metrics(endpoint, request, 408, started_at)
+            return EmptyResponse(status=408)
 
     def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
         tags = {
