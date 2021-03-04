@@ -22,3 +22,6 @@ class NoopMetricsProvider(MetricsProvider):
 
     def observe_value(self, name: str, tags: Dict[str, str], value: float) -> None:
         pass
+
+
+NOOP_METRICS_PROVIDER = NoopMetricsProvider()

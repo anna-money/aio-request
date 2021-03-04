@@ -1,12 +1,4 @@
-from aio_request import (
-    Deadline,
-    DefaultResponseClassifier,
-    NoopMetricsProvider,
-    RequestSender,
-    RequestStrategiesFactory,
-    get,
-    linear_delays,
-)
+from aio_request import Deadline, DefaultResponseClassifier, RequestSender, RequestStrategiesFactory, get, linear_delays
 from tests.conftest import FakeResponseConfiguration, FakeTransport
 
 
@@ -20,7 +12,6 @@ async def test_timeout_because_of_expiration():
                     FakeResponseConfiguration(status=200, delay_seconds=5),
                 ],
             ),
-            metrics_provider=NoopMetricsProvider(),
         ),
         endpoint="http://service.com",
         response_classifier=DefaultResponseClassifier(),
@@ -36,7 +27,6 @@ async def test_succeed_response_received_first_slow_request():
     strategies_factory = RequestStrategiesFactory(
         request_sender=RequestSender(
             transport=FakeTransport([FakeResponseConfiguration(status=200, delay_seconds=5), 200]),
-            metrics_provider=NoopMetricsProvider(),
         ),
         endpoint="http://service.com",
         response_classifier=DefaultResponseClassifier(),
@@ -50,7 +40,7 @@ async def test_succeed_response_received_first_slow_request():
 
 async def test_succeed_response_received():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(transport=FakeTransport([489, 200]), metrics_provider=NoopMetricsProvider()),
+        request_sender=RequestSender(transport=FakeTransport([489, 200])),
         response_classifier=DefaultResponseClassifier(),
         endpoint="http://service.com",
     )
@@ -63,10 +53,7 @@ async def test_succeed_response_received():
 
 async def test_succeed_response_not_received_too_many_failures():
     strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(
-            transport=FakeTransport([499, 499, 499]),
-            metrics_provider=NoopMetricsProvider(),
-        ),
+        request_sender=RequestSender(transport=FakeTransport([499, 499, 499])),
         response_classifier=DefaultResponseClassifier(),
         endpoint="http://service.com",
     )
