@@ -10,14 +10,14 @@ import aiohttp.web_response
 import pytest
 import yarl
 
-import aio_request
 from aio_request import (
+    AioHttpTransport,
     ClosableResponse,
     DefaultResponseClassifier,
     EmptyResponse,
-    NoopMetricsProvider,
     Request,
     RequestSender,
+    RequestStrategiesFactory,
     Transport,
     aiohttp_middleware_factory,
 )
@@ -73,11 +73,8 @@ async def service(aiohttp_client):
 @pytest.fixture
 async def request_strategies_factory(service):
     async with aiohttp.ClientSession() as client_session:
-        yield aio_request.RequestStrategiesFactory(
-            request_sender=RequestSender(
-                transport=aio_request.AioHttpTransport(client_session),
-                metrics_provider=NoopMetricsProvider(),
-            ),
+        yield RequestStrategiesFactory(
+            request_sender=RequestSender(transport=AioHttpTransport(client_session)),
             endpoint=f"http://{service.server.host}:{service.server.port}/",
             response_classifier=DefaultResponseClassifier(),
         )
