@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from typing import Any, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union
 
 import multidict
 import yarl
@@ -27,12 +27,15 @@ async def _close(item: TClosable) -> None:
         await item.close()
 
 
-async def close_futures(items: Collection[asyncio.Future[TClosable]]) -> None:
+T = TypeVar("T")
+
+
+async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable[[T], TClosable]) -> None:
     for item in items:
         if item.cancelled():
             continue
         try:
-            await _close(await item)
+            await _close(as_close(await item))
         except asyncio.CancelledError:
             if not item.cancelled():
                 raise
@@ -43,7 +46,7 @@ async def close(items: Collection[TClosable]) -> None:
         await _close(item)
 
 
-async def cancel_futures(futures: Collection[asyncio.Future[TClosable]]) -> None:
+async def cancel_futures(futures: Collection[asyncio.Future[T]]) -> None:
     for future in futures:
         if future.done():
             continue

@@ -4,7 +4,7 @@ from aiohttp import ClientSession
 import aio_request
 
 
-async def test_success(request_strategies_factory):
+async def test_success():
     async with ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
         response = await transport.send(

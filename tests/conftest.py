@@ -13,13 +13,11 @@ import yarl
 from aio_request import (
     AioHttpTransport,
     ClosableResponse,
-    DefaultResponseClassifier,
     EmptyResponse,
     Request,
-    RequestSender,
-    RequestStrategiesFactory,
     Transport,
     aiohttp_middleware_factory,
+    setup,
 )
 
 logging.basicConfig(level="DEBUG")
@@ -71,10 +69,9 @@ async def service(aiohttp_client):
 
 
 @pytest.fixture
-async def request_strategies_factory(service):
+async def client(service):
     async with aiohttp.ClientSession() as client_session:
-        yield RequestStrategiesFactory(
-            request_sender=RequestSender(transport=AioHttpTransport(client_session)),
+        yield setup(
+            transport=AioHttpTransport(client_session),
             endpoint=f"http://{service.server.host}:{service.server.port}/",
-            response_classifier=DefaultResponseClassifier(),
         )
