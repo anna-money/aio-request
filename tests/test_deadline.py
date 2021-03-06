@@ -1,6 +1,8 @@
 import asyncio
 import datetime
 
+import aio_request
+
 try:
     import zoneinfo
 except ImportError:
@@ -8,11 +10,9 @@ except ImportError:
 
 import pytest
 
-from aio_request import Deadline
-
 
 async def test_deadline_expired():
-    deadline = Deadline.from_timeout(1)
+    deadline = aio_request.Deadline.from_timeout(1)
     assert not deadline.expired
     assert 0.5 < deadline.timeout < 1
     await asyncio.sleep(1)
@@ -21,9 +21,9 @@ async def test_deadline_expired():
 
 async def test_invalid_deadline_at():
     with pytest.raises(RuntimeError):
-        Deadline(datetime.datetime.utcnow().replace(tzinfo=zoneinfo.ZoneInfo("UTC")))
+        aio_request.Deadline(datetime.datetime.utcnow().replace(tzinfo=zoneinfo.ZoneInfo("UTC")))
 
 
 async def test_parse_str():
-    deadline = Deadline.from_timeout(1)
-    assert deadline.deadline_at == Deadline.try_parse(str(deadline)).deadline_at
+    deadline = aio_request.Deadline.from_timeout(1)
+    assert deadline.deadline_at == aio_request.Deadline.try_parse(str(deadline)).deadline_at

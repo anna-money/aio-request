@@ -1,64 +1,55 @@
-from aio_request import Deadline, DefaultResponseClassifier, RequestSender, RequestStrategiesFactory, get, linear_delays
+import aio_request
 from tests.conftest import FakeResponseConfiguration, FakeTransport
 
 
 async def test_timeout_because_of_expiration():
-    strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(
-            transport=FakeTransport(
-                [
-                    FakeResponseConfiguration(status=200, delay_seconds=5),
-                    FakeResponseConfiguration(status=200, delay_seconds=5),
-                    FakeResponseConfiguration(status=200, delay_seconds=5),
-                ],
-            ),
+    client = aio_request.setup(
+        transport=FakeTransport(
+            [
+                FakeResponseConfiguration(status=200, delay_seconds=5),
+                FakeResponseConfiguration(status=200, delay_seconds=5),
+                FakeResponseConfiguration(status=200, delay_seconds=5),
+            ]
         ),
         endpoint="http://service.com",
-        response_classifier=DefaultResponseClassifier(),
     )
-    parallel = strategies_factory.parallel()
-    deadline = Deadline.from_timeout(1)
-    async with parallel.request(get("hello"), deadline=deadline) as response:
+
+    deadline = aio_request.Deadline.from_timeout(1)
+    response_ctx = client.request(aio_request.get("hello"), deadline=deadline, strategy=aio_request.parallel_strategy())
+    async with response_ctx as response:
         assert response.status == 408
         assert deadline.expired
 
 
 async def test_succeed_response_received_first_slow_request():
-    strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(
-            transport=FakeTransport([FakeResponseConfiguration(status=200, delay_seconds=5), 200]),
-        ),
+    client = aio_request.setup(
+        transport=FakeTransport([FakeResponseConfiguration(status=200, delay_seconds=5), 200]),
         endpoint="http://service.com",
-        response_classifier=DefaultResponseClassifier(),
     )
-    parallel = strategies_factory.parallel()
-    deadline = Deadline.from_timeout(1)
-    async with parallel.request(get("hello"), deadline=deadline) as response:
+    deadline = aio_request.Deadline.from_timeout(1)
+    response_ctx = client.request(aio_request.get("hello"), deadline=deadline, strategy=aio_request.parallel_strategy())
+    async with response_ctx as response:
         assert response.status == 200
         assert not deadline.expired
 
 
 async def test_succeed_response_received():
-    strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(transport=FakeTransport([489, 200])),
-        response_classifier=DefaultResponseClassifier(),
-        endpoint="http://service.com",
-    )
-    parallel = strategies_factory.parallel()
-    deadline = Deadline.from_timeout(1)
-    async with parallel.request(get("hello"), deadline=deadline) as response:
+    client = aio_request.setup(transport=FakeTransport([489, 200]), endpoint="http://service.com")
+    deadline = aio_request.Deadline.from_timeout(1)
+    response_ctx = client.request(aio_request.get("hello"), deadline=deadline, strategy=aio_request.parallel_strategy())
+    async with response_ctx as response:
         assert response.status == 200
         assert not deadline.expired
 
 
 async def test_succeed_response_not_received_too_many_failures():
-    strategies_factory = RequestStrategiesFactory(
-        request_sender=RequestSender(transport=FakeTransport([499, 499, 499])),
-        response_classifier=DefaultResponseClassifier(),
-        endpoint="http://service.com",
+    client = aio_request.setup(transport=FakeTransport([499, 499, 499]), endpoint="http://service.com")
+    deadline = aio_request.Deadline.from_timeout(1)
+    response_ctx = client.request(
+        aio_request.get("hello"),
+        deadline=deadline,
+        strategy=aio_request.parallel_strategy(attempts_count=3, delays_provider=aio_request.linear_delays()),
     )
-    parallel = strategies_factory.parallel(attempts_count=3, delays_provider=linear_delays())
-    deadline = Deadline.from_timeout(1)
-    async with parallel.request(get("hello"), deadline=deadline) as response:
+    async with response_ctx as response:
         assert response.status == 499
         assert not deadline.expired

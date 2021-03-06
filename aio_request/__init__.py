@@ -8,10 +8,16 @@ from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .priority import Priority
-from .request_sender import RequestSender
 from .requests import delete, get, post, post_json, put, put_json
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
-from .strategy import MethodBasedStrategy, RequestStrategiesFactory, RequestStrategy
+from .strategy import (
+    MethodBasedStrategy,
+    RequestStrategy,
+    SendRequestFunc,
+    SendRequestResult,
+    parallel_strategy,
+    sequential_strategy,
+)
 from .transport import Transport
 
 try:
