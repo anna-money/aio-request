@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from typing import Any, Callable, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union, Iterator
 
 import multidict
 import yarl
@@ -73,3 +73,14 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[Mapping[str, 
     )
 
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
+
+
+def attempts(attempts_count: int) -> Iterator[int]:
+    if attempts_count == -1:
+        attempt = 0
+        while True:
+            yield attempt
+            attempt += 1
+    else:
+        for attempt in range(attempts_count):
+            yield attempt

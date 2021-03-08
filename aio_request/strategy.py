@@ -10,7 +10,7 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
 from .response_classifier import ResponseVerdict
-from .utils import cancel_futures, close, close_futures
+from .utils import cancel_futures, close, close_futures, attempts
 
 
 class SendRequestResult:
@@ -103,7 +103,7 @@ class SequentialRequestStrategy(RequestStrategy):
     ) -> AsyncIterator[Response]:
         responses: List[ClosableResponse] = []
         try:
-            for attempt in range(self._attempts_count):
+            for attempt in attempts(self._attempts_count):
                 send_result = await send_request(endpoint, request, deadline, priority)
                 responses.append(send_result.response)
                 if send_result.verdict == ResponseVerdict.ACCEPT:
@@ -161,7 +161,7 @@ class ParallelRequestStrategy(RequestStrategy):
     ) -> AsyncIterator[Response]:
         completed_tasks: Set[asyncio.Future[SendRequestResult]] = set()
         pending_tasks: Set[asyncio.Future[SendRequestResult]] = set()
-        for attempt in range(0, self._attempts_count):
+        for attempt in attempts(self._attempts_count):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
