@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import aiohttp
 import aiohttp.web_exceptions
@@ -51,6 +51,8 @@ class AioHttpTransport(Transport):
 
         method = request.method
         url = endpoint.join(substitute_path_parameters(request.url, request.path_parameters))
+        if request.query_parameters is not None:
+            url = url.update_query(request.query_parameters)
         headers = request.headers
         body = request.body
 
@@ -164,7 +166,7 @@ def aiohttp_middleware_factory(
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
     metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
-    client_header_name: str = "X-Service-Name",
+    client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
     def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:

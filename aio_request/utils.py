@@ -1,17 +1,11 @@
 import asyncio
 import contextlib
-from typing import Any, Callable, Collection, Dict, Mapping, Optional, Protocol, TypeVar, Union
+from typing import Any, Callable, Collection, Dict, Mapping, Optional, Protocol, TypeVar
 
 import multidict
 import yarl
 
 EMPTY_HEADERS = multidict.CIMultiDictProxy[str](multidict.CIMultiDict[str]())
-
-
-def get_headers_to_enrich(
-    headers: Optional[Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str]]]
-) -> multidict.CIMultiDict[str]:
-    return multidict.CIMultiDict[str](headers) if headers is not None else multidict.CIMultiDict[str]()
 
 
 class Closable(Protocol):

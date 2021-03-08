@@ -5,7 +5,7 @@ from typing import Any, Callable, Mapping, Optional, Union
 import multidict
 import yarl
 
-from .utils import EMPTY_HEADERS, get_headers_to_enrich
+from .utils import EMPTY_HEADERS
 
 
 class Method:
@@ -19,6 +19,10 @@ class Header:
     CONTENT_TYPE = multidict.istr("Content-Type")
     X_REQUEST_DEADLINE_AT = multidict.istr("X-Request-Deadline-At")
     X_REQUEST_PRIORITY = multidict.istr("X-Request-Priority")
+    X_SERVICE_NAME = multidict.istr("X-Service-Name")
+
+
+MultiDict = Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]]
 
 
 class Request:
@@ -26,16 +30,19 @@ class Request:
         "method",
         "url",
         "path_parameters",
+        "query_parameters",
         "headers",
         "body",
     )
 
     def __init__(
         self,
+        *,
         method: str,
         url: yarl.URL,
         path_parameters: Optional[Mapping[str, str]] = None,
-        headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+        query_parameters: Optional[MultiDict] = None,
+        headers: Optional[MultiDict] = None,
         body: Optional[bytes] = None,
     ):
         if url.is_absolute():
@@ -43,14 +50,15 @@ class Request:
 
         self.method = method
         self.path_parameters = path_parameters
+        self.query_parameters = query_parameters
         self.url = url
         self.headers = headers
         self.body = body
 
-    def update_headers(
-        self, headers: Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str]]
-    ) -> "Request":
-        updated_headers = get_headers_to_enrich(self.headers)
+    def update_headers(self, headers: MultiDict) -> "Request":
+        updated_headers = (
+            multidict.CIMultiDict[str](self.headers) if self.headers is not None else multidict.CIMultiDict[str]()
+        )
         updated_headers.update(headers)
         return Request(
             method=self.method,
