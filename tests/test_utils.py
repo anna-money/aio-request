@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import pytest
 import yarl
 
-from aio_request.utils import substitute_path_parameters
+from aio_request.utils import substitute_path_parameters, attempts
 
 
 @pytest.mark.parametrize(
@@ -20,3 +20,17 @@ from aio_request.utils import substitute_path_parameters
 )
 def test_substitute_path_parameters(url: yarl.URL, parameters: Optional[Dict[str, str]], result: yarl.URL) -> None:
     assert substitute_path_parameters(url, parameters) == result
+
+
+def test_fixed_attempts():
+    assert list(attempts(3)) == [0, 1, 2]
+
+
+def test_infinite_attempts():
+    done = []
+    for attempt in attempts(-1):
+        if attempt == 42:
+            break
+        done.append(attempt)
+
+    assert done == list(attempts(42))
