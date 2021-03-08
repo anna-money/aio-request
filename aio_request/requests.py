@@ -4,46 +4,61 @@ from typing import Any, Callable, Mapping, Optional, Union
 import multidict
 import yarl
 
-from .base import Header, Method, Request
-from .utils import get_headers_to_enrich
+from .base import Header, Method, MultiDict, Request
 
 
 def get(
     url: Union[str, yarl.URL],
     *,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    headers: Optional[MultiDict] = None,
     path_parameters: Optional[Mapping[str, str]] = None,
+    query_parameters: Optional[MultiDict] = None,
 ) -> Request:
-    return build_request(Method.GET, url, path_parameters=path_parameters, headers=headers)
+    return build_request(
+        Method.GET, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers
+    )
 
 
 def post(
     url: Union[str, yarl.URL],
     body: Optional[bytes] = None,
     *,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    headers: Optional[MultiDict] = None,
     path_parameters: Optional[Mapping[str, str]] = None,
+    query_parameters: Optional[MultiDict] = None,
 ) -> Request:
-    return build_request(Method.POST, url, path_parameters=path_parameters, headers=headers, body=body)
+    return build_request(
+        Method.POST, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
+    )
 
 
 def put(
     url: Union[str, yarl.URL],
     body: Optional[bytes] = None,
     *,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    headers: Optional[MultiDict] = None,
     path_parameters: Optional[Mapping[str, str]] = None,
+    query_parameters: Optional[MultiDict] = None,
 ) -> Request:
-    return build_request(Method.PUT, url, path_parameters=path_parameters, headers=headers, body=body)
+    return build_request(
+        Method.PUT, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
+    )
 
 
 def delete(
     url: Union[str, yarl.URL],
     *,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    headers: Optional[MultiDict] = None,
     path_parameters: Optional[Mapping[str, str]] = None,
+    query_parameters: Optional[MultiDict] = None,
 ) -> Request:
-    return build_request(Method.DELETE, url, path_parameters=path_parameters, headers=headers)
+    return build_request(
+        Method.DELETE,
+        url,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+    )
 
 
 def post_json(
@@ -51,7 +66,8 @@ def post_json(
     data: Any,
     *,
     path_parameters: Optional[Mapping[str, str]] = None,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[MultiDict] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -61,6 +77,7 @@ def post_json(
         url,
         data,
         path_parameters=path_parameters,
+        query_parameters=query_parameters,
         headers=headers,
         encoding=encoding,
         dumps=dumps,
@@ -73,7 +90,8 @@ def put_json(
     data: Any,
     *,
     path_parameters: Optional[Mapping[str, str]] = None,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[MultiDict] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -83,6 +101,7 @@ def put_json(
         url,
         data,
         path_parameters=path_parameters,
+        query_parameters=query_parameters,
         headers=headers,
         encoding=encoding,
         dumps=dumps,
@@ -96,12 +115,13 @@ def build_json_request(
     data: Any,
     *,
     path_parameters: Optional[Mapping[str, str]] = None,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[MultiDict] = None,
     encoding: str = "utf-8",
     dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
 ) -> Request:
-    enriched_headers = get_headers_to_enrich(headers)
+    enriched_headers = multidict.CIMultiDict[str](headers) if headers is not None else multidict.CIMultiDict[str]()
     enriched_headers.add(Header.CONTENT_TYPE, content_type)
 
     body = dumps(data).encode(encoding)
@@ -112,6 +132,7 @@ def build_json_request(
         headers=multidict.CIMultiDictProxy[str](enriched_headers),
         body=body,
         path_parameters=path_parameters,
+        query_parameters=query_parameters,
     )
 
 
@@ -120,7 +141,8 @@ def build_request(
     url: Union[str, yarl.URL],
     *,
     path_parameters: Optional[Mapping[str, str]] = None,
-    headers: Optional[multidict.CIMultiDictProxy[str]] = None,
+    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[MultiDict] = None,
     body: Optional[bytes] = None,
 ) -> Request:
     return Request(
@@ -129,4 +151,5 @@ def build_request(
         headers=headers,
         body=body,
         path_parameters=path_parameters,
+        query_parameters=query_parameters,
     )
