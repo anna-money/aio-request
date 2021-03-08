@@ -23,10 +23,16 @@ def read_version():
         raise RuntimeError("Cannot find version in aio_request/__init__.py")
 
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+
 setup(
     name="aio-request",
     version=read_version(),
     description="Various strategies for sending requests",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     platforms=["macOS", "POSIX", "Windows"],
     author="Yury Pliner",
     python_requires=">=3.9",
