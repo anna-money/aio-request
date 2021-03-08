@@ -8,7 +8,7 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .strategy import MethodBasedStrategy, RequestStrategy, SendRequestResult, parallel_strategy, sequential_strategy
+from .strategy import MethodBasedStrategy, RequestStrategy, SendRequestResult, sequential_strategy
 from .transport import Transport
 
 
@@ -68,7 +68,7 @@ class Client:
         )
 
     @staticmethod
-    def normalize_priority(priority: "Priority", context_priority: Optional["Priority"]) -> "Priority":
+    def normalize_priority(priority: Priority, context_priority: Optional[Priority]) -> Priority:
         if context_priority is None:
             return priority
 
@@ -103,31 +103,21 @@ def setup(
     *,
     transport: Transport,
     endpoint: Union[str, yarl.URL],
-    safe_method_attempts_count: int = 3,
-    unsafe_method_attempts_count: int = 3,
-    safe_method_delays_provider: Callable[[int], float] = linear_delays(delay_multiplier=0.1),
-    unsafe_method_delays_provider: Callable[[int], float] = linear_delays(delay_multiplier=0.05),
+    safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
+    unsafe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=1, delays_provider=linear_delays()),
     response_classifier: Optional[ResponseClassifier] = None,
-    default_timeout: float = 20.0,
-    default_priority: Priority = Priority.NORMAL,
+    timeout: float = 20.0,
+    priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
 ) -> Client:
     request_strategy = MethodBasedStrategy(
         {
-            Method.GET: parallel_strategy(
-                attempts_count=safe_method_attempts_count, delays_provider=safe_method_delays_provider
-            ),
-            Method.POST: sequential_strategy(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
-            Method.PUT: sequential_strategy(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
-            Method.DELETE: sequential_strategy(
-                attempts_count=unsafe_method_attempts_count, delays_provider=unsafe_method_delays_provider
-            ),
+            Method.GET: safe_method_strategy,
+            Method.POST: unsafe_method_strategy,
+            Method.PUT: unsafe_method_strategy,
+            Method.DELETE: unsafe_method_strategy,
         }
     )
     return Client(
@@ -135,8 +125,8 @@ def setup(
         transport=transport,
         response_classifier=response_classifier or DefaultResponseClassifier(),
         request_strategy=request_strategy,
-        timeout=default_timeout,
-        priority=default_priority,
+        timeout=timeout,
+        priority=priority,
         request_enricher=request_enricher,
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
