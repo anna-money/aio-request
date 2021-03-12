@@ -25,7 +25,7 @@ from .transport import Transport
 try:
     import aiohttp
 
-    from .aiohttp import AioHttpTransport, aiohttp_middleware_factory
+    from .aiohttp import AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
 except ImportError:
     pass
 
