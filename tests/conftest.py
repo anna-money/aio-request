@@ -53,18 +53,18 @@ class FakeTransport(aio_request.Transport):
 @pytest.fixture
 async def server(aiohttp_client):
     async def handler(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
-        await asyncio.sleep(float(request.query.get("delay", 0)))
+        await asyncio.sleep(float(request.query.get("delay", "0")))
         return aiohttp.web_response.Response()
 
     @aio_request.aiohttp_timeout(seconds=0.2)
     async def handler_with_timeout(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
-        await asyncio.sleep(float(request.query.get("delay", 0)))
+        await asyncio.sleep(float(request.query.get("delay", "0")))
         return aiohttp.web_response.Response()
 
     class ViewWithTimeout(aiohttp.web.View):
         @aio_request.aiohttp_timeout(seconds=0.2)
         async def get(self) -> aiohttp.web.StreamResponse:
-            await asyncio.sleep(float(self.request.query.get("delay", 0)))
+            await asyncio.sleep(float(self.request.query.get("delay", "0")))
             return aiohttp.web_response.Response()
 
     app = aiohttp.web.Application(
@@ -80,7 +80,7 @@ async def server(aiohttp_client):
 async def client(server):
     async with aiohttp.ClientSession() as client_session:
 
-        def go(emit_system_headers: bool = False):
+        def go(emit_system_headers: bool = True):
             return aio_request.setup(
                 transport=aio_request.AioHttpTransport(client_session),
                 endpoint=f"http://{server.server.host}:{server.server.port}/",
