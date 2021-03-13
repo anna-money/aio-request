@@ -16,7 +16,7 @@ class Closable(Protocol):
 TClosable = TypeVar("TClosable", bound=Closable)
 
 
-async def _close(item: TClosable) -> None:
+async def close_single(item: TClosable) -> None:
     with contextlib.suppress(Exception):
         await item.close()
 
@@ -29,7 +29,7 @@ async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable
         if item.cancelled():
             continue
         try:
-            await _close(as_close(await item))
+            await close_single(as_close(await item))
         except asyncio.CancelledError:
             if not item.cancelled():
                 raise
@@ -37,7 +37,7 @@ async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable
 
 async def close(items: Collection[TClosable]) -> None:
     for item in items:
-        await _close(item)
+        await close_single(item)
 
 
 async def cancel_futures(futures: Collection[asyncio.Future[T]]) -> None:

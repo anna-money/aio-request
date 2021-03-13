@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import contextlib
-from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Set
+from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Set
 
 import yarl
 
@@ -10,7 +10,7 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
 from .response_classifier import ResponseVerdict
-from .utils import cancel_futures, close, close_futures
+from .utils import cancel_futures, close, close_futures, close_single
 
 
 class SendRequestResult:
@@ -56,6 +56,10 @@ class MethodBasedStrategy(RequestStrategy):
         return self._strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
 
 
+def single_attempt_strategy() -> RequestStrategy:
+    return SingleAttemptRequestStrategy()
+
+
 def sequential_strategy(
     *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
 ) -> RequestStrategy:
@@ -72,6 +76,27 @@ def parallel_strategy(
         attempts_count=attempts_count,
         delays_provider=delays_provider,
     )
+
+
+class SingleAttemptRequestStrategy(RequestStrategy):
+    __slots__ = ()
+
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        send_request: SendRequestFunc,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
+    ) -> AsyncIterator[Response]:
+        send_result: Optional[SendRequestResult] = None
+        try:
+            send_result = await send_request(endpoint, request, deadline, priority)
+            yield send_result.response
+        finally:
+            if send_result is not None:
+                await asyncio.shield(close_single(send_result.response))
 
 
 class SequentialRequestStrategy(RequestStrategy):

@@ -14,11 +14,15 @@ from .requests import delete, get, post, post_json, put, put_json
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .strategy import (
     MethodBasedStrategy,
+    ParallelRequestStrategy,
     RequestStrategy,
     SendRequestFunc,
     SendRequestResult,
+    SequentialRequestStrategy,
+    SingleAttemptRequestStrategy,
     parallel_strategy,
     sequential_strategy,
+    single_attempt_strategy,
 )
 from .transport import Transport
 
