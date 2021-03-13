@@ -25,6 +25,7 @@ async with aiohttp.ClientSession() as client_session:
 
 # Request strategies 
 The following strategies are supported:
+0. Single attempt. Only one attempt is sent.
 1. Sequential. Attempts are sent sequentially with delays between them.
 1. Parallel. Attempts are sent in parallel one by one with delays between them.
 
