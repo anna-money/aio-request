@@ -161,7 +161,7 @@ _HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_respons
 _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
 
 
-def aiohttp_timeout(seconds: float) -> Callable[..., Any]:
+def aiohttp_timeout(*, seconds: float) -> Callable[..., Any]:
     def wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
         setattr(func, "__aio_request_timeout__", seconds)
         return func
@@ -236,12 +236,12 @@ def _get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
 
 
 def _get_deadline_from_handler(request: aiohttp.web_request.Request) -> Optional[Deadline]:
-    origin_handler = request.match_info.handler
-    timeout = getattr(origin_handler, "__aio_request_timeout__", None)
-    if timeout is None and _is_subclass(origin_handler, aiohttp.web.View):
-        sub_handler = getattr(origin_handler, request.method.lower(), None)
-        if sub_handler is not None:
-            timeout = getattr(sub_handler, "__aio_request_timeout__", None)
+    handler = request.match_info.handler
+    timeout = getattr(handler, "__aio_request_timeout__", None)
+    if timeout is None and _is_subclass(handler, aiohttp.web.View):
+        method_handler = getattr(handler, request.method.lower(), None)
+        if method_handler is not None:
+            timeout = getattr(method_handler, "__aio_request_timeout__", None)
 
     return Deadline.from_timeout(cast(float, timeout)) if timeout is not None else None
 

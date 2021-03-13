@@ -52,12 +52,12 @@ class FakeTransport(aio_request.Transport):
 
 @pytest.fixture
 async def server(aiohttp_client):
-    async def get(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
+    async def handler(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
         await asyncio.sleep(float(request.query.get("delay", 0)))
         return aiohttp.web_response.Response()
 
     @aio_request.aiohttp_timeout(seconds=0.2)
-    async def get_with_timeout(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
+    async def handler_with_timeout(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
         await asyncio.sleep(float(request.query.get("delay", 0)))
         return aiohttp.web_response.Response()
 
@@ -70,8 +70,8 @@ async def server(aiohttp_client):
     app = aiohttp.web.Application(
         middlewares=[aio_request.aiohttp_middleware_factory(cancel_on_timeout=True)],
     )
-    app.router.add_get("/", get)
-    app.router.add_get("/with_timeout", get_with_timeout)
+    app.router.add_get("/", handler)
+    app.router.add_get("/with_timeout", handler_with_timeout)
     app.router.add_get("/view_with_timeout", ViewWithTimeout)
     return await aiohttp_client(app)
 
