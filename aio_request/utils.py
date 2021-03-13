@@ -67,3 +67,13 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[Mapping[str, 
     )
 
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
+
+
+def try_parse_float(value: Optional[str]) -> Optional[float]:
+    if value is None:
+        return None
+
+    try:
+        return float(value)
+    except ValueError:
+        return None

@@ -20,7 +20,7 @@ from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .transport import Transport
-from .utils import substitute_path_parameters
+from .utils import substitute_path_parameters, try_parse_float
 
 logger = logging.getLogger(__package__)
 
@@ -228,6 +228,10 @@ def aiohttp_middleware_factory(
 
 
 def _get_deadline(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+    timeout = try_parse_float(request.headers.get(Header.X_REQUEST_TIMEOUT))
+    if timeout is not None:
+        return Deadline.from_timeout(timeout)
+
     return Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT))
 
 
