@@ -1,7 +1,7 @@
 import aio_request
 
 
-async def test_success(client: aio_request.Client) -> None:
+async def test_success(client) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(1.5),
@@ -11,7 +11,7 @@ async def test_success(client: aio_request.Client) -> None:
         assert response.status == 200
 
 
-async def test_not_enough_timeout(client: aio_request.Client) -> None:
+async def test_not_enough_timeout(client) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(0.5),
@@ -21,7 +21,7 @@ async def test_not_enough_timeout(client: aio_request.Client) -> None:
         assert response.status == 408
 
 
-async def test_expired_budget(client: aio_request.Client) -> None:
+async def test_expired_budget(client) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(0),
