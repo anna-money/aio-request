@@ -2,9 +2,10 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Optional, Union
+from typing import Any, Awaitable, Callable, Optional, Union, cast
 
 import aiohttp
+import aiohttp.web
 import aiohttp.web_exceptions
 import aiohttp.web_middlewares
 import aiohttp.web_request
@@ -160,6 +161,14 @@ _HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_respons
 _MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
 
 
+def aiohttp_timeout(*, seconds: float) -> Callable[..., Any]:
+    def wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
+        setattr(func, "__aio_request_timeout__", seconds)
+        return func
+
+    return wrapper
+
+
 def aiohttp_middleware_factory(
     *,
     timeout: float = 20,
@@ -187,14 +196,14 @@ def aiohttp_middleware_factory(
     async def middleware(
         request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
-        deadline = get_deadline(request) or Deadline.from_timeout(timeout)
+        deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
         try:
             response: Optional[aiohttp.web_response.StreamResponse]
             if deadline.expired or deadline.timeout <= low_timeout_threshold:
                 response = aiohttp.web_response.Response(status=408)
             else:
-                with set_context(deadline=deadline, priority=get_priority(request) or priority):
+                with set_context(deadline=deadline, priority=_get_priority(request) or priority):
                     if not cancel_on_timeout:
                         response = await handler(request)
                     else:
@@ -218,9 +227,27 @@ def aiohttp_middleware_factory(
     return middleware
 
 
-def get_deadline(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+def _get_deadline(request: aiohttp.web_request.Request) -> Optional[Deadline]:
     return Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT))
 
 
-def get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
+def _get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
     return Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY))
+
+
+def _get_deadline_from_handler(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+    handler = request.match_info.handler
+    timeout = getattr(handler, "__aio_request_timeout__", None)
+    if timeout is None and _is_subclass(handler, aiohttp.web.View):
+        method_handler = getattr(handler, request.method.lower(), None)
+        if method_handler is not None:
+            timeout = getattr(method_handler, "__aio_request_timeout__", None)
+
+    return Deadline.from_timeout(cast(float, timeout)) if timeout is not None else None
+
+
+def _is_subclass(cls: Any, cls_info: type) -> bool:
+    try:
+        return issubclass(cls, cls_info)
+    except TypeError:
+        return False
