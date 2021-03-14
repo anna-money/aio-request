@@ -1,14 +1,10 @@
 import asyncio
 import datetime
-
-import aio_request
-
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo
+import zoneinfo
 
 import pytest
+
+import aio_request
 
 
 async def test_deadline_expired():
