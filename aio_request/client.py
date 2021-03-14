@@ -8,7 +8,13 @@ from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .strategy import MethodBasedStrategy, RequestStrategy, SendRequestResult, sequential_strategy
+from .strategy import (
+    MethodBasedStrategy,
+    RequestStrategy,
+    SendRequestResult,
+    sequential_strategy,
+    single_attempt_strategy,
+)
 from .transport import Transport
 
 
@@ -104,7 +110,7 @@ def setup(
     transport: Transport,
     endpoint: Union[str, yarl.URL],
     safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
-    unsafe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=1, delays_provider=linear_delays()),
+    unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
     response_classifier: Optional[ResponseClassifier] = None,
     timeout: float = 20.0,
     priority: Priority = Priority.NORMAL,
