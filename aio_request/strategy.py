@@ -1,7 +1,8 @@
 import abc
 import asyncio
 import contextlib
-from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Set
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Optional
 
 import yarl
 
@@ -35,14 +36,14 @@ class RequestStrategy(abc.ABC):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncContextManager[Response]:
+    ) -> contextlib.AbstractAsyncContextManager[Response]:
         ...
 
 
 class MethodBasedStrategy(RequestStrategy):
     __slots__ = ("_strategy_by_method",)
 
-    def __init__(self, strategy_by_method: Dict[str, RequestStrategy]):
+    def __init__(self, strategy_by_method: dict[str, RequestStrategy]):
         self._strategy_by_method = strategy_by_method
 
     def request(
@@ -52,7 +53,7 @@ class MethodBasedStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncContextManager[Response]:
+    ) -> contextlib.AbstractAsyncContextManager[Response]:
         return self._strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
 
 
@@ -126,7 +127,7 @@ class SequentialRequestStrategy(RequestStrategy):
         deadline: Deadline,
         priority: Priority,
     ) -> AsyncIterator[Response]:
-        responses: List[ClosableResponse] = []
+        responses: list[ClosableResponse] = []
         try:
             for attempt in range(self._attempts_count):
                 send_result = await send_request(endpoint, request, deadline, priority)
@@ -184,14 +185,14 @@ class ParallelRequestStrategy(RequestStrategy):
         deadline: Deadline,
         priority: Priority,
     ) -> AsyncIterator[Response]:
-        completed_tasks: Set[asyncio.Future[SendRequestResult]] = set()
-        pending_tasks: Set[asyncio.Future[SendRequestResult]] = set()
+        completed_tasks: set[asyncio.Future[SendRequestResult]] = set()
+        pending_tasks: set[asyncio.Future[SendRequestResult]] = set()
         for attempt in range(0, self._attempts_count):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
-        accepted_responses: List[ClosableResponse] = []
-        not_accepted_responses: List[ClosableResponse] = []
+        accepted_responses: list[ClosableResponse] = []
+        not_accepted_responses: list[ClosableResponse] = []
         try:
             try:
                 while pending_tasks:

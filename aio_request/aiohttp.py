@@ -2,7 +2,8 @@ import asyncio
 import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Optional, Union, cast
+from collections.abc import Awaitable, Callable
+from typing import Any, Optional, Union, cast
 
 import aiohttp
 import aiohttp.web
@@ -20,7 +21,7 @@ from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .transport import Transport
-from .utils import substitute_path_parameters, try_parse_float
+from .utils import build_query_parameters, substitute_path_parameters, try_parse_float
 
 logger = logging.getLogger(__package__)
 
@@ -53,7 +54,7 @@ class AioHttpTransport(Transport):
         method = request.method
         url = endpoint.join(substitute_path_parameters(request.url, request.path_parameters))
         if request.query_parameters is not None:
-            url = url.update_query(request.query_parameters)
+            url = url.update_query(build_query_parameters(request.query_parameters))
         headers = request.headers
         body = request.body
 

@@ -1,11 +1,12 @@
 import abc
 import json
-from typing import Any, Callable, Mapping, Optional, Union
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any, Optional, Union
 
 import multidict
 import yarl
 
-from .utils import EMPTY_HEADERS
+EMPTY_HEADERS = multidict.CIMultiDictProxy[str](multidict.CIMultiDict[str]())
 
 
 class Method:
@@ -23,7 +24,13 @@ class Header:
     X_SERVICE_NAME = multidict.istr("X-Service-Name")
 
 
-MultiDict = Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]]
+_MultiDict = Union[
+    Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]
+]
+
+PathParameters = Mapping[str, Any]
+QueryParameters = Union[Mapping[str, Any], Iterable[tuple[str, Any]], _MultiDict]
+Headers = _MultiDict
 
 
 class Request:
@@ -41,9 +48,9 @@ class Request:
         *,
         method: str,
         url: yarl.URL,
-        path_parameters: Optional[Mapping[str, str]] = None,
-        query_parameters: Optional[MultiDict] = None,
-        headers: Optional[MultiDict] = None,
+        path_parameters: Optional[PathParameters] = None,
+        query_parameters: Optional[QueryParameters] = None,
+        headers: Optional[Headers] = None,
         body: Optional[bytes] = None,
     ):
         if url.is_absolute():
@@ -56,7 +63,7 @@ class Request:
         self.headers = headers
         self.body = body
 
-    def update_headers(self, headers: MultiDict) -> "Request":
+    def update_headers(self, headers: Headers) -> "Request":
         updated_headers = (
             multidict.CIMultiDict[str](self.headers) if self.headers is not None else multidict.CIMultiDict[str]()
         )

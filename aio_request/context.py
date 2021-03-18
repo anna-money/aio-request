@@ -1,7 +1,8 @@
 import contextlib
 import contextvars
 import dataclasses
-from typing import Iterator, Optional, Union, cast
+from collections.abc import Iterator
+from typing import Optional, Union, cast
 
 from .deadline import Deadline
 from .priority import Priority
