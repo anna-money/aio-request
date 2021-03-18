@@ -1,18 +1,19 @@
 import json
-from typing import Any, Callable, Mapping, Optional, Union
+from collections.abc import Callable
+from typing import Any, Optional, Union
 
 import multidict
 import yarl
 
-from .base import Header, Method, MultiDict, Request
+from .base import Header, Headers, Method, PathParameters, QueryParameters, Request
 
 
 def get(
     url: Union[str, yarl.URL],
     *,
-    headers: Optional[MultiDict] = None,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[Headers] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
 ) -> Request:
     return build_request(
         Method.GET, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers
@@ -23,9 +24,9 @@ def post(
     url: Union[str, yarl.URL],
     body: Optional[bytes] = None,
     *,
-    headers: Optional[MultiDict] = None,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[Headers] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
 ) -> Request:
     return build_request(
         Method.POST, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
@@ -36,9 +37,9 @@ def put(
     url: Union[str, yarl.URL],
     body: Optional[bytes] = None,
     *,
-    headers: Optional[MultiDict] = None,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[Headers] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
 ) -> Request:
     return build_request(
         Method.PUT, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
@@ -48,9 +49,9 @@ def put(
 def delete(
     url: Union[str, yarl.URL],
     *,
-    headers: Optional[MultiDict] = None,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
+    headers: Optional[Headers] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
 ) -> Request:
     return build_request(
         Method.DELETE,
@@ -65,9 +66,9 @@ def post_json(
     url: Union[str, yarl.URL],
     data: Any,
     *,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
-    headers: Optional[MultiDict] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+    headers: Optional[Headers] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -89,9 +90,9 @@ def put_json(
     url: Union[str, yarl.URL],
     data: Any,
     *,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
-    headers: Optional[MultiDict] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+    headers: Optional[Headers] = None,
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
@@ -114,9 +115,9 @@ def build_json_request(
     url: Union[str, yarl.URL],
     data: Any,
     *,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
-    headers: Optional[MultiDict] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+    headers: Optional[Headers] = None,
     encoding: str = "utf-8",
     dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
@@ -140,9 +141,9 @@ def build_request(
     method: str,
     url: Union[str, yarl.URL],
     *,
-    path_parameters: Optional[Mapping[str, str]] = None,
-    query_parameters: Optional[MultiDict] = None,
-    headers: Optional[MultiDict] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+    headers: Optional[Headers] = None,
     body: Optional[bytes] = None,
 ) -> Request:
     return Request(

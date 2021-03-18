@@ -2,7 +2,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from queue import Queue
-from typing import List, Union
+from typing import Union
 
 import aiohttp.web
 import aiohttp.web_request
@@ -24,7 +24,7 @@ class FakeResponseConfiguration:
 class FakeTransport(aio_request.Transport):
     __slots__ = ("_responses",)
 
-    def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
+    def __init__(self, responses: list[Union[int, FakeResponseConfiguration]]):
         self._responses = Queue()
         for response in responses:
             self._responses.put(response)
