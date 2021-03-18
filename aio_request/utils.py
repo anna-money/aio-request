@@ -76,10 +76,26 @@ def build_query_parameters(query_parameters: QueryParameters) -> dict[str, Union
             continue
         if not isinstance(value, str) and isinstance(value, Iterable):
             values = [str(v) for v in value if v is not None]
-            if values:
+            if not values:
+                continue
+
+            if name in parameters:
+                existing_value = parameters[name]
+                if isinstance(existing_value, str):
+                    parameters[name] = [existing_value, *values]
+                else:
+                    parameters[name] = [*existing_value, *values]
+            else:
                 parameters[name] = values
         else:
-            parameters[name] = str(value)
+            if name in parameters:
+                existing_value = parameters[name]
+                if isinstance(existing_value, str):
+                    parameters[name] = [existing_value, str(value)]
+                else:
+                    parameters[name] = [*existing_value, str(value)]
+            else:
+                parameters[name] = str(value)
     return parameters
 
 

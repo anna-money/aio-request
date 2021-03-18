@@ -24,9 +24,13 @@ class Header:
     X_SERVICE_NAME = multidict.istr("X-Service-Name")
 
 
+_MultiDict = Union[
+    Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]
+]
+
 PathParameters = Mapping[str, Any]
-QueryParameters = Union[Mapping[str, Any], Iterable[tuple[str, Any]]]
-Headers = Union[Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]]
+QueryParameters = Union[Mapping[str, Any], Iterable[tuple[str, Any]], _MultiDict]
+Headers = _MultiDict
 
 
 class Request:
