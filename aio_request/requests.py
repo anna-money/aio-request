@@ -1,6 +1,5 @@
 import json
-from collections.abc import Callable
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Callable
 
 import multidict
 import yarl

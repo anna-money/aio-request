@@ -2,8 +2,8 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import Awaitable, Callable
-from typing import Any, Optional, Union, cast
+from collections.abc import Awaitable
+from typing import Any, Optional, Union, cast, Callable
 
 import aiohttp
 import aiohttp.web

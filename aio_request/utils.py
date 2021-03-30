@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
-from collections.abc import Callable, Collection, Iterable, Mapping
-from typing import Any, Optional, Protocol, TypeVar, Union
+from collections.abc import Collection, Iterable, Mapping
+from typing import Any, Optional, Protocol, TypeVar, Union, Callable
 
 import yarl
 
