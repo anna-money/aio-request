@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional, Union, Callable
+from typing import Any, Callable, Optional, Union
 
 import multidict
 import yarl

@@ -1,7 +1,6 @@
 import abc
 import json
-from collections.abc import Iterable, Mapping
-from typing import Any, Optional, Union, Callable
+from typing import Any, Callable, Iterable, Mapping, Optional, Union
 
 import multidict
 import yarl
