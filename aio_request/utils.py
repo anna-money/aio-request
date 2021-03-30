@@ -1,7 +1,6 @@
 import asyncio
 import contextlib
-from collections.abc import Collection, Iterable, Mapping
-from typing import Any, Optional, Protocol, TypeVar, Union, Callable
+from typing import Any, Callable, Collection, Dict, Iterable, List, Mapping, Optional, Protocol, TypeVar, Union
 
 import yarl
 
@@ -55,7 +54,7 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     for name, value in parameters.items():
         path = path.replace(f"{{{name}}}", str(value))
 
-    build_parameters: dict[str, Any] = dict(
+    build_parameters: Dict[str, Any] = dict(
         scheme=url.scheme,
         user=url.user,
         password=url.password,
@@ -69,8 +68,8 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
 
 
-def build_query_parameters(query_parameters: QueryParameters) -> dict[str, Union[str, list[str]]]:
-    parameters: dict[str, Union[str, list[str]]] = {}
+def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union[str, List[str]]]:
+    parameters: Dict[str, Union[str, List[str]]] = {}
     for name, value in query_parameters.items() if isinstance(query_parameters, Mapping) else query_parameters:
         if value is None:
             continue

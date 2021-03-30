@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 import pytest
 import yarl
@@ -20,7 +20,7 @@ from aio_request.utils import build_query_parameters, substitute_path_parameters
         (yarl.URL("https://site.com/{a}"), {"a": "1"}, yarl.URL("https://site.com:443/1")),
     ],
 )
-def test_substitute_path_parameters(url: yarl.URL, parameters: Optional[dict[str, str]], result: yarl.URL) -> None:
+def test_substitute_path_parameters(url: yarl.URL, parameters: Optional[Dict[str, str]], result: yarl.URL) -> None:
     assert substitute_path_parameters(url, parameters) == result
 
 
@@ -43,7 +43,7 @@ sample_uuid = uuid.uuid4()
     ],
 )
 def test_build_query_parameters(
-    query_parameters: QueryParameters, expected_parameters: dict[str, Union[str, list[str]]]
+    query_parameters: QueryParameters, expected_parameters: Dict[str, Union[str, List[str]]]
 ) -> None:
     assert build_query_parameters(query_parameters) == expected_parameters
     assert build_query_parameters(query_parameters.items()) == expected_parameters

@@ -1,8 +1,7 @@
 import abc
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator, Awaitable
-from typing import Optional, Callable
+from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import yarl
 
@@ -36,14 +35,14 @@ class RequestStrategy(abc.ABC):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> contextlib.AbstractAsyncContextManager[Response]:
+    ) -> AsyncContextManager[Response]:
         ...
 
 
 class MethodBasedStrategy(RequestStrategy):
     __slots__ = ("_strategy_by_method",)
 
-    def __init__(self, strategy_by_method: dict[str, RequestStrategy]):
+    def __init__(self, strategy_by_method: Dict[str, RequestStrategy]):
         self._strategy_by_method = strategy_by_method
 
     def request(
@@ -53,7 +52,7 @@ class MethodBasedStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> contextlib.AbstractAsyncContextManager[Response]:
+    ) -> AsyncContextManager[Response]:
         return self._strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
 
 
@@ -127,7 +126,7 @@ class SequentialRequestStrategy(RequestStrategy):
         deadline: Deadline,
         priority: Priority,
     ) -> AsyncIterator[Response]:
-        responses: list[ClosableResponse] = []
+        responses: List[ClosableResponse] = []
         try:
             for attempt in range(self._attempts_count):
                 send_result = await send_request(endpoint, request, deadline, priority)
@@ -191,8 +190,8 @@ class ParallelRequestStrategy(RequestStrategy):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
-        accepted_responses: list[ClosableResponse] = []
-        not_accepted_responses: list[ClosableResponse] = []
+        accepted_responses: List[ClosableResponse] = []
+        not_accepted_responses: List[ClosableResponse] = []
         try:
             try:
                 while pending_tasks:

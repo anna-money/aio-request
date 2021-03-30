@@ -1,5 +1,4 @@
-import contextlib
-from typing import Optional, Union, Callable
+from typing import AsyncContextManager, Callable, Optional, Union
 
 import yarl
 
@@ -62,7 +61,7 @@ class Client:
         deadline: Optional[Deadline] = None,
         priority: Optional[Priority] = None,
         strategy: Optional[RequestStrategy] = None,
-    ) -> contextlib.AbstractAsyncContextManager[Response]:
+    ) -> AsyncContextManager[Response]:
         if self._request_enricher is not None:
             request = self._request_enricher(request)
         context = get_context()
