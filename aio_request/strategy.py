@@ -1,8 +1,8 @@
 import abc
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import Optional
+from collections.abc import AsyncIterator, Awaitable
+from typing import Optional, Callable
 
 import yarl
 

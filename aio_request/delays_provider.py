@@ -1,5 +1,5 @@
 import random
-from collections.abc import Callable
+from typing import Callable
 
 DELAY_PROVIDER = Callable[[int], float]
 

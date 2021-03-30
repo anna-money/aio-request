@@ -1,6 +1,5 @@
 import contextlib
-from collections.abc import Callable
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 import yarl
 
