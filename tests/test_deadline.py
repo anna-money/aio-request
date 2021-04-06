@@ -1,6 +1,10 @@
 import asyncio
 import datetime
-import zoneinfo
+
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
 
 import pytest
 

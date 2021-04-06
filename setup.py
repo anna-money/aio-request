@@ -35,7 +35,7 @@ setup(
     long_description_content_type="text/markdown",
     platforms=["macOS", "POSIX", "Windows"],
     author="Yury Pliner",
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     project_urls={},
     author_email="yury.pliner@gmail.com",
     license="MIT",
