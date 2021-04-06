@@ -23,7 +23,7 @@ async def close_single(item: TClosable) -> None:
 T = TypeVar("T")
 
 
-async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable[[T], TClosable]) -> None:
+async def close_futures(items: Collection["asyncio.Future[T]"], as_close: Callable[[T], TClosable]) -> None:
     for item in items:
         if item.cancelled():
             continue
