@@ -1,6 +1,6 @@
 import abc
 import json
-from typing import Any, Callable, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Union
 
 import multidict
 import yarl
@@ -28,7 +28,7 @@ _MultiDict = Union[
 ]
 
 PathParameters = Mapping[str, Any]
-QueryParameters = Union[Mapping[str, Any], Iterable[tuple[str, Any]], _MultiDict]
+QueryParameters = Union[Mapping[str, Any], Iterable[Tuple[str, Any]], _MultiDict]
 Headers = _MultiDict
 
 

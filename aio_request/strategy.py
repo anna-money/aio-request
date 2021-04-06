@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import contextlib
-from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Optional
+from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Set
 
 import yarl
 
@@ -184,8 +184,8 @@ class ParallelRequestStrategy(RequestStrategy):
         deadline: Deadline,
         priority: Priority,
     ) -> AsyncIterator[Response]:
-        completed_tasks: set[asyncio.Future[SendRequestResult]] = set()
-        pending_tasks: set[asyncio.Future[SendRequestResult]] = set()
+        completed_tasks: Set[asyncio.Future[SendRequestResult]] = set()
+        pending_tasks: Set[asyncio.Future[SendRequestResult]] = set()
         for attempt in range(0, self._attempts_count):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
