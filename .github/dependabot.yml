@@ -10,6 +10,3 @@ updates:
   - dependency-name: aiohttp
     versions:
     - 3.7.4.post0
-  - dependency-name: isort
-    versions:
-    - 5.7.0
