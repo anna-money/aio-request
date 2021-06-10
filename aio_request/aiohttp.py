@@ -1,10 +1,12 @@
 import asyncio
+import contextlib
 import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Optional, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import aiohttp
+import aiohttp.abc
 import aiohttp.web
 import aiohttp.web_exceptions
 import aiohttp.web_middlewares
@@ -23,6 +25,63 @@ from .transport import Transport
 from .utils import build_query_parameters, substitute_path_parameters, try_parse_float
 
 logger = logging.getLogger(__package__)
+
+
+class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
+    __slots__ = ("_resolver", "_results", "_interval", "_task", "_max_failures")
+
+    def __init__(self, resolver: aiohttp.abc.AbstractResolver, *, interval: float = 30, max_failures: float = 3):
+        if interval <= 0:
+            raise RuntimeError("Interval should be positive")
+        if max_failures <= 0:
+            raise RuntimeError("Max failures should be positive")
+
+        self._interval = interval
+        self._resolver = resolver
+        self._results: Dict[Tuple[str, int, int], List[Dict[str, Any]]] = {}
+        self._task = asyncio.create_task(self._resolve())
+        self._max_failures = max_failures
+
+    def resolve_no_wait(self, host: str, port: int, family: int) -> Optional[List[Dict[str, Any]]]:
+        return self._results.get((host, port, family))
+
+    async def resolve(self, host: str, port: int, family: int) -> List[Dict[str, Any]]:
+        key = (host, port, family)
+        addresses = self._results.get(key)
+        if addresses is not None:
+            return addresses
+        addresses = await self._resolver.resolve(host, port, family)
+        self._results[key] = addresses
+        return addresses
+
+    async def close(self) -> None:
+        self._task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._task
+        await self._resolver.close()
+
+    async def _resolve(self) -> None:
+        failures_per_endpoint: Dict[Tuple[str, int, int], int] = {}
+        while True:
+            await asyncio.sleep(self._interval)
+
+            keys_to_pop = []
+
+            for key in self._results.keys():
+                try:
+                    (h, p, f) = key
+                    self._results[key] = await self._resolver.resolve(h, p, f)
+                except Exception:
+                    failures = failures_per_endpoint.pop(key, 0)
+                    if failures + 1 >= self._max_failures:
+                        keys_to_pop.append(key)
+                    else:
+                        failures_per_endpoint[key] = failures + 1
+                else:
+                    failures_per_endpoint.pop(key, 0)
+
+            for key_to_pop in keys_to_pop:
+                self._results.pop(key_to_pop, None)
 
 
 class AioHttpTransport(Transport):
