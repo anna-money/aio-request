@@ -61,6 +61,8 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
     async def _resolve(self) -> None:
         failures_per_endpoint: Dict[Tuple[str, int, int], int] = {}
         while True:
+            await asyncio.sleep(self._interval)
+
             keys_to_pop = []
 
             for key in self._results.keys():
@@ -78,8 +80,6 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 
             for key_to_pop in keys_to_pop:
                 self._results.pop(key_to_pop, None)
-
-            await asyncio.sleep(self._interval)
 
 
 class AioHttpTransport(Transport):
