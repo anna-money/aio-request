@@ -1,7 +1,7 @@
 import asyncio
+import dataclasses
 import logging
-from dataclasses import dataclass
-from queue import Queue
+import queue
 from typing import List, Union
 
 import aiohttp.web
@@ -15,7 +15,7 @@ import aio_request
 logging.basicConfig(level="DEBUG")
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class FakeResponseConfiguration:
     status: int
     delay_seconds: float
@@ -25,7 +25,7 @@ class FakeTransport(aio_request.Transport):
     __slots__ = ("_responses",)
 
     def __init__(self, responses: List[Union[int, FakeResponseConfiguration]]):
-        self._responses = Queue()
+        self._responses = queue.Queue()
         for response in responses:
             self._responses.put(response)
 

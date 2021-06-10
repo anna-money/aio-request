@@ -1,12 +1,12 @@
+import aiohttp
 import multidict
 import yarl
-from aiohttp import ClientSession
 
 import aio_request
 
 
 async def test_success_with_path_parameters():
-    async with ClientSession() as client_session:
+    async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
         response = await transport.send(
             yarl.URL("https://httpbin.org/"),
@@ -20,7 +20,7 @@ async def test_success_with_path_parameters():
 
 
 async def test_success_with_query_parameters():
-    async with ClientSession() as client_session:
+    async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
         response = await transport.send(
             yarl.URL("https://httpbin.org/"),
@@ -36,7 +36,7 @@ async def test_success_with_query_parameters():
 
 
 async def test_success_with_query_parameters_multidict():
-    async with ClientSession() as client_session:
+    async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
         query_parameters = multidict.CIMultiDict[str]()
         query_parameters.add("a", "b")
