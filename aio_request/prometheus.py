@@ -6,17 +6,17 @@ from .metrics import MetricsProvider
 
 
 class PrometheusMetricsProvider(MetricsProvider):
-    __slots__ = ("_metrics", "_registry")
+    __slots__ = ("_metrics", "_registry", "_histogram_buckets")
 
     def __init__(
         self,
         registry: prometheus_client.CollectorRegistry,
         *,
-        observation_buckets: Collection[float] = prometheus_client.Histogram.DEFAULT_BUCKETS
+        histogram_buckets: Collection[float] = prometheus_client.Histogram.DEFAULT_BUCKETS
     ) -> None:
         self._metrics: Dict[str, Any] = {}
         self._registry = registry
-        self._observation_buckets = observation_buckets
+        self._histogram_buckets = histogram_buckets
 
     def increment_counter(self, name: str, tags: Dict[str, Any], value: float = 1) -> None:
         if name not in self._metrics:
@@ -29,7 +29,7 @@ class PrometheusMetricsProvider(MetricsProvider):
                 name,
                 "",
                 labelnames=tags.keys(),
-                buckets=self._observation_buckets,
+                buckets=self._histogram_buckets,
             )
         self._metrics[name].labels(*[str(value) for value in tags.values()]).observe(value)
 
