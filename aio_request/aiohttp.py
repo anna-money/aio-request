@@ -30,9 +30,11 @@ logger = logging.getLogger(__package__)
 class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
     __slots__ = ("_resolver", "_results", "_interval", "_task", "_max_failures")
 
-    def __init__(self, resolver: aiohttp.abc.AbstractResolver, *, interval: float = 60, max_failures: float = 3):
+    def __init__(self, resolver: aiohttp.abc.AbstractResolver, *, interval: float = 30, max_failures: float = 3):
         if interval <= 0:
             raise RuntimeError("Interval should be positive")
+        if max_failures <= 0:
+            raise RuntimeError("Max failures should be positive")
 
         self._interval = interval
         self._resolver = resolver
