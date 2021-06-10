@@ -4,6 +4,25 @@ import prometheus_client
 
 from .metrics import MetricsProvider
 
+DEFAULT_HISTORY_BUCKETS = (
+    0.005,
+    0.010,
+    0.025,
+    0.050,
+    0.075,
+    0.100,
+    0.125,
+    0.150,
+    0.175,
+    0.200,
+    0.300,
+    0.400,
+    0.500,
+    1.0,
+    5.0,
+    10.0,
+)
+
 
 class PrometheusMetricsProvider(MetricsProvider):
     __slots__ = ("_metrics", "_registry", "_histogram_buckets")
@@ -12,7 +31,7 @@ class PrometheusMetricsProvider(MetricsProvider):
         self,
         registry: prometheus_client.CollectorRegistry,
         *,
-        histogram_buckets: Collection[float] = prometheus_client.Histogram.DEFAULT_BUCKETS
+        histogram_buckets: Collection[float] = DEFAULT_HISTORY_BUCKETS
     ) -> None:
         self._metrics: Dict[str, Any] = {}
         self._registry = registry
