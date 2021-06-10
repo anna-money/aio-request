@@ -1,4 +1,4 @@
-from typing import Any, Dict, Collection
+from typing import Any, Collection, Dict
 
 import prometheus_client
 
