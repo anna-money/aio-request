@@ -20,7 +20,7 @@ async def test_multiple_resolve():
     base_resolver.close.assert_called_once()
 
     assert first == [{"endpoint": {"ip": "1"}}]
-    assert second == [{"endpoint": {"ip": "2"}}]
+    assert second == [{"endpoint": {"ip": "1"}}]
 
 
 async def test_resolve_in_background():
