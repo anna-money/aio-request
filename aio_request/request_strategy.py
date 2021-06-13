@@ -78,7 +78,7 @@ def parallel_strategy(
     return ParallelRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
 
-def retry_until_deadline_expired_strategy(
+def retry_until_deadline_expired(
     strategy: RequestStrategy, *, delays_provider: Callable[[int], float] = linear_delays()
 ) -> RequestStrategy:
     return RetryUntilDeadlineExpiredStrategy(strategy, delays_provider)

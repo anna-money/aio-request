@@ -13,7 +13,7 @@ async def test_timeout_because_of_expiration():
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
-        strategy=aio_request.retry_until_deadline_expired_strategy(aio_request.single_attempt_strategy()),
+        strategy=aio_request.retry_until_deadline_expired(aio_request.single_attempt_strategy()),
     )
     async with response_ctx as response:
         assert response.status == 408

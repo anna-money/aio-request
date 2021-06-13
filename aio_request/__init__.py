@@ -21,7 +21,7 @@ from .request_strategy import (
     SequentialRequestStrategy,
     SingleAttemptRequestStrategy,
     parallel_strategy,
-    retry_until_deadline_expired_strategy,
+    retry_until_deadline_expired,
     sequential_strategy,
     single_attempt_strategy,
 )
