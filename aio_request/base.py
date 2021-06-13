@@ -1,9 +1,11 @@
 import abc
 import json
-from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import multidict
 import yarl
+
+from .utils import Closable
 
 EMPTY_HEADERS = multidict.CIMultiDictProxy[str](multidict.CIMultiDict[str]())
 
@@ -124,7 +126,7 @@ class Response(abc.ABC):
         return 500 <= self.status < 600
 
 
-class ClosableResponse(Response):
+class ClosableResponse(Response, Closable):
     __slots__ = ()
 
     @abc.abstractmethod
@@ -163,3 +165,55 @@ class EmptyResponse(ClosableResponse):
 
     async def close(self) -> None:
         pass
+
+
+def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union[str, List[str]]]:
+    parameters: Dict[str, Union[str, List[str]]] = {}
+    for name, value in query_parameters.items() if isinstance(query_parameters, Mapping) else query_parameters:
+        if value is None:
+            continue
+        if not isinstance(value, str) and isinstance(value, Iterable):
+            values = [str(v) for v in value if v is not None]
+            if not values:
+                continue
+
+            if name in parameters:
+                existing_value = parameters[name]
+                if isinstance(existing_value, str):
+                    parameters[name] = [existing_value, *values]
+                else:
+                    parameters[name] = [*existing_value, *values]
+            else:
+                parameters[name] = values
+        else:
+            if name in parameters:
+                existing_value = parameters[name]
+                if isinstance(existing_value, str):
+                    parameters[name] = [existing_value, str(value)]
+                else:
+                    parameters[name] = [*existing_value, str(value)]
+            else:
+                parameters[name] = str(value)
+    return parameters
+
+
+def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameters] = None) -> yarl.URL:
+    if not parameters:
+        return url
+
+    path = url.path
+    for name, value in parameters.items():
+        path = path.replace(f"{{{name}}}", str(value))
+
+    build_parameters: Dict[str, Any] = dict(
+        scheme=url.scheme,
+        user=url.user,
+        password=url.password,
+        host=url.host,
+        port=url.port,
+        path=path,
+        query=url.query,
+        fragment=url.fragment,
+    )
+
+    return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})

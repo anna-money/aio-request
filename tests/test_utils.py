@@ -4,8 +4,7 @@ from typing import Dict, List, Optional, Union
 import pytest
 import yarl
 
-from aio_request.base import QueryParameters
-from aio_request.utils import build_query_parameters, substitute_path_parameters
+from aio_request.base import QueryParameters, build_query_parameters, substitute_path_parameters
 
 
 @pytest.mark.parametrize(

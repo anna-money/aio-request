@@ -1,0 +1,20 @@
+import aio_request
+
+from .conftest import FakeTransport
+
+
+async def test_timeout_because_of_expiration():
+    client = aio_request.setup(
+        transport=FakeTransport([500, 500, 500, 500, 500, 500]),
+        endpoint="http://service.com",
+    )
+    deadline = aio_request.Deadline.from_timeout(1)
+
+    response_ctx = client.request(
+        aio_request.get("hello"),
+        deadline=deadline,
+        strategy=aio_request.retry_until_deadline_expired_strategy(aio_request.single_attempt_strategy()),
+    )
+    async with response_ctx as response:
+        assert response.status == 408
+        assert deadline.expired
