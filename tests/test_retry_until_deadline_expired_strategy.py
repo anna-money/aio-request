@@ -5,7 +5,7 @@ from .conftest import FakeTransport
 
 async def test_timeout_because_of_expiration():
     client = aio_request.setup(
-        transport=FakeTransport([500, 500, 500, 500, 500, 500]),
+        transport=FakeTransport([500, 500, 500, 500, 500, 500, 500]),
         endpoint="http://service.com",
     )
     deadline = aio_request.Deadline.from_timeout(1)
