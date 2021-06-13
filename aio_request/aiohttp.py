@@ -16,13 +16,13 @@ import async_timeout
 import multidict
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Header, Request
+from .base import ClosableResponse, EmptyResponse, Header, Request, build_query_parameters, substitute_path_parameters
 from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .transport import Transport
-from .utils import build_query_parameters, substitute_path_parameters, try_parse_float
+from .utils import try_parse_float
 
 logger = logging.getLogger(__package__)
 

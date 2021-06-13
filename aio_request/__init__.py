@@ -10,20 +10,22 @@ from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .priority import Priority
-from .requests import delete, get, post, post_json, put, put_json
-from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
-from .strategy import (
+from .request import delete, get, post, post_json, put, put_json
+from .request_strategy import (
     MethodBasedStrategy,
     ParallelRequestStrategy,
     RequestStrategy,
+    ResponseWithVerdict,
+    RetryUntilDeadlineExpiredStrategy,
     SendRequestFunc,
-    SendRequestResult,
     SequentialRequestStrategy,
     SingleAttemptRequestStrategy,
     parallel_strategy,
+    retry_until_deadline_expired,
     sequential_strategy,
     single_attempt_strategy,
 )
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .transport import Transport
 
 try:

@@ -1,5 +1,6 @@
 import aio_request
-from tests.conftest import FakeTransport
+
+from .conftest import FakeTransport
 
 
 async def test_setup_with_defaults():

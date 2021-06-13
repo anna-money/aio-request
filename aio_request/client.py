@@ -1,4 +1,5 @@
-from typing import AsyncContextManager, Callable, Optional, Union
+import contextlib
+from typing import AsyncIterator, Callable, Optional, Union
 
 import yarl
 
@@ -7,14 +8,14 @@ from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
 from .priority import Priority
-from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .strategy import (
+from .request_strategy import (
     MethodBasedStrategy,
     RequestStrategy,
-    SendRequestResult,
+    ResponseWithVerdict,
     sequential_strategy,
     single_attempt_strategy,
 )
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
 
 
@@ -54,24 +55,27 @@ class Client:
         self._low_timeout_threshold = low_timeout_threshold
         self._request_enricher = request_enricher
 
-    def request(
+    @contextlib.asynccontextmanager
+    async def request(
         self,
         request: Request,
         *,
         deadline: Optional[Deadline] = None,
         priority: Optional[Priority] = None,
         strategy: Optional[RequestStrategy] = None,
-    ) -> AsyncContextManager[Response]:
+    ) -> AsyncIterator[Response]:
         if self._request_enricher is not None:
             request = self._request_enricher(request)
         context = get_context()
-        return (strategy or self._request_strategy).request(
+        response_ctx = (strategy or self._request_strategy).request(
             self._send_request,
             self._endpoint,
             request,
             deadline or context.deadline or Deadline.from_timeout(self._timeout),
             self.normalize_priority(priority or self._priority, context.priority),
         )
+        async with response_ctx as response:
+            yield response.response
 
     @staticmethod
     def normalize_priority(priority: Priority, context_priority: Optional[Priority]) -> Priority:
@@ -88,7 +92,7 @@ class Client:
 
     async def _send_request(
         self, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
-    ) -> SendRequestResult:
+    ) -> ResponseWithVerdict[ClosableResponse]:
         if self._emit_system_headers:
             request = request.update_headers(
                 {
@@ -103,7 +107,7 @@ class Client:
         else:
             response = await self._transport.send(endpoint, request, deadline.timeout)
 
-        return SendRequestResult(response, self._response_classifier.classify(response))
+        return ResponseWithVerdict(response, self._response_classifier.classify(response))
 
 
 def setup(

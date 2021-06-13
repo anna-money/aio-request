@@ -1,5 +1,6 @@
 import aio_request
-from tests.conftest import FakeResponseConfiguration, FakeTransport
+
+from .conftest import FakeResponseConfiguration, FakeTransport
 
 
 async def test_timeout_because_of_expiration():
