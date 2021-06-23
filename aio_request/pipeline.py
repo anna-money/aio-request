@@ -9,7 +9,7 @@ from .base import ClosableResponse, EmptyResponse, Header, Request
 from .deadline import Deadline
 from .metrics import MetricsProvider
 from .priority import Priority
-from .tracing import Tracer, SpanKind
+from .tracing import SpanKind, Tracer
 from .transport import Transport
 
 RequestHandler = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]]

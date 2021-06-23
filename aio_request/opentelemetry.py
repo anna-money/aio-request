@@ -1,15 +1,15 @@
 import contextlib
-from typing import Iterable, Optional
+from typing import Iterable
 
 import multidict
+import opentelemetry.context as otel_ctx
 import opentelemetry.propagate as otel_propagate
 import opentelemetry.semconv.trace as otel_semconv_trace
 import opentelemetry.trace as otel_trace
-import opentelemetry.context as otel_ctx
 import yarl
 
 from .base import Headers, Request, Response
-from .tracing import Span, Tracer, SpanKind
+from .tracing import Span, SpanKind, Tracer
 
 
 class _OpenTelemetrySpan(Span):
@@ -53,15 +53,15 @@ class OpenTelemetryTracer(Tracer):
         return self._start_span(name, kind)
 
     def get_headers_to_propagate(self) -> Headers:
-        headers = multidict.CIMultiDict[str]
+        headers = multidict.CIMultiDict[str]()
         otel_propagate.inject(headers)
         return headers
 
-    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager:
+    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager[None]:
         return self._setup_context(headers)
 
     @contextlib.contextmanager  # type: ignore
-    def _setup_context(self, headers: Headers) -> Iterable:
+    def _setup_context(self, headers: Headers) -> Iterable[None]:
         context = otel_propagate.extract(headers)
         token = otel_ctx.attach(context)
         try:

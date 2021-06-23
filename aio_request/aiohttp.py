@@ -16,12 +16,12 @@ import async_timeout
 import multidict
 import yarl
 
-from .tracing import Tracer, NOOP_TRACER, SpanKind
 from .base import ClosableResponse, EmptyResponse, Header, Request, build_query_parameters, substitute_path_parameters
 from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
+from .tracing import NOOP_TRACER, SpanKind, Tracer
 from .transport import Transport
 from .utils import try_parse_float
 
@@ -241,7 +241,7 @@ def aiohttp_middleware_factory(
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
-        with tracer.setup_context(request.headers), tracer.start_span(name='', kind=SpanKind.SERVER) as span:
+        with tracer.setup_context(request.headers), tracer.start_span(name="", kind=SpanKind.SERVER):
             try:
                 response: Optional[aiohttp.web_response.StreamResponse]
                 if deadline.expired or deadline.timeout <= low_timeout_threshold:

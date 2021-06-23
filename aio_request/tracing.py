@@ -4,7 +4,7 @@ import enum
 
 import yarl
 
-from .base import Headers, Request, Response, EMPTY_HEADERS
+from .base import EMPTY_HEADERS, Headers, Request, Response
 
 
 class Span(abc.ABC):
@@ -36,7 +36,7 @@ class Tracer(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager:
+    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager[None]:
         ...
 
 
@@ -60,7 +60,7 @@ class NoopTracer(Tracer):
     def get_headers_to_propagate(self) -> Headers:
         return EMPTY_HEADERS
 
-    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager:
+    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager[None]:
         return contextlib.nullcontext()
 
 
