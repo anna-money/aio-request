@@ -1,4 +1,5 @@
 import contextlib
+import typing
 from typing import Iterable
 
 import multidict
@@ -66,7 +67,7 @@ class OpenTelemetryTracer(Tracer):
     def __init__(self, trace_provider: otel_trace.TracerProvider):
         self._tracer = trace_provider.get_tracer("aio_request")
 
-    def start_span(self, name: str, kind: SpanKind) -> contextlib.AbstractContextManager[Span]:
+    def start_span(self, name: str, kind: SpanKind) -> typing.ContextManager[Span]:
         return self._start_span(name, kind)
 
     def get_context_headers(self) -> Headers:
@@ -74,7 +75,7 @@ class OpenTelemetryTracer(Tracer):
         otel_propagate.inject(headers)
         return headers
 
-    def setup_context(self, headers: Headers) -> contextlib.AbstractContextManager[None]:
+    def setup_context(self, headers: Headers) -> typing.ContextManager[None]:
         return self._setup_context(headers)
 
     @contextlib.contextmanager  # type: ignore
