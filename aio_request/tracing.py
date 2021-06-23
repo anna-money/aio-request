@@ -53,6 +53,11 @@ class Tracer(abc.ABC):
 
 
 class NoopSpan(Span):
+    __slots__ = ()
+
+    def set_request_method(self, method: str) -> None:
+        return
+
     def set_request_route(self, route: str) -> None:
         pass
 
@@ -65,14 +70,8 @@ class NoopSpan(Span):
     def set_response_status(self, status: int) -> None:
         return
 
-    __slots__ = ()
-
-    def set_request_method(self, method: str) -> None:
-        return
-
 
 class NoopTracer(Tracer):
-
     __slots__ = ()
 
     def start_span(self, name: str, kind: SpanKind) -> contextlib.AbstractContextManager[Span]:
