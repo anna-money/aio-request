@@ -26,6 +26,7 @@ from .request_strategy import (
     single_attempt_strategy,
 )
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .tracing import NOOP_TRACER, NoopSpan, NoopTracer, Span, Tracer
 from .transport import Transport
 
 try:
@@ -39,6 +40,15 @@ try:
     import prometheus_client
 
     from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
+except ImportError:
+    pass
+
+try:
+    import opentelemetry.propagate
+    import opentelemetry.semconv
+    import opentelemetry.trace
+
+    from .opentelemetry import OpenTelemetryTracer
 except ImportError:
     pass
 

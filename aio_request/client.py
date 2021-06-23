@@ -3,10 +3,12 @@ from typing import AsyncIterator, Callable, Optional, Union
 
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
+from .base import ClosableResponse, Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
+from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
+from .pipeline import LowTimeoutRequestModule, MetricsModule, RequestSendingModule, TracingModule, build_pipeline
 from .priority import Priority
 from .request_strategy import (
     MethodBasedStrategy,
@@ -16,6 +18,7 @@ from .request_strategy import (
     single_attempt_strategy,
 )
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
+from .tracing import NOOP_TRACER, Tracer
 from .transport import Transport
 
 
@@ -27,9 +30,8 @@ class Client:
         "_request_strategy",
         "_priority",
         "_timeout",
-        "_emit_system_headers",
-        "_low_timeout_threshold",
         "_request_enricher",
+        "_pipeline",
     )
 
     def __init__(
@@ -44,6 +46,8 @@ class Client:
         emit_system_headers: bool,
         low_timeout_threshold: float,
         request_enricher: Optional[Callable[[Request], Request]],
+        metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+        tracer: Tracer = NOOP_TRACER,
     ):
         self._endpoint = endpoint
         self._transport = transport
@@ -51,9 +55,15 @@ class Client:
         self._request_strategy = request_strategy
         self._priority = priority
         self._timeout = timeout
-        self._emit_system_headers = emit_system_headers
-        self._low_timeout_threshold = low_timeout_threshold
         self._request_enricher = request_enricher
+        self._pipeline = build_pipeline(
+            [
+                TracingModule(tracer=tracer),
+                MetricsModule(metrics_provider=metrics_provider),
+                LowTimeoutRequestModule(low_timeout_threshold=low_timeout_threshold),
+                RequestSendingModule(transport, emit_system_headers=emit_system_headers),
+            ]
+        )
 
     @contextlib.asynccontextmanager
     async def request(
@@ -93,20 +103,7 @@ class Client:
     async def _send_request(
         self, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
     ) -> ResponseWithVerdict[ClosableResponse]:
-        if self._emit_system_headers:
-            request = request.update_headers(
-                {
-                    Header.X_REQUEST_DEADLINE_AT: str(deadline),  # for backward compatibility
-                    Header.X_REQUEST_PRIORITY: str(priority),
-                    Header.X_REQUEST_TIMEOUT: str(deadline.timeout),
-                }
-            )
-
-        if deadline.expired or deadline.timeout < self._low_timeout_threshold:
-            response: ClosableResponse = EmptyResponse(status=408)
-        else:
-            response = await self._transport.send(endpoint, request, deadline.timeout)
-
+        response = await self._pipeline(endpoint, request, deadline, priority)
         return ResponseWithVerdict(response, self._response_classifier.classify(response))
 
 
