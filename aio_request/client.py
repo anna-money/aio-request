@@ -119,6 +119,8 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
+    metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+    tracer: Tracer = NOOP_TRACER,
 ) -> Client:
     request_strategy = MethodBasedStrategy(
         {
@@ -138,4 +140,6 @@ def setup(
         request_enricher=request_enricher,
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
+        metrics_provider=metrics_provider,
+        tracer=tracer,
     )
