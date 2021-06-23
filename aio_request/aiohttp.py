@@ -241,8 +241,13 @@ def aiohttp_middleware_factory(
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
-        with tracer.setup_context(request.headers), tracer.start_span(name="", kind=SpanKind.SERVER):
+        with tracer.setup_context(request.headers), tracer.start_span(name="", kind=SpanKind.SERVER) as span:
             try:
+                span.set_request_method(request.method)
+                span.set_request_path(
+                    request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
+                )
+
                 response: Optional[aiohttp.web_response.StreamResponse]
                 if deadline.expired or deadline.timeout <= low_timeout_threshold:
                     response = aiohttp.web_response.Response(status=408)
@@ -256,16 +261,22 @@ def aiohttp_middleware_factory(
                                     response = await handler(request)
                             except asyncio.TimeoutError:
                                 response = aiohttp.web_response.Response(status=408)
+
                 capture_metrics(request, response.status, started_at)
+                span.set_response_status(response.status)
+
                 return response
             except asyncio.CancelledError:
                 capture_metrics(request, 499, started_at)
+                span.set_response_status(499)
                 raise
             except aiohttp.web_exceptions.HTTPException as e:
                 capture_metrics(request, e.status, started_at)
+                span.set_response_status(e.status)
                 raise
             except Exception:
                 capture_metrics(request, 500, started_at)
+                span.set_response_status(500)
                 raise
 
     return middleware

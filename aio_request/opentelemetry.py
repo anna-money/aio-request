@@ -1,5 +1,5 @@
 import contextlib
-from typing import Iterable
+from typing import Iterable, Union
 
 import multidict
 import opentelemetry.context as otel_ctx
@@ -8,7 +8,7 @@ import opentelemetry.semconv.trace as otel_semconv_trace
 import opentelemetry.trace as otel_trace
 import yarl
 
-from .base import Headers, Request, Response
+from .base import Headers
 from .tracing import Span, SpanKind, Tracer
 
 
@@ -18,22 +18,33 @@ class _OpenTelemetrySpan(Span):
     def __init__(self, span: otel_trace.Span):
         self._span = span
 
-    def set_response_attrs(self, response: Response) -> None:
+    def set_response_status(self, status: int) -> None:
         if not self._span.is_recording():
             return
 
-        self._span.set_status(otel_trace.Status(self.http_status_to_status_code(response.status)))
-        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_STATUS_CODE, response.status)
+        self._span.set_status(otel_trace.Status(self.status_to_status_code(status)))
+        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_STATUS_CODE, status)
 
-    def set_request_attrs(self, endpoint: yarl.URL, request: Request) -> None:
+    def set_request_method(self, method: str) -> None:
         if not self._span.is_recording():
             return
 
-        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_METHOD, request.method)
-        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_URL, str(endpoint))
+        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_METHOD, method)
+
+    def set_request_endpoint(self, endpoint: yarl.URL) -> None:
+        if not self._span.is_recording():
+            return
+
+        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_HOST, str(endpoint))
+
+    def set_request_path(self, path: Union[yarl.URL, str]) -> None:
+        if not self._span.is_recording():
+            return
+
+        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_TARGET, str(path))
 
     @staticmethod
-    def http_status_to_status_code(status: int) -> otel_trace.StatusCode:
+    def status_to_status_code(status: int) -> otel_trace.StatusCode:
         if status < 100:
             return otel_trace.StatusCode.ERROR
         if status <= 299:
@@ -52,7 +63,7 @@ class OpenTelemetryTracer(Tracer):
     def start_span(self, name: str, kind: SpanKind) -> contextlib.AbstractContextManager[Span]:
         return self._start_span(name, kind)
 
-    def get_headers_to_propagate(self) -> Headers:
+    def get_context_headers(self) -> Headers:
         headers = multidict.CIMultiDict[str]()
         otel_propagate.inject(headers)
         return headers

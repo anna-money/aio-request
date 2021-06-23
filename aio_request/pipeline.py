@@ -132,14 +132,17 @@ class TracingModule(RequestModule):
         priority: Priority,
     ) -> ClosableResponse:
         with self._tracer.start_span("huj", SpanKind.CLIENT) as span:
-            span.set_request_attrs(endpoint, request)
+            span.set_request_method(request.method)
+            span.set_request_endpoint(endpoint)
+            span.set_request_path(request.url)
+
             response = await next(
                 endpoint,
-                request.update_headers(self._tracer.get_headers_to_propagate()),
+                request.update_headers(self._tracer.get_context_headers()),
                 deadline,
                 priority,
             )
-            span.set_response_attrs(response)
+            span.set_response_status(response.status)
             return response
 
 
