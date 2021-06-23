@@ -131,7 +131,8 @@ class TracingModule(RequestModule):
         deadline: Deadline,
         priority: Priority,
     ) -> ClosableResponse:
-        with self._tracer.start_span("huj", SpanKind.CLIENT) as span:
+        span_name = str(request.url)
+        with self._tracer.start_span(span_name, SpanKind.CLIENT) as span:
             span.set_request_method(request.method)
             span.set_request_endpoint(endpoint)
             span.set_request_path(request.url)
@@ -142,7 +143,9 @@ class TracingModule(RequestModule):
                 deadline,
                 priority,
             )
+
             span.set_response_status(response.status)
+
             return response
 
 

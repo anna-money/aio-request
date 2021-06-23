@@ -1,5 +1,5 @@
 import contextlib
-from typing import Iterable, Union
+from typing import Iterable
 
 import multidict
 import opentelemetry.context as otel_ctx
@@ -37,11 +37,17 @@ class _OpenTelemetrySpan(Span):
 
         self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_HOST, str(endpoint))
 
-    def set_request_path(self, path: Union[yarl.URL, str]) -> None:
+    def set_request_path(self, path: yarl.URL) -> None:
         if not self._span.is_recording():
             return
 
         self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_TARGET, str(path))
+
+    def set_request_route(self, route: str) -> None:
+        if not self._span.is_recording():
+            return
+
+        self._span.set_attribute(otel_semconv_trace.SpanAttributes.HTTP_ROUTE, route)
 
     @staticmethod
     def status_to_status_code(status: int) -> otel_trace.StatusCode:

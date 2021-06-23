@@ -1,7 +1,6 @@
 import abc
 import contextlib
 import enum
-from typing import Union
 
 import yarl
 
@@ -20,7 +19,11 @@ class Span(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def set_request_path(self, path: Union[yarl.URL, str]) -> None:
+    def set_request_path(self, path: yarl.URL) -> None:
+        ...
+
+    @abc.abstractmethod
+    def set_request_route(self, route: str) -> None:
         ...
 
     @abc.abstractmethod
@@ -50,10 +53,13 @@ class Tracer(abc.ABC):
 
 
 class NoopSpan(Span):
+    def set_request_route(self, route: str) -> None:
+        pass
+
     def set_request_endpoint(self, endpoint: yarl.URL) -> None:
         return
 
-    def set_request_path(self, path: Union[yarl.URL, str]) -> None:
+    def set_request_path(self, path: yarl.URL) -> None:
         return
 
     def set_response_status(self, status: int) -> None:
