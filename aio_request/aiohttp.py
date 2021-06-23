@@ -3,6 +3,7 @@ import contextlib
 import json
 import logging
 import time
+import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import aiohttp
@@ -97,10 +98,13 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+        metrics_provider: Optional[MetricsProvider] = None,
         network_errors_code: int = 489,
         buffer_payload: bool = True,
     ):
+        if metrics_provider is not None:
+            warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+
         self._client_session = client_session
         self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code

@@ -7,7 +7,7 @@ from .base import ClosableResponse, Method, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .delays_provider import linear_delays
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
+from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .pipeline import LowTimeoutRequestModule, MetricsModule, RequestSendingModule, TracingModule, build_pipeline
 from .priority import Priority
 from .request_strategy import (
@@ -140,6 +140,11 @@ def setup(
         request_enricher=request_enricher,
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
-        metrics_provider=metrics_provider,
+        metrics_provider=(
+            # try to acquire metrics_provider from transport
+            getattr(transport, "_metrics_provider", NOOP_METRICS_PROVIDER)
+            if isinstance(metrics_provider, NoopMetricsProvider)
+            else metrics_provider
+        ),
         tracer=tracer,
     )
