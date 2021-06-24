@@ -9,6 +9,15 @@ from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
+from .pipeline import (
+    LowTimeoutRequestModule,
+    MetricsModule,
+    RequestHandler,
+    RequestModule,
+    RequestSendingModule,
+    TracingModule,
+    build_pipeline,
+)
 from .priority import Priority
 from .request import delete, get, post, post_json, put, put_json
 from .request_strategy import (
@@ -26,6 +35,7 @@ from .request_strategy import (
     single_attempt_strategy,
 )
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .tracing import NOOP_TRACER, NoopSpan, NoopTracer, Span, Tracer
 from .transport import Transport
 
 try:
@@ -39,6 +49,15 @@ try:
     import prometheus_client
 
     from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
+except ImportError:
+    pass
+
+try:
+    import opentelemetry.propagate
+    import opentelemetry.semconv
+    import opentelemetry.trace
+
+    from .opentelemetry import OpenTelemetryTracer
 except ImportError:
     pass
 

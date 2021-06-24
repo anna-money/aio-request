@@ -3,6 +3,7 @@ import contextlib
 import json
 import logging
 import time
+import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import aiohttp
@@ -21,6 +22,7 @@ from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
+from .tracing import NOOP_TRACER, SpanKind, Tracer
 from .transport import Transport
 from .utils import try_parse_float
 
@@ -96,10 +98,13 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+        metrics_provider: Optional[MetricsProvider] = None,
         network_errors_code: int = 489,
         buffer_payload: bool = True,
     ):
+        if metrics_provider is not None:
+            warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+
         self._client_session = client_session
         self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code
@@ -116,7 +121,6 @@ class AioHttpTransport(Transport):
         headers = request.headers
         body = request.body
 
-        started_at = time.perf_counter()
         try:
             logger.debug(
                 "Sending request %s %s with timeout %s",
@@ -138,7 +142,6 @@ class AioHttpTransport(Transport):
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
-            self._capture_metrics(endpoint, request, response.status, started_at)
             return _AioHttpResponse(response)
         except aiohttp.ClientError:
             logger.warning(
@@ -151,11 +154,7 @@ class AioHttpTransport(Transport):
                     "request_url": url,
                 },
             )
-            self._capture_metrics(endpoint, request, self._network_errors_code, started_at)
             return EmptyResponse(status=self._network_errors_code)
-        except asyncio.CancelledError:
-            self._capture_metrics(endpoint, request, 499, started_at)
-            raise
         except asyncio.TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
@@ -168,19 +167,7 @@ class AioHttpTransport(Transport):
                     "request_timeout": timeout,
                 },
             )
-            self._capture_metrics(endpoint, request, 408, started_at)
             return EmptyResponse(status=408)
-
-    def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
-        tags = {
-            "request_endpoint": endpoint.human_repr(),
-            "request_method": request.method,
-            "request_path": request.url.path,
-            "response_status": str(status),
-        }
-        elapsed = max(0.0, time.perf_counter() - started_at)
-        self._metrics_provider.increment_counter("aio_request_status", tags)
-        self._metrics_provider.observe_value("aio_request_latency", tags, elapsed)
 
 
 class _AioHttpResponse(ClosableResponse):
@@ -236,6 +223,7 @@ def aiohttp_middleware_factory(
     metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
+    tracer: Tracer = NOOP_TRACER,
 ) -> _MIDDLEWARE:
     def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
         method = request.method
@@ -257,31 +245,47 @@ def aiohttp_middleware_factory(
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
-        try:
-            response: Optional[aiohttp.web_response.StreamResponse]
-            if deadline.expired or deadline.timeout <= low_timeout_threshold:
-                response = aiohttp.web_response.Response(status=408)
-            else:
-                with set_context(deadline=deadline, priority=_get_priority(request) or priority):
-                    if not cancel_on_timeout:
-                        response = await handler(request)
-                    else:
-                        try:
-                            async with async_timeout.timeout(timeout=deadline.timeout):
-                                response = await handler(request)
-                        except asyncio.TimeoutError:
-                            response = aiohttp.web_response.Response(status=408)
-            capture_metrics(request, response.status, started_at)
-            return response
-        except asyncio.CancelledError:
-            capture_metrics(request, 499, started_at)
-            raise
-        except aiohttp.web_exceptions.HTTPException as e:
-            capture_metrics(request, e.status, started_at)
-            raise
-        except Exception:
-            capture_metrics(request, 500, started_at)
-            raise
+        span_name = (
+            request.match_info.route.resource.canonical
+            if request.match_info.route.resource
+            else f"HTTP {request.method}"
+        )
+        with tracer.setup_context(request.headers), tracer.start_span(name=span_name, kind=SpanKind.SERVER) as span:
+            try:
+                span.set_request_method(request.method)
+                if request.match_info.route.resource:
+                    span.set_request_route(request.match_info.route.resource.canonical)
+
+                response: Optional[aiohttp.web_response.StreamResponse]
+                if deadline.expired or deadline.timeout <= low_timeout_threshold:
+                    response = aiohttp.web_response.Response(status=408)
+                else:
+                    with set_context(deadline=deadline, priority=_get_priority(request) or priority):
+                        if not cancel_on_timeout:
+                            response = await handler(request)
+                        else:
+                            try:
+                                async with async_timeout.timeout(timeout=deadline.timeout):
+                                    response = await handler(request)
+                            except asyncio.TimeoutError:
+                                response = aiohttp.web_response.Response(status=408)
+
+                capture_metrics(request, response.status, started_at)
+                span.set_response_status(response.status)
+
+                return response
+            except asyncio.CancelledError:
+                capture_metrics(request, 499, started_at)
+                span.set_response_status(499)
+                raise
+            except aiohttp.web_exceptions.HTTPException as e:
+                capture_metrics(request, e.status, started_at)
+                span.set_response_status(e.status)
+                raise
+            except Exception:
+                capture_metrics(request, 500, started_at)
+                span.set_response_status(500)
+                raise
 
     return middleware
 

@@ -74,7 +74,7 @@ class Request:
             url=self.url,
             path_parameters=self.path_parameters,
             query_parameters=self.query_parameters,
-            headers=multidict.CIMultiDictProxy[str](updated_headers),
+            headers=headers,
             body=self.body,
         )
 
