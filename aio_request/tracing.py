@@ -1,7 +1,7 @@
 import abc
 import contextlib
 import enum
-import typing
+from typing import ContextManager
 
 import yarl
 
@@ -41,7 +41,7 @@ class Tracer(abc.ABC):
     __slots__ = ()
 
     @abc.abstractmethod
-    def start_span(self, name: str, kind: SpanKind) -> typing.ContextManager[Span]:
+    def start_span(self, name: str, kind: SpanKind) -> ContextManager[Span]:
         ...
 
     @abc.abstractmethod
@@ -49,7 +49,7 @@ class Tracer(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def setup_context(self, headers: Headers) -> typing.ContextManager[None]:
+    def setup_context(self, headers: Headers) -> ContextManager[None]:
         ...
 
 
@@ -75,13 +75,13 @@ class NoopSpan(Span):
 class NoopTracer(Tracer):
     __slots__ = ()
 
-    def start_span(self, name: str, kind: SpanKind) -> typing.ContextManager[Span]:
+    def start_span(self, name: str, kind: SpanKind) -> ContextManager[Span]:
         return contextlib.nullcontext(NoopSpan())
 
     def get_context_headers(self) -> Headers:
         return EMPTY_HEADERS
 
-    def setup_context(self, headers: Headers) -> typing.ContextManager[None]:
+    def setup_context(self, headers: Headers) -> ContextManager[None]:
         return contextlib.nullcontext()
 
 
