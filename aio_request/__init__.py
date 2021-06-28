@@ -61,7 +61,7 @@ try:
 except ImportError:
     pass
 
-__version__ = "0.1.9a2"
+__version__ = "0.1.9a3"
 
 version = f"{__version__}, Python {sys.version}"
 
