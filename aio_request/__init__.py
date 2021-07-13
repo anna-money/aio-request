@@ -4,7 +4,7 @@ import re
 import sys
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
-from .client import Client, setup
+from .client import Client, DefaultClient
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
@@ -12,10 +12,10 @@ from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .pipeline import (
     LowTimeoutRequestModule,
     MetricsModule,
-    RequestHandler,
+    NextModuleFunc,
     RequestModule,
-    RequestSendingModule,
     TracingModule,
+    TransportModule,
     build_pipeline,
 )
 from .priority import Priority
@@ -35,6 +35,7 @@ from .request_strategy import (
     single_attempt_strategy,
 )
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
+from .setup import setup, setup_v2
 from .tracing import NOOP_TRACER, NoopSpan, NoopTracer, Span, Tracer
 from .transport import Transport
 
