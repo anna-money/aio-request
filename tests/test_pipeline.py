@@ -9,7 +9,7 @@ class NextPassingModule(aio_request.RequestModule):
 
     async def execute(
         self,
-        next: aio_request.RequestHandler,
+        next: aio_request.NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: aio_request.Request,
@@ -24,7 +24,7 @@ class RejectingModule(aio_request.RequestModule):
 
     async def execute(
         self,
-        next: aio_request.RequestHandler,
+        next: aio_request.NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: aio_request.Request,
@@ -39,7 +39,7 @@ class ResponseModule(aio_request.RequestModule):
 
     async def execute(
         self,
-        next: aio_request.RequestHandler,
+        next: aio_request.NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: aio_request.Request,

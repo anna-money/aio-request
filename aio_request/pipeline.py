@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import time
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Optional
 
 import yarl
 
@@ -12,7 +12,7 @@ from .priority import Priority
 from .tracing import SpanKind, Tracer
 from .transport import Transport
 
-RequestHandler = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]]
+NextModuleFunc = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]]
 
 
 class RequestModule(abc.ABC):
@@ -21,7 +21,7 @@ class RequestModule(abc.ABC):
     @abc.abstractmethod
     async def execute(
         self,
-        next: RequestHandler,
+        next: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
@@ -39,7 +39,7 @@ class LowTimeoutRequestModule(RequestModule):
 
     async def execute(
         self,
-        next: RequestHandler,
+        next: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
@@ -52,16 +52,23 @@ class LowTimeoutRequestModule(RequestModule):
         return await next(endpoint, request, deadline, priority)
 
 
-class RequestSendingModule(RequestModule):
-    __slots__ = ("_transport", "_emit_system_headers")
+class TransportModule(RequestModule):
+    __slots__ = ("_transport", "_emit_system_headers", "_request_enricher")
 
-    def __init__(self, transport: Transport, *, emit_system_headers: bool):
-        self._emit_system_headers = emit_system_headers
+    def __init__(
+        self,
+        transport: Transport,
+        *,
+        emit_system_headers: bool,
+        request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]],
+    ):
         self._transport = transport
+        self._emit_system_headers = emit_system_headers
+        self._request_enricher = request_enricher
 
     async def execute(
         self,
-        _: RequestHandler,
+        _: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
@@ -77,6 +84,12 @@ class RequestSendingModule(RequestModule):
                 }
             )
 
+        request = (
+            await self._request_enricher(request, self._emit_system_headers)
+            if self._request_enricher is not None
+            else request
+        )
+
         return await self._transport.send(endpoint, request, deadline.timeout)
 
 
@@ -88,7 +101,7 @@ class MetricsModule(RequestModule):
 
     async def execute(
         self,
-        next: RequestHandler,
+        next: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
@@ -117,14 +130,15 @@ class MetricsModule(RequestModule):
 
 
 class TracingModule(RequestModule):
-    __slots__ = ("_tracer",)
+    __slots__ = ("_tracer", "_emit_system_headers")
 
-    def __init__(self, tracer: Tracer):
+    def __init__(self, tracer: Tracer, *, emit_system_headers: bool):
         self._tracer = tracer
+        self._emit_system_headers = emit_system_headers
 
     async def execute(
         self,
-        next: RequestHandler,
+        next: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
@@ -139,7 +153,7 @@ class TracingModule(RequestModule):
 
             response = await next(
                 endpoint,
-                request.update_headers(self._tracer.get_context_headers()),
+                (request.update_headers(self._tracer.get_context_headers()) if self._emit_system_headers else request),
                 deadline,
                 priority,
             )
@@ -149,7 +163,7 @@ class TracingModule(RequestModule):
             return response
 
 
-def build_pipeline(modules: List[RequestModule]) -> RequestHandler:
+def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
     async def _unsupported(
         _: yarl.URL,
         __: Request,
@@ -158,10 +172,10 @@ def build_pipeline(modules: List[RequestModule]) -> RequestHandler:
     ) -> ClosableResponse:
         raise NotImplementedError()
 
-    def _execute_module(m: RequestModule, n: RequestHandler) -> RequestHandler:
+    def _execute_module(m: RequestModule, n: NextModuleFunc) -> NextModuleFunc:
         return lambda e, r, d, p: m.execute(n, endpoint=e, request=r, deadline=d, priority=p)
 
-    pipeline: RequestHandler = _unsupported
+    pipeline: NextModuleFunc = _unsupported
     for module in reversed(modules):
         pipeline = _execute_module(module, pipeline)
     return pipeline

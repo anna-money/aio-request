@@ -1,72 +1,71 @@
+import abc
 import contextlib
-from typing import AsyncIterator, Callable, Optional, Union
+from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Optional
 
 import yarl
 
-from .base import ClosableResponse, Method, Request, Response
+from .base import ClosableResponse, Request, Response
 from .context import get_context
 from .deadline import Deadline
-from .delays_provider import linear_delays
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
-from .pipeline import LowTimeoutRequestModule, MetricsModule, RequestSendingModule, TracingModule, build_pipeline
 from .priority import Priority
-from .request_strategy import (
-    MethodBasedStrategy,
-    RequestStrategy,
-    ResponseWithVerdict,
-    sequential_strategy,
-    single_attempt_strategy,
-)
-from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .tracing import NOOP_TRACER, Tracer
-from .transport import Transport
+from .request_strategy import RequestStrategy, ResponseWithVerdict
+from .response_classifier import ResponseClassifier
 
 
-class Client:
+class Client(abc.ABC):
+    __slots__ = ()
+
+    @abc.abstractmethod
+    def request(
+        self,
+        request: Request,
+        *,
+        deadline: Optional[Deadline] = None,
+        priority: Optional[Priority] = None,
+        strategy: Optional[RequestStrategy] = None,
+    ) -> AsyncContextManager[Response]:
+        ...
+
+
+class DefaultClient(Client):
     __slots__ = (
         "_endpoint",
-        "_transport",
         "_response_classifier",
         "_request_strategy",
         "_priority",
         "_timeout",
-        "_request_enricher",
-        "_pipeline",
+        "_send_request",
     )
 
     def __init__(
         self,
         *,
         endpoint: yarl.URL,
-        transport: Transport,
         response_classifier: ResponseClassifier,
         request_strategy: RequestStrategy,
         timeout: float,
         priority: Priority,
-        emit_system_headers: bool,
-        low_timeout_threshold: float,
-        request_enricher: Optional[Callable[[Request], Request]],
-        metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
-        tracer: Tracer = NOOP_TRACER,
+        send_request: Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]],
     ):
         self._endpoint = endpoint
-        self._transport = transport
         self._response_classifier = response_classifier
         self._request_strategy = request_strategy
         self._priority = priority
         self._timeout = timeout
-        self._request_enricher = request_enricher
-        self._pipeline = build_pipeline(
-            [
-                TracingModule(tracer=tracer),
-                MetricsModule(metrics_provider=metrics_provider),
-                LowTimeoutRequestModule(low_timeout_threshold=low_timeout_threshold),
-                RequestSendingModule(transport, emit_system_headers=emit_system_headers),
-            ]
-        )
+        self._send_request = send_request
+
+    def request(
+        self,
+        request: Request,
+        *,
+        deadline: Optional[Deadline] = None,
+        priority: Optional[Priority] = None,
+        strategy: Optional[RequestStrategy] = None,
+    ) -> AsyncContextManager[Response]:
+        return self._request(request, deadline=deadline, priority=priority, strategy=strategy)
 
     @contextlib.asynccontextmanager
-    async def request(
+    async def _request(
         self,
         request: Request,
         *,
@@ -74,11 +73,9 @@ class Client:
         priority: Optional[Priority] = None,
         strategy: Optional[RequestStrategy] = None,
     ) -> AsyncIterator[Response]:
-        if self._request_enricher is not None:
-            request = self._request_enricher(request)
         context = get_context()
         response_ctx = (strategy or self._request_strategy).request(
-            self._send_request,
+            self._send,
             self._endpoint,
             request,
             deadline or context.deadline or Deadline.from_timeout(self._timeout),
@@ -100,50 +97,8 @@ class Client:
 
         return priority
 
-    async def _send_request(
+    async def _send(
         self, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
     ) -> ResponseWithVerdict[ClosableResponse]:
-        response = await self._pipeline(endpoint, request, deadline, priority)
+        response = await self._send_request(endpoint, request, deadline, priority)
         return ResponseWithVerdict(response, self._response_classifier.classify(response))
-
-
-def setup(
-    *,
-    transport: Transport,
-    endpoint: Union[str, yarl.URL],
-    safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
-    unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
-    response_classifier: Optional[ResponseClassifier] = None,
-    timeout: float = 20.0,
-    priority: Priority = Priority.NORMAL,
-    low_timeout_threshold: float = 0.005,
-    emit_system_headers: bool = True,
-    request_enricher: Optional[Callable[[Request], Request]] = None,
-    metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
-    tracer: Tracer = NOOP_TRACER,
-) -> Client:
-    request_strategy = MethodBasedStrategy(
-        {
-            Method.GET: safe_method_strategy,
-            Method.POST: unsafe_method_strategy,
-            Method.PUT: unsafe_method_strategy,
-            Method.DELETE: unsafe_method_strategy,
-        }
-    )
-    return Client(
-        endpoint=yarl.URL(endpoint) if isinstance(endpoint, str) else endpoint,
-        transport=transport,
-        response_classifier=response_classifier or DefaultResponseClassifier(),
-        request_strategy=request_strategy,
-        timeout=timeout,
-        priority=priority,
-        request_enricher=request_enricher,
-        low_timeout_threshold=low_timeout_threshold,
-        emit_system_headers=emit_system_headers,
-        metrics_provider=(
-            # try to acquire metrics_provider from transport
-            getattr(transport, "_metrics_provider", None)
-            or metrics_provider
-        ),
-        tracer=tracer,
-    )
