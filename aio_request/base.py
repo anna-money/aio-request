@@ -1,5 +1,6 @@
 import abc
 import json
+import re
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import multidict
@@ -28,6 +29,9 @@ class Header:
 _MultiDict = Union[
     Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]
 ]
+
+
+json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json", re.RegexFlag.IGNORECASE)
 
 PathParameters = Mapping[str, Any]
 QueryParameters = Union[Mapping[str, Any], Iterable[Tuple[str, Any]], _MultiDict]
@@ -125,6 +129,14 @@ class Response(abc.ABC):
     def is_server_error(self) -> bool:
         return 500 <= self.status < 600
 
+    @property
+    def content_type(self) -> Optional[str]:
+        return self.headers.get(Header.CONTENT_TYPE)
+
+    @property
+    def is_json(self) -> bool:
+        return bool(json_re.match(self.content_type or ""))
+
 
 class ClosableResponse(Response, Closable):
     __slots__ = ()
@@ -135,10 +147,11 @@ class ClosableResponse(Response, Closable):
 
 
 class EmptyResponse(ClosableResponse):
-    __slots__ = ("_status",)
+    __slots__ = ("_status", "_headers")
 
-    def __init__(self, *, status: int):
+    def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS):
         self._status = status
+        self._headers = headers
 
     @property
     def status(self) -> int:
@@ -146,7 +159,7 @@ class EmptyResponse(ClosableResponse):
 
     @property
     def headers(self) -> multidict.CIMultiDictProxy[str]:
-        return EMPTY_HEADERS
+        return self._headers
 
     async def json(
         self,
