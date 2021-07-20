@@ -3,7 +3,7 @@ import collections
 import re
 import sys
 
-from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
+from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, has_content_type
 from .client import Client, DefaultClient
 from .context import get_context, set_context
 from .deadline import Deadline

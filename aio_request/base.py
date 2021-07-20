@@ -1,5 +1,6 @@
 import abc
 import json
+import re
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import multidict
@@ -135,10 +136,11 @@ class ClosableResponse(Response, Closable):
 
 
 class EmptyResponse(ClosableResponse):
-    __slots__ = ("_status",)
+    __slots__ = ("_status", "_headers")
 
-    def __init__(self, *, status: int):
+    def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS):
         self._status = status
+        self._headers = headers
 
     @property
     def status(self) -> int:
@@ -146,7 +148,7 @@ class EmptyResponse(ClosableResponse):
 
     @property
     def headers(self) -> multidict.CIMultiDictProxy[str]:
-        return EMPTY_HEADERS
+        return self._headers
 
     async def json(
         self,
@@ -217,3 +219,13 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     )
 
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
+
+
+json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json")
+
+
+def has_content_type(response: Response, *, content_type: str) -> bool:
+    response_content_type = response.headers.get(Header.CONTENT_TYPE, "").lower()
+    if content_type == "application/json":
+        return json_re.match(response_content_type) is not None
+    return content_type in response_content_type
