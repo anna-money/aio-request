@@ -30,6 +30,9 @@ _MultiDict = Union[
     Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]
 ]
 
+
+json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json", re.RegexFlag.IGNORECASE)
+
 PathParameters = Mapping[str, Any]
 QueryParameters = Union[Mapping[str, Any], Iterable[Tuple[str, Any]], _MultiDict]
 Headers = _MultiDict
@@ -126,6 +129,14 @@ class Response(abc.ABC):
     def is_server_error(self) -> bool:
         return 500 <= self.status < 600
 
+    @property
+    def content_type(self) -> Optional[str]:
+        return self.headers.get(Header.CONTENT_TYPE)
+
+    @property
+    def is_json(self) -> bool:
+        return bool(json_re.match(self.content_type or ""))
+
 
 class ClosableResponse(Response, Closable):
     __slots__ = ()
@@ -219,13 +230,3 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     )
 
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
-
-
-json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json")
-
-
-def has_content_type(response: Response, *, content_type: str) -> bool:
-    response_content_type = response.headers.get(Header.CONTENT_TYPE, "").lower()
-    if content_type == "application/json":
-        return json_re.match(response_content_type) is not None
-    return content_type in response_content_type
