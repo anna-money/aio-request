@@ -72,6 +72,20 @@ class Request:
         updated_headers = (
             multidict.CIMultiDict[str](self.headers) if self.headers is not None else multidict.CIMultiDict[str]()
         )
+        updated_headers.update(headers)
+        return Request(
+            method=self.method,
+            url=self.url,
+            path_parameters=self.path_parameters,
+            query_parameters=self.query_parameters,
+            headers=updated_headers,
+            body=self.body,
+        )
+
+    def extend_headers(self, headers: Headers) -> "Request":
+        updated_headers = (
+            multidict.CIMultiDict[str](self.headers) if self.headers is not None else multidict.CIMultiDict[str]()
+        )
         updated_headers.extend(headers)
         return Request(
             method=self.method,
