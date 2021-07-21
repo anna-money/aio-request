@@ -63,6 +63,5 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Framework :: AsyncIO",
         "Typing :: Typed",
-        "Internet :: WWW/HTTP",
     ],
 )

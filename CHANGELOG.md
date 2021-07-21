@@ -1,3 +1,7 @@
+## v0.1.12 (2021-07-21)
+
+* [Basic repr implementation](https://github.com/Pliner/aio-request/commit/adaa4888c3d372fa65f3dd5eb6113ab68f46de24)
+
 ## v0.1.11 (2021-07-21)
 
 * Fix Request.update_headers, add Request.extend_headers [#59](https://github.com/Pliner/aio-request/pull/59)
