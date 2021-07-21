@@ -104,6 +104,9 @@ class SingleAttemptRequestStrategy(RequestStrategy):
             if send_result is not None:
                 await asyncio.shield(close_single(send_result))
 
+    def __repr__(self) -> str:
+        return "<SingleAttemptRequestStrategy>"
+
 
 class SequentialRequestStrategy(RequestStrategy):
     __slots__ = (
@@ -149,6 +152,9 @@ class SequentialRequestStrategy(RequestStrategy):
             yield ResponseWithVerdict[Response](final_response.response, final_response.verdict)
         finally:
             await asyncio.shield(close(responses))
+
+    def __repr__(self) -> str:
+        return f"<SequentialRequestStrategy [{self._attempts_count}]>"
 
 
 class ParallelRequestStrategy(RequestStrategy):
@@ -223,6 +229,9 @@ class ParallelRequestStrategy(RequestStrategy):
             await asyncio.sleep(min(self._delays_provider(attempt), deadline.timeout))
         return await send_request(endpoint, request, deadline, priority)
 
+    def __repr__(self) -> str:
+        return f"<ParallelRequestStrategy [{self._attempts_count}]>"
+
 
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     __slots__ = ("_base_strategy", "_delays_provider")
@@ -250,3 +259,6 @@ class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
 
             attempt += 1
             await asyncio.sleep(min(self._delays_provider(attempt), deadline.timeout))
+
+    def __repr__(self) -> str:
+        return "<RetryUntilDeadlineExpiredStrategy>"

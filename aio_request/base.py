@@ -96,6 +96,9 @@ class Request:
             body=self.body,
         )
 
+    def __repr__(self) -> str:
+        return f"<Request [{self.method} {self.url}]>"
+
 
 class Response(abc.ABC):
     __slots__ = ()
@@ -150,6 +153,9 @@ class Response(abc.ABC):
     @property
     def is_json(self) -> bool:
         return bool(json_re.match(self.content_type or ""))
+
+    def __repr__(self) -> str:
+        return f"<Response [{self.status}]>"
 
 
 class ClosableResponse(Response, Closable):

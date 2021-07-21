@@ -26,6 +26,9 @@ class Context:
             priority=self.priority if priority is sentinel else cast(Optional[Priority], priority),
         )
 
+    def __repr__(self) -> str:
+        return f"<Context [{self.deadline} {self.priority}]>"
+
 
 context_var = contextvars.ContextVar("aio_request_context", default=Context(None, None))
 

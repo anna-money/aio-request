@@ -10,6 +10,9 @@ class Priority(str, enum.Enum):
     def __str__(self) -> str:
         return self.value
 
+    def __repr__(self) -> str:
+        return f"<Priority [{self.value}]>"
+
     @staticmethod
     def try_parse(value: Optional[str]) -> Optional["Priority"]:
         if value is None:

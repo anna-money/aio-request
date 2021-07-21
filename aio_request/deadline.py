@@ -34,5 +34,8 @@ class Deadline:
     def expired(self) -> bool:
         return (self.deadline_at - datetime.datetime.utcnow()).total_seconds() <= 0
 
+    def __repr__(self) -> str:
+        return f"<Deadline [{self.deadline_at.isoformat()}]>"
+
     def __str__(self) -> str:
         return str(self.deadline_at.isoformat())
