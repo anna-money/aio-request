@@ -61,7 +61,6 @@ setup(
         "Operating System :: OS Independent",
         "Environment :: Web Environment",
         "Development Status :: 5 - Production/Stable",
-        "Topic :: Database",
         "Framework :: AsyncIO",
         "Typing :: Typed",
         "Internet :: WWW/HTTP",
