@@ -8,6 +8,6 @@ aiohttp==3.7.4
 yarl==1.6.3
 multidict==5.1.0
 prometheus-client==0.11.0
-opentelemetry-api==1.4.0
+opentelemetry-api==1.4.1
 opentelemetry-semantic-conventions==0.23b0
 backports.zoneinfo;python_version<"3.9"
