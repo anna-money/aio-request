@@ -24,6 +24,7 @@ class Header:
     X_REQUEST_PRIORITY = multidict.istr("X-Request-Priority")
     X_REQUEST_TIMEOUT = multidict.istr("X-Request-Timeout")
     X_SERVICE_NAME = multidict.istr("X-Service-Name")
+    X_DO_NOT_RETRY = multidict.istr("X-Do-Not-Retry")
 
 
 _MultiDict = Union[

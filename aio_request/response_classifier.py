@@ -1,7 +1,7 @@
 import abc
 import enum
 
-from .base import Response
+from .base import Header, Response
 
 
 class ResponseVerdict(enum.Enum):
@@ -24,6 +24,8 @@ class DefaultResponseClassifier(ResponseClassifier):
         self._network_errors_code = network_errors_code
 
     def classify(self, response: Response) -> ResponseVerdict:
+        if Header.X_DO_NOT_RETRY in response.headers:
+            return ResponseVerdict.ACCEPT
         if response.is_server_error():
             return ResponseVerdict.REJECT
         if response.status == self._network_errors_code:

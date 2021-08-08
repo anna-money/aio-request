@@ -3,6 +3,7 @@ import asyncio
 import time
 from typing import Awaitable, Callable, List, Optional
 
+import multidict
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
@@ -198,7 +199,12 @@ class CircuitBreakerModule(RequestModule):
         priority: Priority,
     ) -> ClosableResponse:
         if not self._circuit_breaker.on_execute(endpoint):
-            return EmptyResponse(status=self._status_code)
+            headers = multidict.CIMultiDict[str]()
+            headers[Header.X_DO_NOT_RETRY] = "true"
+            return EmptyResponse(
+                status=self._status_code,
+                headers=multidict.CIMultiDictProxy[str](headers),
+            )
 
         response = await next(endpoint, request, deadline, priority)
         if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
