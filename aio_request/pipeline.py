@@ -6,9 +6,11 @@ from typing import Awaitable, Callable, List, Optional
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
+from .circuit_breaker import CircuitBreaker
 from .deadline import Deadline
 from .metrics import MetricsProvider
 from .priority import Priority
+from .response_classifier import ResponseClassifier, ResponseVerdict
 from .tracing import SpanKind, Tracer
 from .transport import Transport
 
@@ -31,7 +33,16 @@ class RequestModule(abc.ABC):
         ...
 
 
-class LowTimeoutRequestModule(RequestModule):
+class ByPassModule(RequestModule):
+    __slots__ = ()
+
+    async def execute(
+        self, next: NextModuleFunc, *, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
+    ) -> ClosableResponse:
+        return await next(endpoint, request, deadline, priority)
+
+
+class LowTimeoutModule(RequestModule):
     __slots__ = ("_low_timeout_threshold",)
 
     def __init__(self, low_timeout_threshold: float):
@@ -163,6 +174,40 @@ class TracingModule(RequestModule):
             return response
 
 
+class CircuitBreakerModule(RequestModule):
+    __slots__ = ("_circuit_breaker", "_status_code", "_response_classifier")
+
+    def __init__(
+        self,
+        circuit_breaker: CircuitBreaker,
+        *,
+        status_code: int = 502,
+        response_classifier: ResponseClassifier,
+    ):
+        self._circuit_breaker = circuit_breaker
+        self._status_code = status_code
+        self._response_classifier = response_classifier
+
+    async def execute(
+        self,
+        next: NextModuleFunc,
+        *,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
+    ) -> ClosableResponse:
+        if not self._circuit_breaker.on_execute(endpoint):
+            return EmptyResponse(status=self._status_code)
+
+        response = await next(endpoint, request, deadline, priority)
+        if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
+            self._circuit_breaker.on_success(endpoint)
+        else:
+            self._circuit_breaker.on_failure(endpoint)
+        return response
+
+
 def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
     async def _unsupported(
         _: yarl.URL,
@@ -177,5 +222,7 @@ def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
 
     pipeline: NextModuleFunc = _unsupported
     for module in reversed(modules):
+        if isinstance(module, ByPassModule):
+            continue
         pipeline = _execute_module(module, pipeline)
     return pipeline

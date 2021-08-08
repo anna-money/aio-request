@@ -3,14 +3,23 @@ from typing import Awaitable, Callable, Optional, Union
 import yarl
 
 from .base import Method, Request
+from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
-from .pipeline import LowTimeoutRequestModule, MetricsModule, TracingModule, TransportModule, build_pipeline
+from .metrics import MetricsProvider
+from .pipeline import (
+    ByPassModule,
+    CircuitBreakerModule,
+    LowTimeoutModule,
+    MetricsModule,
+    TracingModule,
+    TransportModule,
+    build_pipeline,
+)
 from .priority import Priority
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .tracing import NOOP_TRACER, Tracer
+from .tracing import Tracer
 from .transport import Transport
 
 
@@ -59,6 +68,7 @@ def setup_v2(
     request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
     metrics_provider: Optional[MetricsProvider] = None,
     tracer: Optional[Tracer] = None,
+    circuit_breaker: Optional[CircuitBreaker] = None,
 ) -> Client:
     request_strategy = MethodBasedStrategy(
         {
@@ -76,9 +86,20 @@ def setup_v2(
         priority=priority,
         send_request=build_pipeline(
             [
-                TracingModule(tracer=tracer or NOOP_TRACER, emit_system_headers=emit_system_headers),
-                MetricsModule(metrics_provider=metrics_provider or NOOP_METRICS_PROVIDER),
-                LowTimeoutRequestModule(low_timeout_threshold=low_timeout_threshold),
+                (
+                    TracingModule(tracer=tracer, emit_system_headers=emit_system_headers)
+                    if tracer is not None
+                    else ByPassModule()
+                ),
+                (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else ByPassModule()),
+                (
+                    CircuitBreakerModule(
+                        circuit_breaker, response_classifier=response_classifier or DefaultResponseClassifier()
+                    )
+                    if circuit_breaker is not None
+                    else ByPassModule()
+                ),
+                LowTimeoutModule(low_timeout_threshold=low_timeout_threshold),
                 TransportModule(transport, emit_system_headers=emit_system_headers, request_enricher=request_enricher),
             ],
         ),
