@@ -48,7 +48,7 @@ class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
     def __init__(self, sampling_duration: float, windows_count: int) -> None:
         self._sampling_duration = sampling_duration
         self._window_duration = sampling_duration / windows_count
-        self._last_n = collections.deque[CircuitBreakerMetricsSnapshot]()
+        self._last_n: collections.deque = collections.deque()  # type: ignore
         self._current: Optional[CircuitBreakerMetricsSnapshot] = None
 
     def increment_successes(self) -> None:
