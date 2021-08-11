@@ -2,7 +2,7 @@ from typing import Awaitable, Callable, Optional, Union
 
 import yarl
 
-from .base import Method, Request
+from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
@@ -68,7 +68,7 @@ def setup_v2(
     request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
     metrics_provider: Optional[MetricsProvider] = None,
     tracer: Optional[Tracer] = None,
-    circuit_breaker: Optional[CircuitBreaker] = None,
+    circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
     request_strategy = MethodBasedStrategy(
         {

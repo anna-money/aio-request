@@ -5,7 +5,6 @@ import sys
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .circuit_breaker import (
-    NOOP_CIRCUIT_BREAKER,
     CircuitBreaker,
     CircuitBreakerMetrics,
     CircuitBreakerMetricsSnapshot,

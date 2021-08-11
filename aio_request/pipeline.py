@@ -176,18 +176,24 @@ class TracingModule(RequestModule):
 
 
 class CircuitBreakerModule(RequestModule):
-    __slots__ = ("_circuit_breaker", "_status_code", "_response_classifier")
+    __slots__ = ("_circuit_breaker", "_fallback", "_response_classifier")
 
     def __init__(
         self,
-        circuit_breaker: CircuitBreaker,
+        circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse],
         *,
         status_code: int = 502,
         response_classifier: ResponseClassifier,
     ):
         self._circuit_breaker = circuit_breaker
-        self._status_code = status_code
         self._response_classifier = response_classifier
+
+        headers = multidict.CIMultiDict[str]()
+        headers[Header.X_DO_NOT_RETRY] = "true"
+        self._fallback = EmptyResponse(
+            status=status_code,
+            headers=multidict.CIMultiDictProxy[str](headers),
+        )
 
     async def execute(
         self,
@@ -198,20 +204,12 @@ class CircuitBreakerModule(RequestModule):
         deadline: Deadline,
         priority: Priority,
     ) -> ClosableResponse:
-        if not self._circuit_breaker.on_execute(endpoint):
-            headers = multidict.CIMultiDict[str]()
-            headers[Header.X_DO_NOT_RETRY] = "true"
-            return EmptyResponse(
-                status=self._status_code,
-                headers=multidict.CIMultiDictProxy[str](headers),
-            )
-
-        response = await next(endpoint, request, deadline, priority)
-        if self._response_classifier.classify(response) == ResponseVerdict.ACCEPT:
-            self._circuit_breaker.on_success(endpoint)
-        else:
-            self._circuit_breaker.on_failure(endpoint)
-        return response
+        return await self._circuit_breaker.execute(
+            scope=endpoint,
+            operation=lambda: next(endpoint, request, deadline, priority),
+            fallback=self._fallback,
+            is_successful=lambda x: _response_verdict_to_bool(self._response_classifier.classify(x)),
+        )
 
 
 def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
@@ -232,3 +230,12 @@ def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
             continue
         pipeline = _execute_module(module, pipeline)
     return pipeline
+
+
+def _response_verdict_to_bool(response_verdict: ResponseVerdict) -> bool:
+    if response_verdict == ResponseVerdict.ACCEPT:
+        return True
+    if response_verdict == ResponseVerdict.REJECT:
+        return False
+
+    raise RuntimeError(f"Unexpected {response_verdict}")

@@ -2,9 +2,7 @@ import abc
 import collections
 import enum
 import time
-from typing import DefaultDict, Optional
-
-import yarl
+from typing import Awaitable, Callable, DefaultDict, Generic, Optional, TypeVar
 
 
 class CircuitState(str, enum.Enum):
@@ -87,30 +85,33 @@ class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
             self._last_n.popleft()
 
 
-class CircuitBreaker(abc.ABC):
+TScope = TypeVar("TScope")
+TResult = TypeVar("TResult")
+
+
+class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
     __slots__ = ()
 
     @abc.abstractmethod
-    def on_execute(self, endpoint: yarl.URL) -> bool:
+    async def execute(
+        self,
+        *,
+        scope: TScope,
+        operation: Callable[[], Awaitable[TResult]],
+        fallback: TResult,
+        is_successful: Callable[[TResult], bool],
+    ) -> TResult:
         ...
 
-    @abc.abstractmethod
-    def on_success(self, endpoint: yarl.URL) -> None:
-        ...
 
-    @abc.abstractmethod
-    def on_failure(self, endpoint: yarl.URL) -> None:
-        ...
-
-
-class DefaultCircuitBreaker(CircuitBreaker):
+class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
     __slots__ = (
         "_block_duration",
         "_minimum_throughput",
         "_failure_threshold",
-        "_per_endpoint_metrics",
-        "_per_endpoint_state",
-        "_per_endpoint_blocked_till",
+        "_per_scope_metrics",
+        "_per_scope_state",
+        "_per_scope_blocked_till",
     )
 
     def __init__(
@@ -125,77 +126,91 @@ class DefaultCircuitBreaker(CircuitBreaker):
         self._block_duration = block_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
-        self._per_endpoint_metrics: DefaultDict[yarl.URL, CircuitBreakerMetrics] = collections.defaultdict(
+        self._per_scope_metrics: DefaultDict[TScope, CircuitBreakerMetrics] = collections.defaultdict(
             lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
         )
-        self._per_endpoint_state: DefaultDict[yarl.URL, CircuitState] = collections.defaultdict(
-            lambda: CircuitState.CLOSED
-        )
-        self._per_endpoint_blocked_till: DefaultDict[yarl.URL, float] = collections.defaultdict(float)
+        self._per_scope_state: DefaultDict[TScope, CircuitState] = collections.defaultdict(lambda: CircuitState.CLOSED)
+        self._per_scope_blocked_till: DefaultDict[TScope, float] = collections.defaultdict(float)
 
-    def on_execute(self, endpoint: yarl.URL) -> bool:
-        state = self._per_endpoint_state[endpoint]
+    async def execute(
+        self,
+        scope: TScope,
+        operation: Callable[[], Awaitable[TResult]],
+        fallback: TResult,
+        is_successful: Callable[[TResult], bool],
+    ) -> TResult:
+        if not self._is_executable(scope):
+            return fallback
+
+        result = await operation()
+
+        if is_successful(result):
+            self._on_success(scope)
+        else:
+            self._on_failure(scope)
+
+        return result
+
+    def _is_executable(self, scope: TScope) -> bool:
+        state = self._per_scope_state[scope]
         if state == CircuitState.CLOSED:
             return True
 
-        blocked_till = self._per_endpoint_blocked_till[endpoint]
+        blocked_till = self._per_scope_blocked_till[scope]
         now = time.time()
         if blocked_till > now:
             return False
 
-        self._per_endpoint_blocked_till[endpoint] = now + self._block_duration
-        self._per_endpoint_state[endpoint] = CircuitState.HALF_OPENED
+        self._per_scope_blocked_till[scope] = now + self._block_duration
+        self._per_scope_state[scope] = CircuitState.HALF_OPENED
         return True
 
-    def on_success(self, endpoint: yarl.URL) -> None:
-        state = self._per_endpoint_state[endpoint]
+    def _on_success(self, scope: TScope) -> None:
+        state = self._per_scope_state[scope]
         if state == CircuitState.HALF_OPENED:
-            self._close(endpoint)
-        self._per_endpoint_metrics[endpoint].increment_successes()
+            self._close(scope)
+        self._per_scope_metrics[scope].increment_successes()
 
-    def on_failure(self, endpoint: yarl.URL) -> None:
-        state = self._per_endpoint_state[endpoint]
+    def _on_failure(self, scope: TScope) -> None:
+        state = self._per_scope_state[scope]
         if state == CircuitState.CLOSED:
-            self._increment_failures(endpoint)
-            snapshot = self._collect_metrics(endpoint)
+            self._increment_failures(scope)
+            snapshot = self._collect_metrics(scope)
             throughput = float(snapshot.successes + snapshot.failures)
             if throughput >= self._minimum_throughput and (snapshot.failures / throughput >= self._failure_threshold):
-                self._open(endpoint)
+                self._open(scope)
         elif state == CircuitState.OPENED:
-            self._increment_failures(endpoint)
+            self._increment_failures(scope)
         else:
-            self._open(endpoint)
+            self._open(scope)
 
-    def _increment_failures(self, endpoint: yarl.URL) -> None:
-        self._per_endpoint_metrics[endpoint].increment_failures()
+    def _increment_failures(self, scope: TScope) -> None:
+        self._per_scope_metrics[scope].increment_failures()
 
-    def _increment_successes(self, endpoint: yarl.URL) -> None:
-        self._per_endpoint_metrics[endpoint].increment_successes()
+    def _increment_successes(self, scope: TScope) -> None:
+        self._per_scope_metrics[scope].increment_successes()
 
-    def _collect_metrics(self, endpoint: yarl.URL) -> CircuitBreakerMetricsSnapshot:
-        return self._per_endpoint_metrics[endpoint].collect()
+    def _collect_metrics(self, scope: TScope) -> CircuitBreakerMetricsSnapshot:
+        return self._per_scope_metrics[scope].collect()
 
-    def _close(self, endpoint: yarl.URL) -> None:
-        self._per_endpoint_metrics[endpoint].reset()
-        self._per_endpoint_state[endpoint] = CircuitState.CLOSED
-        self._per_endpoint_blocked_till[endpoint] = 0
+    def _close(self, scope: TScope) -> None:
+        self._per_scope_metrics[scope].reset()
+        self._per_scope_state[scope] = CircuitState.CLOSED
+        self._per_scope_blocked_till[scope] = 0
 
-    def _open(self, endpoint: yarl.URL) -> None:
-        self._per_endpoint_blocked_till[endpoint] = time.time() + self._block_duration
-        self._per_endpoint_state[endpoint] = CircuitState.OPENED
+    def _open(self, scope: TScope) -> None:
+        self._per_scope_blocked_till[scope] = time.time() + self._block_duration
+        self._per_scope_state[scope] = CircuitState.OPENED
 
 
-class NoopCircuitBreaker(CircuitBreaker):
+class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):
     __slots__ = ()
 
-    def on_execute(self, endpoint: yarl.URL) -> bool:
-        return True
-
-    def on_success(self, endpoint: yarl.URL) -> None:
-        pass
-
-    def on_failure(self, endpoint: yarl.URL) -> None:
-        pass
-
-
-NOOP_CIRCUIT_BREAKER = NoopCircuitBreaker()
+    async def execute(
+        self,
+        scope: TScope,
+        operation: Callable[[], Awaitable[TResult]],
+        fallback: TResult,
+        is_successful: Callable[[TResult], bool],
+    ) -> TResult:
+        return await operation()
