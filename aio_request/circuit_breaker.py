@@ -127,7 +127,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         minimum_throughput: float,
         sampling_duration: float,
     ):
-        """ "
+        """
         failure_threshold: The failure threshold at which the circuit will break (a number between 0 and 1)
         break_duration: The duration the circuit will stay open before resetting
         minimum_throughput: How many actions must pass through the circuit-breaker to come into action.
