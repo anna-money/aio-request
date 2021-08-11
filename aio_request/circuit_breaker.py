@@ -2,7 +2,7 @@ import abc
 import collections
 import enum
 import time
-from typing import Awaitable, Callable, DefaultDict, Generic, Optional, TypeVar
+from typing import Awaitable, Callable, DefaultDict, Generic, Mapping, Optional, TypeVar
 
 
 class CircuitState(str, enum.Enum):
@@ -103,10 +103,15 @@ class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
     ) -> TResult:
         ...
 
+    @property
+    @abc.abstractmethod
+    def state(self) -> Mapping[TScope, CircuitState]:
+        ...
+
 
 class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
     __slots__ = (
-        "_block_duration",
+        "_break_duration",
         "_minimum_throughput",
         "_failure_threshold",
         "_per_scope_metrics",
@@ -117,17 +122,22 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
     def __init__(
         self,
         *,
-        block_duration: float,
-        sampling_duration: float,
-        minimum_throughput: float,
+        break_duration: float,
         failure_threshold: float,
-        windows_count: int = 10,
+        minimum_throughput: float,
+        sampling_duration: float,
     ):
-        self._block_duration = block_duration
+        """ "
+        failure_threshold: The failure threshold at which the circuit will break (a number between 0 and 1)
+        break_duration: The duration the circuit will stay open before resetting
+        minimum_throughput: How many actions must pass through the circuit-breaker to come into action.
+        sampling_sampling_duration: The duration when failure ratios are assessed.
+        """
+        self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
         self._per_scope_metrics: DefaultDict[TScope, CircuitBreakerMetrics] = collections.defaultdict(
-            lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
+            lambda: RollingCircuitBreakerMetrics(sampling_duration, 10)
         )
         self._per_scope_state: DefaultDict[TScope, CircuitState] = collections.defaultdict(lambda: CircuitState.CLOSED)
         self._per_scope_blocked_till: DefaultDict[TScope, float] = collections.defaultdict(float)
@@ -151,6 +161,10 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
         return result
 
+    @property
+    def state(self) -> Mapping[TScope, CircuitState]:
+        return dict(self._per_scope_state)
+
     def _is_executable(self, scope: TScope) -> bool:
         state = self._per_scope_state[scope]
         if state == CircuitState.CLOSED:
@@ -161,7 +175,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         if blocked_till > now:
             return False
 
-        self._per_scope_blocked_till[scope] = now + self._block_duration
+        self._per_scope_blocked_till[scope] = now + self._break_duration
         self._per_scope_state[scope] = CircuitState.HALF_OPENED
         return True
 
@@ -199,7 +213,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         self._per_scope_blocked_till[scope] = 0
 
     def _open(self, scope: TScope) -> None:
-        self._per_scope_blocked_till[scope] = time.time() + self._block_duration
+        self._per_scope_blocked_till[scope] = time.time() + self._break_duration
         self._per_scope_state[scope] = CircuitState.OPENED
 
 
@@ -214,3 +228,7 @@ class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):
         is_successful: Callable[[TResult], bool],
     ) -> TResult:
         return await operation()
+
+    @property
+    def state(self) -> Mapping[TScope, CircuitState]:
+        return {}
