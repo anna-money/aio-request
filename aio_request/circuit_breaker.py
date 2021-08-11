@@ -175,6 +175,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         if blocked_till > now:
             return False
 
+        # Only one operation should win and be executed
         self._per_scope_blocked_till[scope] = now + self._break_duration
         self._per_scope_state[scope] = CircuitState.HALF_OPENED
         return True

@@ -25,7 +25,7 @@ async def test_circuit_breaker_should_be_closed_because_of_expire_metrics() -> N
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert circuit_breaker.state == {"scope": aio_request.CircuitState.CLOSED}
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(1)  # wait sampling_duration for expiration of metrics
 
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert circuit_breaker.state == {"scope": aio_request.CircuitState.CLOSED}
@@ -43,7 +43,7 @@ async def test_circuit_breaker_should_be_opened_because_of_expire_metrics() -> N
     assert await circuit_breaker.execute(scope="scope", operation=do(200), fallback=503, is_successful=is_200) == 200
     assert circuit_breaker.state == {"scope": aio_request.CircuitState.CLOSED}
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(1)  # wait sampling_duration for expiration of metrics
 
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
