@@ -35,6 +35,7 @@ def setup(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request], Request]] = None,
+    circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
     async def _enrich_request(request: Request, _: bool) -> Request:
         return request_enricher(request) if request_enricher is not None else request
@@ -51,6 +52,7 @@ def setup(
         emit_system_headers=emit_system_headers,
         request_enricher=_enrich_request,
         metrics_provider=getattr(transport, "_metrics_provider", None),
+        circuit_breaker=circuit_breaker,
     )
 
 
