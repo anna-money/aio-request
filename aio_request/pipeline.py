@@ -190,6 +190,7 @@ class CircuitBreakerModule(RequestModule):
 
         headers = multidict.CIMultiDict[str]()
         headers[Header.X_DO_NOT_RETRY] = "true"
+        headers[Header.X_CIRCUIT_BREAKER] = "true"
         self._fallback = EmptyResponse(
             status=status_code,
             headers=multidict.CIMultiDictProxy[str](headers),
