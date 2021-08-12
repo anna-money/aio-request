@@ -34,7 +34,7 @@ class RequestModule(abc.ABC):
         ...
 
 
-class ByPassModule(RequestModule):
+class BypassModule(RequestModule):
     __slots__ = ()
 
     async def execute(
@@ -227,7 +227,7 @@ def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
 
     pipeline: NextModuleFunc = _unsupported
     for module in reversed(modules):
-        if isinstance(module, ByPassModule):
+        if isinstance(module, BypassModule):
             continue
         pipeline = _execute_module(module, pipeline)
     return pipeline

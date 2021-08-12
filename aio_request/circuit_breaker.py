@@ -6,8 +6,8 @@ from typing import Awaitable, Callable, DefaultDict, Generic, Mapping, Optional,
 
 
 class CircuitState(str, enum.Enum):
-    OPENED = "OPENED"
-    HALF_OPENED = "HALF_OPENED"
+    OPEN = "OPEN"
+    HALF_OPEN = "HALF_OPEN"
     CLOSED = "CLOSED"
 
 
@@ -130,8 +130,8 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         """
         failure_threshold: The failure threshold at which the circuit will break (a number between 0 and 1)
         break_duration: The duration the circuit will stay open before resetting
-        minimum_throughput: How many actions must pass through the circuit breaker to come into action.
-        sampling_sampling_duration: The duration when failure ratios are assessed.
+        minimum_throughput: How many actions must pass through the circuit breaker to come into action
+        sampling_duration: The duration when failure ratios are assessed
         """
         self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
@@ -177,12 +177,12 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
         # Only one operation should win and be executed
         self._per_scope_blocked_till[scope] = now + self._break_duration
-        self._per_scope_state[scope] = CircuitState.HALF_OPENED
+        self._per_scope_state[scope] = CircuitState.HALF_OPEN
         return True
 
     def _on_success(self, scope: TScope) -> None:
         state = self._per_scope_state[scope]
-        if state == CircuitState.HALF_OPENED:
+        if state == CircuitState.HALF_OPEN:
             self._close(scope)
         self._per_scope_metrics[scope].increment_successes()
 
@@ -194,7 +194,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
             throughput = float(snapshot.successes + snapshot.failures)
             if throughput >= self._minimum_throughput and (snapshot.failures / throughput >= self._failure_threshold):
                 self._open(scope)
-        elif state == CircuitState.OPENED:
+        elif state == CircuitState.OPEN:
             self._increment_failures(scope)
         else:
             self._open(scope)
@@ -215,7 +215,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
     def _open(self, scope: TScope) -> None:
         self._per_scope_blocked_till[scope] = time.time() + self._break_duration
-        self._per_scope_state[scope] = CircuitState.OPENED
+        self._per_scope_state[scope] = CircuitState.OPEN
 
 
 class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):

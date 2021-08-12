@@ -8,7 +8,7 @@ from .client import Client, DefaultClient
 from .delays_provider import linear_delays
 from .metrics import MetricsProvider
 from .pipeline import (
-    ByPassModule,
+    BypassModule,
     CircuitBreakerModule,
     LowTimeoutModule,
     MetricsModule,
@@ -91,15 +91,15 @@ def setup_v2(
                 (
                     TracingModule(tracer=tracer, emit_system_headers=emit_system_headers)
                     if tracer is not None
-                    else ByPassModule()
+                    else BypassModule()
                 ),
-                (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else ByPassModule()),
+                (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else BypassModule()),
                 (
                     CircuitBreakerModule(
                         circuit_breaker, response_classifier=response_classifier or DefaultResponseClassifier()
                     )
                     if circuit_breaker is not None
-                    else ByPassModule()
+                    else BypassModule()
                 ),
                 LowTimeoutModule(low_timeout_threshold=low_timeout_threshold),
                 TransportModule(transport, emit_system_headers=emit_system_headers, request_enricher=request_enricher),

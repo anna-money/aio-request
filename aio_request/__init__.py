@@ -19,7 +19,7 @@ from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .pipeline import (
-    ByPassModule,
+    BypassModule,
     LowTimeoutModule,
     MetricsModule,
     NextModuleFunc,

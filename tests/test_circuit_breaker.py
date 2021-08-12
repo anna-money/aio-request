@@ -15,7 +15,7 @@ def is_200(result: int) -> bool:
     return result == 200
 
 
-async def test_circuit_breaker_should_be_closed_because_of_expire_metrics() -> None:
+async def test_circuit_breaker_should_be_closed_because_of_metrics_expire() -> None:
     circuit_breaker = aio_request.DefaultCircuitBreaker[str, int](
         break_duration=1.0,
         sampling_duration=1.0,
@@ -31,7 +31,7 @@ async def test_circuit_breaker_should_be_closed_because_of_expire_metrics() -> N
     assert circuit_breaker.state == {"scope": aio_request.CircuitState.CLOSED}
 
 
-async def test_circuit_breaker_should_be_opened_because_of_expire_metrics() -> None:
+async def test_circuit_breaker_should_be_opened_because_of_metrics_expire() -> None:
     circuit_breaker = aio_request.DefaultCircuitBreaker[str, int](
         break_duration=1.0,
         sampling_duration=1.0,
@@ -47,10 +47,10 @@ async def test_circuit_breaker_should_be_opened_because_of_expire_metrics() -> N
 
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
-    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPENED}
+    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPEN}
 
 
-async def test_circuit_breaker_should_close_after_success() -> None:
+async def test_circuit_breaker_should_be_closed_after_success() -> None:
     circuit_breaker = aio_request.DefaultCircuitBreaker[str, int](
         break_duration=1.0,
         sampling_duration=1.0,
@@ -68,7 +68,7 @@ async def test_circuit_breaker_should_close_after_success() -> None:
     assert circuit_breaker.state == {"scope": aio_request.CircuitState.CLOSED}
 
 
-async def test_circuit_breaker_should_close_after_failure() -> None:
+async def test_circuit_breaker_should_be_open_after_failure() -> None:
     circuit_breaker = aio_request.DefaultCircuitBreaker[str, int](
         break_duration=1.0,
         sampling_duration=5.0,
@@ -79,9 +79,9 @@ async def test_circuit_breaker_should_close_after_failure() -> None:
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 503
-    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPENED}
+    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPEN}
 
     await asyncio.sleep(1)
 
     assert await circuit_breaker.execute(scope="scope", operation=do(500), fallback=503, is_successful=is_200) == 500
-    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPENED}
+    assert circuit_breaker.state == {"scope": aio_request.CircuitState.OPEN}
