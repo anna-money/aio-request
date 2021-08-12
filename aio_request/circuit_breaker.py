@@ -124,7 +124,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         *,
         break_duration: float,
         failure_threshold: float,
-        minimum_throughput: float,
+        minimum_throughput: int,
         sampling_duration: float,
     ):
         """
@@ -133,6 +133,15 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         minimum_throughput: How many actions must pass through the circuit breaker to come into action
         sampling_duration: The duration when failure ratios are assessed
         """
+        if break_duration <= 0:
+            raise RuntimeError("Break duration should be positive")
+        if minimum_throughput <= 0:
+            raise RuntimeError("Minimum throughput should be positive")
+        if failure_threshold <= 0 or failure_threshold >= 1:
+            raise RuntimeError("Failure threshold should be between 0 and 1")
+        if sampling_duration <= 0:
+            raise RuntimeError("Sample duration should be positive")
+
         self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
