@@ -126,6 +126,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         failure_threshold: float,
         minimum_throughput: int,
         sampling_duration: float,
+        windows_count: int = 10,
     ):
         """
         failure_threshold: The failure threshold at which the circuit will break (a number between 0 and 1)
@@ -141,12 +142,14 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
             raise RuntimeError("Failure threshold should be between 0 and 1")
         if sampling_duration <= 0:
             raise RuntimeError("Sample duration should be positive")
+        if windows_count <= 0:
+            raise RuntimeError("Windows count should be positive")
 
         self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
         self._per_scope_metrics: DefaultDict[TScope, CircuitBreakerMetrics] = collections.defaultdict(
-            lambda: RollingCircuitBreakerMetrics(sampling_duration, 10)
+            lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
         )
         self._per_scope_state: DefaultDict[TScope, CircuitState] = collections.defaultdict(lambda: CircuitState.CLOSED)
         self._per_scope_blocked_till: DefaultDict[TScope, float] = collections.defaultdict(float)
