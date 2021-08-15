@@ -123,18 +123,29 @@ class MetricsModule(RequestModule):
         started_at = time.perf_counter()
         try:
             response = await next(endpoint, request, deadline, priority)
-            self._capture_metrics(endpoint, request, response.status, started_at)
+            self._capture_metrics(
+                endpoint=endpoint,
+                request=request,
+                status=response.status,
+                circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
+                started_at=started_at,
+            )
             return response
         except asyncio.CancelledError:
-            self._capture_metrics(endpoint, request, 499, started_at)
+            self._capture_metrics(
+                endpoint=endpoint, request=request, status=499, circuit_breaker=False, started_at=started_at
+            )
             raise
 
-    def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
+    def _capture_metrics(
+        self, *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+    ) -> None:
         tags = {
             "request_endpoint": endpoint.human_repr(),
             "request_method": request.method,
             "request_path": request.url.path,
             "response_status": str(status),
+            "circuit_breaker": int(circuit_breaker),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
         self._metrics_provider.increment_counter("aio_request_status", tags)
@@ -189,8 +200,8 @@ class CircuitBreakerModule(RequestModule):
         self._response_classifier = response_classifier
 
         headers = multidict.CIMultiDict[str]()
-        headers[Header.X_DO_NOT_RETRY] = "true"
-        headers[Header.X_CIRCUIT_BREAKER] = "true"
+        headers[Header.X_DO_NOT_RETRY] = "1"
+        headers[Header.X_CIRCUIT_BREAKER] = "1"
         self._fallback = EmptyResponse(
             status=status_code,
             headers=multidict.CIMultiDictProxy[str](headers),
