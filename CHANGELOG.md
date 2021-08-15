@@ -1,3 +1,7 @@
+## v0.1.13 (2021-08-15)
+
+* [Circuit breaker](https://github.com/Pliner/aio-request/pull/65)
+
 ## v0.1.12 (2021-07-21)
 
 * [Basic repr implementation](https://github.com/Pliner/aio-request/commit/adaa4888c3d372fa65f3dd5eb6113ab68f46de24)
