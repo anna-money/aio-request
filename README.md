@@ -95,3 +95,25 @@ app = aiohttp.web.Application(
     ]
 )
 ```
+
+# Circuit breaker
+
+```python
+import aiohttp
+import aio_request
+
+async with aiohttp.ClientSession() as client_session:
+    client = aio_request.setup_v2(
+        transport=aio_request.AioHttpTransport(client_session),
+        endpoint="http://endpoint:8080/",
+        circuit_breaker=aio_request.DefaultCircuitBreaker[str, int](
+            break_duration=1.0,
+            sampling_duration=1.0,
+            minimum_throughput=2,
+            failure_threshold=0.5,
+        ),
+    )
+```
+
+In the case of requests count >= minimum throughput(>=2) in sampling period(1 second) the circuit breaker will open
+if failed requests count/total requests count >= failure threshold(50%).

@@ -3,12 +3,15 @@ import asyncio
 import time
 from typing import Awaitable, Callable, List, Optional
 
+import multidict
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
+from .circuit_breaker import CircuitBreaker
 from .deadline import Deadline
 from .metrics import MetricsProvider
 from .priority import Priority
+from .response_classifier import ResponseClassifier, ResponseVerdict
 from .tracing import SpanKind, Tracer
 from .transport import Transport
 
@@ -31,7 +34,16 @@ class RequestModule(abc.ABC):
         ...
 
 
-class LowTimeoutRequestModule(RequestModule):
+class BypassModule(RequestModule):
+    __slots__ = ()
+
+    async def execute(
+        self, next: NextModuleFunc, *, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
+    ) -> ClosableResponse:
+        return await next(endpoint, request, deadline, priority)
+
+
+class LowTimeoutModule(RequestModule):
     __slots__ = ("_low_timeout_threshold",)
 
     def __init__(self, low_timeout_threshold: float):
@@ -111,18 +123,29 @@ class MetricsModule(RequestModule):
         started_at = time.perf_counter()
         try:
             response = await next(endpoint, request, deadline, priority)
-            self._capture_metrics(endpoint, request, response.status, started_at)
+            self._capture_metrics(
+                endpoint=endpoint,
+                request=request,
+                status=response.status,
+                circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
+                started_at=started_at,
+            )
             return response
         except asyncio.CancelledError:
-            self._capture_metrics(endpoint, request, 499, started_at)
+            self._capture_metrics(
+                endpoint=endpoint, request=request, status=499, circuit_breaker=False, started_at=started_at
+            )
             raise
 
-    def _capture_metrics(self, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
+    def _capture_metrics(
+        self, *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+    ) -> None:
         tags = {
             "request_endpoint": endpoint.human_repr(),
             "request_method": request.method,
             "request_path": request.url.path,
             "response_status": str(status),
+            "circuit_breaker": int(circuit_breaker),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
         self._metrics_provider.increment_counter("aio_request_status", tags)
@@ -163,6 +186,44 @@ class TracingModule(RequestModule):
             return response
 
 
+class CircuitBreakerModule(RequestModule):
+    __slots__ = ("_circuit_breaker", "_fallback", "_response_classifier")
+
+    def __init__(
+        self,
+        circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse],
+        *,
+        status_code: int = 502,
+        response_classifier: ResponseClassifier,
+    ):
+        self._circuit_breaker = circuit_breaker
+        self._response_classifier = response_classifier
+
+        headers = multidict.CIMultiDict[str]()
+        headers[Header.X_DO_NOT_RETRY] = "1"
+        headers[Header.X_CIRCUIT_BREAKER] = "1"
+        self._fallback = EmptyResponse(
+            status=status_code,
+            headers=multidict.CIMultiDictProxy[str](headers),
+        )
+
+    async def execute(
+        self,
+        next: NextModuleFunc,
+        *,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
+    ) -> ClosableResponse:
+        return await self._circuit_breaker.execute(
+            scope=endpoint,
+            operation=lambda: next(endpoint, request, deadline, priority),
+            fallback=self._fallback,
+            is_successful=lambda x: _response_verdict_to_bool(self._response_classifier.classify(x)),
+        )
+
+
 def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
     async def _unsupported(
         _: yarl.URL,
@@ -177,5 +238,16 @@ def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
 
     pipeline: NextModuleFunc = _unsupported
     for module in reversed(modules):
+        if isinstance(module, BypassModule):
+            continue
         pipeline = _execute_module(module, pipeline)
     return pipeline
+
+
+def _response_verdict_to_bool(response_verdict: ResponseVerdict) -> bool:
+    if response_verdict == ResponseVerdict.ACCEPT:
+        return True
+    if response_verdict == ResponseVerdict.REJECT:
+        return False
+
+    raise RuntimeError(f"Unexpected {response_verdict}")

@@ -81,10 +81,13 @@ async def client(server):
     async with aiohttp.ClientSession() as client_session:
 
         def go(emit_system_headers: bool = True):
-            return aio_request.setup(
+            return aio_request.setup_v2(
                 transport=aio_request.AioHttpTransport(client_session),
                 endpoint=f"http://{server.server.host}:{server.server.port}/",
                 emit_system_headers=emit_system_headers,
+                metrics_provider=aio_request.NOOP_METRICS_PROVIDER,
+                tracer=aio_request.NOOP_TRACER,
+                circuit_breaker=aio_request.NoopCircuitBreaker[yarl.URL, aio_request.ClosableResponse](),
             )
 
         yield go
