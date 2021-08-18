@@ -69,7 +69,7 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 
             keys_to_pop = []
 
-            for key in self._results.keys():
+            for key in list(self._results.keys()):
                 try:
                     (h, p, f) = key
                     self._results[key] = await self._resolver.resolve(h, p, f)
