@@ -1,3 +1,7 @@
+## v0.1.14 (2021-08-18)
+
+* [Keys should be materialized if dict is changed in loop](https://github.com/Pliner/aio-request/pull/66)
+
 ## v0.1.13 (2021-08-15)
 
 * [Circuit breaker](https://github.com/Pliner/aio-request/pull/65)
