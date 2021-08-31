@@ -213,8 +213,13 @@ class ParallelRequestStrategy(RequestStrategy):
             final_response = accepted_responses[0] if accepted_responses else not_accepted_responses[0]
             yield ResponseWithVerdict[Response](final_response.response, final_response.verdict)
         finally:
-            await asyncio.shield(close_futures(pending_tasks | completed_tasks, lambda x: x.response))
-            await asyncio.shield(close(accepted_responses + not_accepted_responses))
+            await asyncio.shield(
+                asyncio.gather(
+                    close_futures(pending_tasks | completed_tasks, lambda x: x.response),
+                    close(accepted_responses + not_accepted_responses),
+                    return_exceptions=True,
+                )
+            )
 
     async def _schedule_request(
         self,
