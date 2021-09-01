@@ -1,3 +1,7 @@
+## v0.1.17 (2021-09-01)
+
+* [Fix patch/patch_json visibility](https://github.com/Pliner/aio-request/pull/73)
+
 ## v0.1.16 (2021-09-01)
 
 * [Support patch method](https://github.com/Pliner/aio-request/pull/72)
