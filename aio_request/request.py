@@ -45,6 +45,24 @@ def put(
     )
 
 
+def patch(
+    url: Union[str, yarl.URL],
+    body: Optional[bytes] = None,
+    *,
+    headers: Optional[Headers] = None,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+) -> Request:
+    return build_request(
+        Method.PATCH,
+        url,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+        body=body,
+    )
+
+
 def delete(
     url: Union[str, yarl.URL],
     *,
@@ -98,6 +116,30 @@ def put_json(
 ) -> Request:
     return build_json_request(
         Method.PUT,
+        url,
+        data,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+        encoding=encoding,
+        dumps=dumps,
+        content_type=content_type,
+    )
+
+
+def patch_json(
+    url: Union[str, yarl.URL],
+    data: Any,
+    *,
+    path_parameters: Optional[PathParameters] = None,
+    query_parameters: Optional[QueryParameters] = None,
+    headers: Optional[Headers] = None,
+    encoding: str = "utf-8",
+    dumps: Callable[[str], Any] = json.dumps,
+    content_type: str = "application/json",
+) -> Request:
+    return build_json_request(
+        Method.PATCH,
         url,
         data,
         path_parameters=path_parameters,
