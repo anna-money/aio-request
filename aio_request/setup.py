@@ -78,6 +78,7 @@ def setup_v2(
             Method.POST: unsafe_method_strategy,
             Method.PUT: unsafe_method_strategy,
             Method.DELETE: unsafe_method_strategy,
+            Method.PATCH: unsafe_method_strategy,
         }
     )
     return DefaultClient(
