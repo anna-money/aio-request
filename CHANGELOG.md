@@ -1,3 +1,7 @@
+## v0.1.15 (2021-09-01)
+
+* [Clean up resources in single shield](https://github.com/Pliner/aio-request/pull/71)
+
 ## v0.1.14 (2021-08-18)
 
 * [Keys should be materialized if dict is changed in loop](https://github.com/Pliner/aio-request/pull/66)
