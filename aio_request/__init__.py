@@ -29,7 +29,7 @@ from .pipeline import (
     build_pipeline,
 )
 from .priority import Priority
-from .request import delete, get, post, post_json, put, put_json
+from .request import delete, get, patch, patch_json, post, post_json, put, put_json
 from .request_strategy import (
     MethodBasedStrategy,
     ParallelRequestStrategy,
