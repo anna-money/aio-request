@@ -127,6 +127,7 @@ __all__: Tuple[str, ...] = (
     "NoopTracer",
     "Span",
     "Tracer",
+    # transport.py
     "Transport",
 )
 
