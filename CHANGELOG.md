@@ -1,3 +1,7 @@
+## v0.1.18 (2021-09-08)
+
+* [Reexport explicitly](https://github.com/Pliner/aio-request/pull/74)
+
 ## v0.1.17 (2021-09-01)
 
 * [Fix patch/patch_json visibility](https://github.com/Pliner/aio-request/pull/73)
