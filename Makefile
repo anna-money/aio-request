@@ -19,3 +19,6 @@ lint: black isort flake8 mypy
 
 test:
 	@python3 -m pytest -vv --rootdir tests .
+
+pyenv:
+	echo aio-request > .python-version && pyenv install -s 3.9.6 && pyenv virtualenv -f 3.9.6 aio-request

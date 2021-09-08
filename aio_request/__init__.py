@@ -2,6 +2,7 @@
 import collections
 import re
 import sys
+from typing import Tuple
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
 from .circuit_breaker import (
@@ -49,10 +50,93 @@ from .setup import setup, setup_v2
 from .tracing import NOOP_TRACER, NoopSpan, NoopTracer, Span, Tracer
 from .transport import Transport
 
+__all__: Tuple[str, ...] = (
+    # base.py
+    "ClosableResponse",
+    "EmptyResponse",
+    "Header",
+    "Method",
+    "Request",
+    "Response",
+    # circuit_breaker.py
+    "CircuitBreaker",
+    "CircuitBreakerMetrics",
+    "CircuitBreakerMetricsSnapshot",
+    "CircuitState",
+    "DefaultCircuitBreaker",
+    "NoopCircuitBreaker",
+    "RollingCircuitBreakerMetrics",
+    # client.py
+    "Client",
+    "DefaultClient",
+    # context.py
+    "get_context",
+    "set_context",
+    # deadline.py
+    "Deadline",
+    # delays_provider.py
+    "constant_delays",
+    "linear_delays",
+    # metrics.py
+    "NOOP_METRICS_PROVIDER",
+    "MetricsProvider",
+    "NoopMetricsProvider",
+    # pipeline.py
+    "BypassModule",
+    "LowTimeoutModule",
+    "MetricsModule",
+    "NextModuleFunc",
+    "RequestModule",
+    "TracingModule",
+    "TransportModule",
+    "build_pipeline",
+    # priority.py
+    "Priority",
+    # request.py
+    "delete",
+    "get",
+    "patch",
+    "patch_json",
+    "post",
+    "post_json",
+    "put",
+    "put_json",
+    # request_strategy.py
+    "MethodBasedStrategy",
+    "ParallelRequestStrategy",
+    "RequestStrategy",
+    "ResponseWithVerdict",
+    "RetryUntilDeadlineExpiredStrategy",
+    "SendRequestFunc",
+    "SequentialRequestStrategy",
+    "SingleAttemptRequestStrategy",
+    "parallel_strategy",
+    "retry_until_deadline_expired",
+    "sequential_strategy",
+    "single_attempt_strategy",
+    # response_classifier.py
+    "DefaultResponseClassifier",
+    "ResponseClassifier",
+    "ResponseVerdict",
+    # setup.py
+    "setup",
+    "setup_v2",
+    # tracing.py
+    "NOOP_TRACER",
+    "NoopSpan",
+    "NoopTracer",
+    "Span",
+    "Tracer",
+    # transport.py
+    "Transport",
+)
+
 try:
     import aiohttp
 
     from .aiohttp import AioHttpDnsResolver, AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
+
+    __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")
 except ImportError:
     pass
 
@@ -60,6 +144,8 @@ try:
     import prometheus_client
 
     from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
+
+    __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")
 except ImportError:
     pass
 
@@ -69,6 +155,8 @@ try:
     import opentelemetry.trace
 
     from .opentelemetry import OpenTelemetryTracer
+
+    __all__ += ("OpenTelemetryTracer",)
 except ImportError:
     pass
 
