@@ -147,7 +147,7 @@ try:
 
     __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")
 except ImportError:
-    pass
+    PROMETHEUS_METRICS_PROVIDER = None
 
 try:
     import opentelemetry.propagate
