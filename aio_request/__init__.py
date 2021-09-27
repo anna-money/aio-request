@@ -145,9 +145,10 @@ try:
 
     from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
 
-    __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")
+    __all__ += ("PrometheusMetricsProvider",)
 except ImportError:
     PROMETHEUS_METRICS_PROVIDER = None
+__all__ += ("PROMETHEUS_METRICS_PROVIDER",)
 
 try:
     import opentelemetry.propagate
