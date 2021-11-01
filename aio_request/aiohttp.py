@@ -265,7 +265,7 @@ def aiohttp_middleware_factory(
                             response = await handler(request)
                         else:
                             try:
-                                async with async_timeout.timeout(timeout=deadline.timeout):
+                                async with async_timeout.timeout(deadline.timeout):
                                     response = await handler(request)
                             except asyncio.TimeoutError:
                                 response = aiohttp.web_response.Response(status=408)
