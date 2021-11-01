@@ -1,3 +1,8 @@
+## v0.1.19 (2021-11-01)
+
+* [Support async-timeout 4.0+](https://github.com/Pliner/aio-request/pull/86)
+
+
 ## v0.1.18 (2021-09-08)
 
 * [Reexport explicitly](https://github.com/Pliner/aio-request/pull/74)
