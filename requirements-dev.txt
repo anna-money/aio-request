@@ -4,7 +4,7 @@ black==21.9b0
 mypy==0.910
 pytest==6.2.5
 pytest-aiohttp==0.3.0
-aiohttp==3.7.4
+aiohttp==3.8.0
 yarl==1.7.0
 multidict==5.2.0
 prometheus-client==0.12.0
