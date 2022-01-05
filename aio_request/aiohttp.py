@@ -192,7 +192,7 @@ class _AioHttpResponse(ClosableResponse):
         *,
         encoding: Optional[str] = None,
         loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        content_type: Optional[str] = None,
     ) -> Any:
         return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
 
