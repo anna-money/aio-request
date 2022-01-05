@@ -122,7 +122,7 @@ class Response(abc.ABC):
         *,
         encoding: Optional[str] = None,
         loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        content_type: Optional[str] = None,
     ) -> Any:
         ...
 

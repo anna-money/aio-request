@@ -1,3 +1,8 @@
+## v0.1.21 (2022-01-05)
+
+* Content type should be None in Response.json()
+
+
 ## v0.1.20 (2022-01-05)
 
 * [Do not expect json content type by default](https://github.com/Pliner/aio-request/pull/106)
