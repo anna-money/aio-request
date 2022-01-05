@@ -189,7 +189,7 @@ class EmptyResponse(ClosableResponse):
         *,
         encoding: Optional[str] = None,
         loads: Optional[Callable[[str], Any]] = None,
-        content_type: Optional[str] = "application/json",
+        content_type: Optional[str] = None,
     ) -> Any:
         return None
 
