@@ -1,3 +1,8 @@
+## v0.1.20 (2022-01-05)
+
+* [Do not expect json content type by default](https://github.com/Pliner/aio-request/pull/106)
+
+
 ## v0.1.19 (2021-11-01)
 
 * [Support async-timeout 4.0+](https://github.com/Pliner/aio-request/pull/86)
