@@ -122,7 +122,7 @@ class Response(abc.ABC):
         *,
         encoding: Optional[str] = None,
         loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = None,
+        content_type: Optional[str] = "application/json",
     ) -> Any:
         ...
 
@@ -189,7 +189,7 @@ class EmptyResponse(ClosableResponse):
         *,
         encoding: Optional[str] = None,
         loads: Optional[Callable[[str], Any]] = json.loads,
-        content_type: Optional[str] = None,
+        content_type: Optional[str] = "application/json",
     ) -> Any:
         return None
 
