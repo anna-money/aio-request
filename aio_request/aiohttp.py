@@ -177,7 +177,7 @@ class _AioHttpResponse(ClosableResponse):
         self._response = response
 
     async def close(self) -> None:
-        self._response.release()
+        await self._response.release()
 
     @property
     def status(self) -> int:
