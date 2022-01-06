@@ -17,8 +17,16 @@ import async_timeout
 import multidict
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Header, Request, build_query_parameters, substitute_path_parameters, \
-    is_expected_content_type, UnexpectedContentTypeError
+from .base import (
+    ClosableResponse,
+    EmptyResponse,
+    Header,
+    Request,
+    UnexpectedContentTypeError,
+    build_query_parameters,
+    is_expected_content_type,
+    substitute_path_parameters,
+)
 from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
