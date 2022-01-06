@@ -4,7 +4,7 @@ import re
 import sys
 from typing import Tuple
 
-from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response
+from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
 from .circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerMetrics,
@@ -58,6 +58,7 @@ __all__: Tuple[str, ...] = (
     "Method",
     "Request",
     "Response",
+    "UnexpectedContentTypeError",
     # circuit_breaker.py
     "CircuitBreaker",
     "CircuitBreakerMetrics",

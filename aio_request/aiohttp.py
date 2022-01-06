@@ -17,7 +17,8 @@ import async_timeout
 import multidict
 import yarl
 
-from .base import ClosableResponse, EmptyResponse, Header, Request, build_query_parameters, substitute_path_parameters
+from .base import ClosableResponse, EmptyResponse, Header, Request, build_query_parameters, substitute_path_parameters, \
+    is_expected_content_type, UnexpectedContentTypeError
 from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
@@ -194,7 +195,12 @@ class _AioHttpResponse(ClosableResponse):
         loads: Callable[[str], Any] = json.loads,
         content_type: Optional[str] = "application/json",
     ) -> Any:
-        return await self._response.json(encoding=encoding, loads=loads, content_type=content_type)
+        if content_type is not None:
+            response_content_type = self._response.headers.get(Header.CONTENT_TYPE, "").lower()
+            if not is_expected_content_type(response_content_type, content_type):
+                raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
+
+        return await self._response.json(encoding=encoding, loads=loads, content_type=None)
 
     async def read(self) -> bytes:
         return await self._response.read()
