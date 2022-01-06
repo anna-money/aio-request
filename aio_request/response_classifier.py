@@ -1,5 +1,6 @@
 import abc
 import enum
+from typing import Dict, Optional
 
 from .base import Header, Response
 
@@ -18,12 +19,19 @@ class ResponseClassifier(abc.ABC):
 
 
 class DefaultResponseClassifier(ResponseClassifier):
-    __slots__ = ("_network_errors_code",)
+    __slots__ = (
+        "_network_errors_code",
+        "_verdict_for_status",
+    )
 
-    def __init__(self, network_errors_code: int = 489):
+    def __init__(self, network_errors_code: int = 489, verdict_for_status: Optional[Dict[int, ResponseVerdict]] = None):
         self._network_errors_code = network_errors_code
+        self._verdict_for_status = verdict_for_status or {}
 
     def classify(self, response: Response) -> ResponseVerdict:
+        verdict = self._verdict_for_status.get(response.status)
+        if verdict is not None:
+            return verdict
         if Header.X_DO_NOT_RETRY in response.headers:
             return ResponseVerdict.ACCEPT
         if response.is_server_error():
