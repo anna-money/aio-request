@@ -41,6 +41,16 @@ QueryParameters = Union[Mapping[str, Any], Iterable[Tuple[str, Any]], _MultiDict
 Headers = _MultiDict
 
 
+def is_expected_content_type(response_content_type: str, expected_content_type: str) -> bool:
+    if expected_content_type == "application/json":
+        return bool(json_re.match(response_content_type))
+    return expected_content_type in response_content_type
+
+
+class UnexpectedContentTypeError(Exception):
+    """ContentType is unexpected"""
+
+
 class Request:
     __slots__ = (
         "method",
@@ -191,6 +201,11 @@ class EmptyResponse(ClosableResponse):
         loads: Optional[Callable[[str], Any]] = json.loads,
         content_type: Optional[str] = "application/json",
     ) -> Any:
+        if content_type is not None:
+            response_content_type = self._headers.get(Header.CONTENT_TYPE, "").lower()
+            if not is_expected_content_type(response_content_type, content_type):
+                raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
+
         return None
 
     async def read(self) -> bytes:
