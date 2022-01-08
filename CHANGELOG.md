@@ -1,3 +1,10 @@
+## v0.1.22 (2022-01-08)
+
+* Return default json expected content_type to "application/json"
+* [Release aiohttp response instead of close](https://github.com/Pliner/aio-request/pull/108)
+* [Validate json content-type](https://github.com/Pliner/aio-request/pull/109)
+
+
 ## v0.1.21 (2022-01-05)
 
 * Content type should be None in Response.json()
