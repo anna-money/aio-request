@@ -1,7 +1,7 @@
 flake8==4.0.1
 isort==5.10.1
 black==21.12b0
-mypy==0.930
+mypy==0.931
 pytest==6.2.5
 pytest-aiohttp==0.3.0
 aiohttp==3.8.1
