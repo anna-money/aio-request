@@ -42,7 +42,6 @@ if sys.version_info >= (3, 9, 0):
                 continue
             future.cancel()
 
-
 else:
 
     async def _close_futures_py38(items: Collection[Any], as_close: Callable[[Any], TClosable]) -> None:

@@ -44,7 +44,7 @@ class PrometheusMetricsProvider(MetricsProvider):
 
     def observe_value(self, name: str, tags: Dict[str, Any], value: float) -> None:
         if name not in self._metrics:
-            self._metrics[name] = prometheus_client.Histogram(
+            self._metrics[name] = prometheus_client.Histogram(  # type: ignore
                 name,
                 "",
                 labelnames=tags.keys(),
