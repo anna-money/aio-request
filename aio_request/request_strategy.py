@@ -84,6 +84,10 @@ def retry_until_deadline_expired(
     return RetryUntilDeadlineExpiredStrategy(strategy, delays_provider)
 
 
+def max_concurrency_strategy(strategy: RequestStrategy, *, limit: int) -> RequestStrategy:
+    return MaxConcurrencyStrategy(strategy, limit)
+
+
 class SingleAttemptRequestStrategy(RequestStrategy):
     __slots__ = ()
 
@@ -267,3 +271,28 @@ class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
 
     def __repr__(self) -> str:
         return "<RetryUntilDeadlineExpiredStrategy>"
+
+
+class MaxConcurrencyStrategy(RequestStrategy):
+    __slots__ = ("_base_strategy", "_semaphore")
+
+    def __init__(self, base_strategy: RequestStrategy, limit: int):
+        self._base_strategy = base_strategy
+        self._semaphore = asyncio.BoundedSemaphore(limit)
+
+    @contextlib.asynccontextmanager
+    async def request(
+        self,
+        send_request: SendRequestFunc,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
+    ) -> AsyncIterator[ResponseWithVerdict[Response]]:
+        async with self._semaphore:
+            response_ctx = self._base_strategy.request(send_request, endpoint, request, deadline, priority)
+            async with response_ctx as response:
+                yield response
+
+    def __repr__(self) -> str:
+        return "<MaxConcurrencyStrategy>"

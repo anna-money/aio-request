@@ -40,6 +40,7 @@ from .request_strategy import (
     SendRequestFunc,
     SequentialRequestStrategy,
     SingleAttemptRequestStrategy,
+    max_concurrency_strategy,
     parallel_strategy,
     retry_until_deadline_expired,
     sequential_strategy,
@@ -115,6 +116,7 @@ __all__: Tuple[str, ...] = (
     "retry_until_deadline_expired",
     "sequential_strategy",
     "single_attempt_strategy",
+    "max_concurrency_strategy",
     # response_classifier.py
     "DefaultResponseClassifier",
     "ResponseClassifier",
