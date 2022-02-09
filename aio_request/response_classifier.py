@@ -40,4 +40,6 @@ class DefaultResponseClassifier(ResponseClassifier):
             return ResponseVerdict.REJECT
         if response.status == 408:
             return ResponseVerdict.REJECT
+        if response.status == 429:
+            return ResponseVerdict.REJECT
         return ResponseVerdict.ACCEPT
