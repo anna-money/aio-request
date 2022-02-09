@@ -1,3 +1,8 @@
+## v0.1.23 (2022-02-08)
+
+* [Reject throttling(too many requests) status code](https://github.com/anna-money/aio-request/pull/123)
+
+
 ## v0.1.22 (2022-01-08)
 
 * Return default json expected content_type to "application/json"
