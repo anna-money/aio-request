@@ -10,8 +10,8 @@ import aio_request
     [
         (408, None, aio_request.ResponseVerdict.REJECT),
         (400, None, aio_request.ResponseVerdict.ACCEPT),
-        (429, None, aio_request.ResponseVerdict.ACCEPT),
-        (429, {429: aio_request.ResponseVerdict.REJECT}, aio_request.ResponseVerdict.REJECT),
+        (429, None, aio_request.ResponseVerdict.REJECT),
+        (429, {429: aio_request.ResponseVerdict.ACCEPT}, aio_request.ResponseVerdict.ACCEPT),
     ],
 )
 def test_default_response_classifier(
