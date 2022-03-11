@@ -10,5 +10,5 @@ yarl==1.7.2
 multidict==6.0.2
 prometheus-client==0.13.1
 opentelemetry-api==1.6.2
-opentelemetry-semantic-conventions==0.26b1
+opentelemetry-semantic-conventions==0.29b0
 backports.zoneinfo;python_version<"3.9"
