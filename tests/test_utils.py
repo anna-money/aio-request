@@ -20,6 +20,11 @@ from aio_request.base import QueryParameters, build_query_parameters, substitute
         (yarl.URL("{a}/do?b=2"), {"a": "x/y"}, yarl.URL("x%2Fy/do?b=2")),
         (yarl.URL("{a}/do%2Fsmth/?b=!%2F^"), {"a": "x/y"}, yarl.URL("x%2Fy/do%2Fsmth/?b=!%2F^")),
         (yarl.URL("{a}/do%2Fsmth/?b=!%2F^#%2F"), {"a": "x/y"}, yarl.URL("x%2Fy/do%2Fsmth/?b=!%2F^#%2F")),
+        (
+            yarl.URL("abc/{a}/xyz"),
+            {"a": "88FBDCCF-2096-40BF-A2D3-568DE949F40C"},
+            yarl.URL("abc/88FBDCCF-2096-40BF-A2D3-568DE949F40C/xyz"),
+        ),
     ],
 )
 def test_substitute_path_parameters(url: yarl.URL, parameters: Optional[Dict[str, str]], result: yarl.URL) -> None:
