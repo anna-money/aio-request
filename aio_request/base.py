@@ -253,9 +253,9 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     if not parameters:
         return url
 
-    path = url.path
+    path = url.raw_path
     for name, value in parameters.items():
-        path = path.replace(f"{{{name}}}", urllib.parse.quote(str(value), safe=""))
+        path = path.replace(f"%7B{name}%7D", urllib.parse.quote(str(value), safe=""))
 
     build_parameters: Dict[str, Any] = dict(
         scheme=url.scheme,
