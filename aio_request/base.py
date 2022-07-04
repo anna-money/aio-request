@@ -1,6 +1,7 @@
 import abc
 import json
 import re
+import urllib.parse
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import multidict
@@ -252,19 +253,19 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     if not parameters:
         return url
 
-    path = url.path
+    path = url.raw_path
     for name, value in parameters.items():
-        path = path.replace(f"{{{name}}}", str(value))
+        path = path.replace(f"%7B{name}%7D", urllib.parse.quote(str(value), safe=""))
 
     build_parameters: Dict[str, Any] = dict(
         scheme=url.scheme,
-        user=url.user,
-        password=url.password,
-        host=url.host,
+        user=url.raw_user,
+        password=url.raw_password,
+        host=url.raw_host,
         port=url.port,
         path=path,
-        query=url.query,
-        fragment=url.fragment,
+        query_string=url.raw_query_string,
+        fragment=url.raw_fragment,
     )
 
-    return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None})
+    return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None}, encoded=True)

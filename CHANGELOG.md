@@ -1,3 +1,8 @@
+## v0.1.24 (2022-07-04)
+
+* [URL-encode path_parameters](https://github.com/anna-money/aio-request/pull/146)
+
+
 ## v0.1.23 (2022-02-08)
 
 * [Reject throttling(too many requests) status code](https://github.com/anna-money/aio-request/pull/123)
