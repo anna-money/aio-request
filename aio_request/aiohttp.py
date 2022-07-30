@@ -151,7 +151,7 @@ class AioHttpTransport(Transport):
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
-            return _AioHttpResponse(response)
+            return _AioHttpResponse(response, content_prohibited=self._buffer_payload)
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed",
@@ -180,10 +180,11 @@ class AioHttpTransport(Transport):
 
 
 class _AioHttpResponse(ClosableResponse):
-    __slots__ = ("_response",)
+    __slots__ = ("_response", "_content_prohibited")
 
-    def __init__(self, response: aiohttp.ClientResponse):
+    def __init__(self, response: aiohttp.ClientResponse, content_prohibited: bool):
         self._response = response
+        self._content_prohibited = content_prohibited
 
     async def close(self) -> None:
         await self._response.release()
@@ -215,6 +216,12 @@ class _AioHttpResponse(ClosableResponse):
 
     async def text(self, encoding: Optional[str] = None) -> str:
         return await self._response.text(encoding=encoding)
+
+    @property
+    def content(self) -> aiohttp.StreamReader:
+        if self._content_prohibited:
+            raise RuntimeError("Streaming content unavailable")
+        return self._response.content
 
 
 _HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]

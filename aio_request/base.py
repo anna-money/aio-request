@@ -168,6 +168,10 @@ class Response(abc.ABC):
     def is_json(self) -> bool:
         return bool(json_re.match(self.content_type or ""))
 
+    @property
+    def content(self) -> Any:
+        raise NotImplementedError
+
     def __repr__(self) -> str:
         return f"<Response [{self.status}]>"
 
