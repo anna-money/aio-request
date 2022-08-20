@@ -168,9 +168,10 @@ class Response(abc.ABC):
     def is_json(self) -> bool:
         return bool(json_re.match(self.content_type or ""))
 
+    @abc.abstractmethod
     @property
     def content(self) -> Any:
-        raise NotImplementedError
+        ...
 
     def __repr__(self) -> str:
         return f"<Response [{self.status}]>"
@@ -221,6 +222,10 @@ class EmptyResponse(ClosableResponse):
 
     async def close(self) -> None:
         pass
+
+    @property
+    def content(self) -> Any:
+        raise NotImplementedError
 
 
 def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union[str, List[str]]]:
