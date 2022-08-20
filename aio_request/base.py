@@ -168,8 +168,8 @@ class Response(abc.ABC):
     def is_json(self) -> bool:
         return bool(json_re.match(self.content_type or ""))
 
-    @abc.abstractmethod
     @property
+    @abc.abstractmethod
     def content(self) -> Any:
         ...
 
