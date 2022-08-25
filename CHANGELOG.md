@@ -1,3 +1,8 @@
+## v0.1.25 (2022-08-25)
+
+* [Reverted: URL-encode path_parameters](https://github.com/anna-money/aio-request/pull/155) - let user
+  decide what to do
+
 ## v0.1.24 (2022-07-04)
 
 * [URL-encode path_parameters](https://github.com/anna-money/aio-request/pull/146)
