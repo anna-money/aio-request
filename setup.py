@@ -4,7 +4,7 @@ from pathlib import Path
 from setuptools import setup
 
 install_requires = [
-    "multidict>=4.5,<7.0",
+    "multidict>=4.5,<6.0",
     "yarl>=1.0,<2.0",
 ]
 
@@ -59,6 +59,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Operating System :: OS Independent",
         "Environment :: Web Environment",
         "Development Status :: 5 - Production/Stable",

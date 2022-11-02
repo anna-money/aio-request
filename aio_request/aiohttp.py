@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import sys
 import time
 import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -13,9 +14,13 @@ import aiohttp.web_exceptions
 import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
-import async_timeout
 import multidict
 import yarl
+
+if sys.version_info < (3, 11, 0):
+    from async_timeout import timeout as timeout_ctx
+else:
+    from asyncio import timeout as timeout_ctx  # type: ignore
 
 from .base import (
     ClosableResponse,
@@ -279,7 +284,7 @@ def aiohttp_middleware_factory(
                             response = await handler(request)
                         else:
                             try:
-                                async with async_timeout.timeout(deadline.timeout):
+                                async with timeout_ctx(deadline.timeout):
                                     response = await handler(request)
                             except asyncio.TimeoutError:
                                 response = aiohttp.web_response.Response(status=408)
