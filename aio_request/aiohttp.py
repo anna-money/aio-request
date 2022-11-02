@@ -13,9 +13,13 @@ import aiohttp.web_exceptions
 import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
-import async_timeout
 import multidict
 import yarl
+
+if sys.version_info < (3, 11, 0):
+    from async_timeout import timeout
+else:
+    from asyncio import timeout # type: ignore
 
 from .base import (
     ClosableResponse,
@@ -279,7 +283,7 @@ def aiohttp_middleware_factory(
                             response = await handler(request)
                         else:
                             try:
-                                async with async_timeout.timeout(deadline.timeout):
+                                async with timeout(deadline.timeout):
                                     response = await handler(request)
                             except asyncio.TimeoutError:
                                 response = aiohttp.web_response.Response(status=408)
