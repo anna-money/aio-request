@@ -4,7 +4,7 @@ from pathlib import Path
 from setuptools import setup
 
 install_requires = [
-    "multidict>=4.5,<6.0",
+    "multidict>=4.5,<7.0",
     "yarl>=1.0,<2.0",
 ]
 
