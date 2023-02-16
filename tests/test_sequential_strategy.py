@@ -39,7 +39,6 @@ async def test_succeed_response_received():
 
 
 async def test_succeed_response_not_received_too_many_failures():
-
     client = aio_request.setup(
         transport=FakeTransport([499, 499, 499]),
         endpoint="http://service.com",

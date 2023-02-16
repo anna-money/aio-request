@@ -1,3 +1,8 @@
+## v0.1.27 (2023-02-16)
+
+* [Maintenance release](https://github.com/anna-money/aio-request/compare/v0.1.26...v0.1.27)
+
+
 ## v0.1.26 (2022-11-02)
 
 * [Add python 3.11 support](https://github.com/anna-money/aio-request/pull/159)
