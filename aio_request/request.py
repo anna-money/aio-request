@@ -6,6 +6,8 @@ import yarl
 
 from .base import Header, Headers, Method, PathParameters, QueryParameters, Request
 
+MAX_REDIRECTS = 10
+
 
 def get(
     url: Union[str, yarl.URL],
@@ -13,9 +15,17 @@ def get(
     headers: Optional[Headers] = None,
     path_parameters: Optional[PathParameters] = None,
     query_parameters: Optional[QueryParameters] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_request(
-        Method.GET, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers
+        Method.GET,
+        url,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -26,9 +36,18 @@ def post(
     headers: Optional[Headers] = None,
     path_parameters: Optional[PathParameters] = None,
     query_parameters: Optional[QueryParameters] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_request(
-        Method.POST, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
+        Method.POST,
+        url,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+        body=body,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -39,9 +58,18 @@ def put(
     headers: Optional[Headers] = None,
     path_parameters: Optional[PathParameters] = None,
     query_parameters: Optional[QueryParameters] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_request(
-        Method.PUT, url, path_parameters=path_parameters, query_parameters=query_parameters, headers=headers, body=body
+        Method.PUT,
+        url,
+        path_parameters=path_parameters,
+        query_parameters=query_parameters,
+        headers=headers,
+        body=body,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -52,6 +80,8 @@ def patch(
     headers: Optional[Headers] = None,
     path_parameters: Optional[PathParameters] = None,
     query_parameters: Optional[QueryParameters] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_request(
         Method.PATCH,
@@ -60,6 +90,8 @@ def patch(
         query_parameters=query_parameters,
         headers=headers,
         body=body,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -69,6 +101,8 @@ def delete(
     headers: Optional[Headers] = None,
     path_parameters: Optional[PathParameters] = None,
     query_parameters: Optional[QueryParameters] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_request(
         Method.DELETE,
@@ -76,6 +110,8 @@ def delete(
         path_parameters=path_parameters,
         query_parameters=query_parameters,
         headers=headers,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -89,6 +125,8 @@ def post_json(
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_json_request(
         Method.POST,
@@ -100,6 +138,8 @@ def post_json(
         encoding=encoding,
         dumps=dumps,
         content_type=content_type,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -113,6 +153,8 @@ def put_json(
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_json_request(
         Method.PUT,
@@ -124,6 +166,8 @@ def put_json(
         encoding=encoding,
         dumps=dumps,
         content_type=content_type,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -137,6 +181,8 @@ def patch_json(
     encoding: str = "utf-8",
     dumps: Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return build_json_request(
         Method.PATCH,
@@ -148,6 +194,8 @@ def patch_json(
         encoding=encoding,
         dumps=dumps,
         content_type=content_type,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -162,6 +210,8 @@ def build_json_request(
     encoding: str = "utf-8",
     dumps: Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     enriched_headers = multidict.CIMultiDict[str](headers) if headers is not None else multidict.CIMultiDict[str]()
     enriched_headers.add(Header.CONTENT_TYPE, content_type)
@@ -175,6 +225,8 @@ def build_json_request(
         body=body,
         path_parameters=path_parameters,
         query_parameters=query_parameters,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )
 
 
@@ -186,6 +238,8 @@ def build_request(
     query_parameters: Optional[QueryParameters] = None,
     headers: Optional[Headers] = None,
     body: Optional[bytes] = None,
+    allow_redirects: bool = True,
+    max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
     return Request(
         method=method,
@@ -194,4 +248,6 @@ def build_request(
         body=body,
         path_parameters=path_parameters,
         query_parameters=query_parameters,
+        allow_redirects=allow_redirects,
+        max_redirects=max_redirects,
     )

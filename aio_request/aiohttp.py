@@ -134,6 +134,8 @@ class AioHttpTransport(Transport):
             url = url.update_query(build_query_parameters(request.query_parameters))
         headers = request.headers
         body = request.body
+        allow_redirects = request.allow_redirects
+        max_redirects = request.max_redirects
 
         try:
             logger.debug(
@@ -153,10 +155,14 @@ class AioHttpTransport(Transport):
                 headers=headers,
                 data=body,
                 timeout=timeout,
+                allow_redirects=allow_redirects,
+                max_redirects=max_redirects,
             )
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
+        except aiohttp.TooManyRedirects:
+            raise
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed",

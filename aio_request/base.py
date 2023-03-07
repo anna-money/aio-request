@@ -59,6 +59,8 @@ class Request:
         "query_parameters",
         "headers",
         "body",
+        "allow_redirects",
+        "max_redirects",
     )
 
     def __init__(
@@ -70,6 +72,8 @@ class Request:
         query_parameters: Optional[QueryParameters] = None,
         headers: Optional[Headers] = None,
         body: Optional[bytes] = None,
+        allow_redirects: bool = True,
+        max_redirects: int = 10,
     ):
         if url.is_absolute():
             raise RuntimeError("Request url should be relative")
@@ -80,6 +84,8 @@ class Request:
         self.url = url
         self.headers = headers
         self.body = body
+        self.allow_redirects = allow_redirects
+        self.max_redirects = max_redirects
 
     def update_headers(self, headers: Headers) -> "Request":
         updated_headers = (
