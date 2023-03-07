@@ -9,6 +9,7 @@ import yarl
 from .utils import Closable
 
 EMPTY_HEADERS = multidict.CIMultiDictProxy[str](multidict.CIMultiDict[str]())
+MAX_REDIRECTS = 10
 
 
 class Method:
@@ -73,7 +74,7 @@ class Request:
         headers: Optional[Headers] = None,
         body: Optional[bytes] = None,
         allow_redirects: bool = True,
-        max_redirects: int = 10,
+        max_redirects: int = MAX_REDIRECTS,
     ):
         if url.is_absolute():
             raise RuntimeError("Request url should be relative")
