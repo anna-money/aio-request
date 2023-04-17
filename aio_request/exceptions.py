@@ -1,0 +1,2 @@
+class TooManyRedirects(BaseException):
+    pass

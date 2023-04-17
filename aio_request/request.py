@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, Union
 import multidict
 import yarl
 
-from .base import Header, Headers, Method, PathParameters, QueryParameters, Request, MAX_REDIRECTS
+from .base import MAX_REDIRECTS, Header, Headers, Method, PathParameters, QueryParameters, Request
 
 
 def get(

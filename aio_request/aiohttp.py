@@ -34,6 +34,7 @@ from .base import (
 )
 from .context import set_context
 from .deadline import Deadline
+from .exceptions import TooManyRedirects
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .tracing import NOOP_TRACER, SpanKind, Tracer
@@ -162,7 +163,7 @@ class AioHttpTransport(Transport):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.TooManyRedirects:
-            raise
+            raise TooManyRedirects
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed",

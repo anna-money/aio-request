@@ -61,7 +61,7 @@ async def test_redirects_max_redirects(aiohttp_server, redirects_app):
     server = await aiohttp_server(app)
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
-        with pytest.raises(aiohttp.TooManyRedirects):
+        with pytest.raises(aio_request.TooManyRedirects):
             await transport.send(
                 yarl.URL(f"http://{server.host}:{server.port}/redirect3"),
                 aio_request.get("", allow_redirects=True, max_redirects=2),
