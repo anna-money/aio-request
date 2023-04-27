@@ -1,3 +1,8 @@
+## v0.1.28 (2023-04-27)
+
+* [Add allow_redirects and max_redirects options to request](https://github.com/anna-money/aio-request/pull/195)
+
+
 ## v0.1.27 (2023-02-16)
 
 * [Maintenance release](https://github.com/anna-money/aio-request/compare/v0.1.26...v0.1.27)
