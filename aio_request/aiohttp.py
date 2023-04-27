@@ -165,6 +165,17 @@ class AioHttpTransport(Transport):
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.TooManyRedirects as e:
+            logger.warning(
+                "Request %s %s has failed: too many redirects",
+                method,
+                url,
+                exc_info=True,
+                extra={
+                    "request_method": method,
+                    "request_url": url,
+                },
+            )
+
             headers = multidict.CIMultiDict[str]()
             for redirect_response in e.history:
                 for location_header in redirect_response.headers.getall(Header.LOCATION):
@@ -172,7 +183,7 @@ class AioHttpTransport(Transport):
             return EmptyResponse(status=self._too_many_redirects_code, headers=multidict.CIMultiDictProxy[str](headers))
         except aiohttp.ClientError:
             logger.warning(
-                "Request %s %s has failed",
+                "Request %s %s has failed: network error",
                 method,
                 url,
                 exc_info=True,
