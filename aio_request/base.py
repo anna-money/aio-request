@@ -102,6 +102,8 @@ class Request:
             query_parameters=self.query_parameters,
             headers=updated_headers,
             body=self.body,
+            allow_redirects=self.allow_redirects,
+            max_redirects=self.max_redirects,
         )
 
     def extend_headers(self, headers: Headers) -> "Request":
@@ -116,6 +118,8 @@ class Request:
             query_parameters=self.query_parameters,
             headers=updated_headers,
             body=self.body,
+            allow_redirects=self.allow_redirects,
+            max_redirects=self.max_redirects,
         )
 
     def __repr__(self) -> str:
