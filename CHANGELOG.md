@@ -1,3 +1,8 @@
+## v0.1.29 (2023-04-27)
+
+* [Stop losing redirects params in headers update](https://github.com/anna-money/aio-request/pull/204)
+
+
 ## v0.1.28 (2023-04-27)
 
 * [Add allow_redirects and max_redirects options to request](https://github.com/anna-money/aio-request/pull/195)
