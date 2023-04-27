@@ -1,5 +1,6 @@
 import aiohttp
 import multidict
+import pytest
 import yarl
 
 import aio_request
@@ -7,6 +8,7 @@ import aio_request
 DEFAULT_TIMEOUT = 20.0
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_success_with_path_parameters():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
@@ -21,6 +23,7 @@ async def test_success_with_path_parameters():
             await response.close()
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_success_with_query_parameters():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
@@ -37,6 +40,7 @@ async def test_success_with_query_parameters():
             await response.close()
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_success_with_query_parameters_multidict():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
@@ -56,6 +60,7 @@ async def test_success_with_query_parameters_multidict():
             await response.close()
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_redirects_max_redirects():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
@@ -73,6 +78,7 @@ async def test_redirects_max_redirects():
         assert not await response.read()
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_redirects_not_allowed():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
@@ -85,6 +91,7 @@ async def test_redirects_not_allowed():
         assert response.headers["Location"] == "http://httpbin.org/absolute-redirect/9"
 
 
+@pytest.mark.skip(reason="httpbin issues")
 async def test_redirects_allowed_default():
     async with aiohttp.ClientSession() as client_session:
         transport = aio_request.AioHttpTransport(client_session)
