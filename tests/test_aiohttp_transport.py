@@ -4,6 +4,8 @@ import yarl
 
 import aio_request
 
+DEFAULT_TIMEOUT = 20.0
+
 
 async def test_success_with_path_parameters():
     async with aiohttp.ClientSession() as client_session:
@@ -11,7 +13,7 @@ async def test_success_with_path_parameters():
         response = await transport.send(
             yarl.URL("https://httpbin.org/"),
             aio_request.get("status/{status}", path_parameters={"status": "200"}),
-            5,
+            DEFAULT_TIMEOUT,
         )
         try:
             assert response.status == 200
@@ -25,7 +27,7 @@ async def test_success_with_query_parameters():
         response = await transport.send(
             yarl.URL("https://httpbin.org/"),
             aio_request.get("anything", query_parameters={"a": "b"}),
-            5,
+            DEFAULT_TIMEOUT,
         )
         try:
             assert response.status == 200
@@ -44,7 +46,7 @@ async def test_success_with_query_parameters_multidict():
         response = await transport.send(
             yarl.URL("https://httpbin.org/"),
             aio_request.get("anything", query_parameters=query_parameters),
-            5,
+            DEFAULT_TIMEOUT,
         )
         try:
             assert response.status == 200
@@ -52,3 +54,43 @@ async def test_success_with_query_parameters_multidict():
             assert response_json["args"] == {"a": ["b", "c"]}
         finally:
             await response.close()
+
+
+async def test_redirects_max_redirects():
+    async with aiohttp.ClientSession() as client_session:
+        transport = aio_request.AioHttpTransport(client_session)
+
+        response = await transport.send(
+            yarl.URL("http://httpbin.org/absolute-redirect/10"),
+            aio_request.get("", allow_redirects=True, max_redirects=2),
+            DEFAULT_TIMEOUT,
+        )
+        assert response.status == 488
+        assert response.headers.getall(aio_request.Header.LOCATION) == [
+            "http://httpbin.org/absolute-redirect/9",
+            "http://httpbin.org/absolute-redirect/8",
+        ]
+        assert not await response.read()
+
+
+async def test_redirects_not_allowed():
+    async with aiohttp.ClientSession() as client_session:
+        transport = aio_request.AioHttpTransport(client_session)
+        response = await transport.send(
+            yarl.URL("http://httpbin.org/absolute-redirect/10"),
+            aio_request.get("", allow_redirects=False),
+            DEFAULT_TIMEOUT,
+        )
+        assert response.status == 302
+        assert response.headers["Location"] == "http://httpbin.org/absolute-redirect/9"
+
+
+async def test_redirects_allowed_default():
+    async with aiohttp.ClientSession() as client_session:
+        transport = aio_request.AioHttpTransport(client_session)
+        response = await transport.send(
+            yarl.URL("http://httpbin.org/absolute-redirect/5"),
+            aio_request.get(""),
+            DEFAULT_TIMEOUT,
+        )
+        assert response.status == 200

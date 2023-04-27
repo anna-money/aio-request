@@ -34,7 +34,6 @@ from .base import (
 )
 from .context import set_context
 from .deadline import Deadline
-from .exceptions import TooManyRedirects
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .tracing import NOOP_TRACER, SpanKind, Tracer
@@ -106,6 +105,7 @@ class AioHttpTransport(Transport):
         "_client_session",
         "_metrics_provider",
         "_network_errors_code",
+        "_too_many_redirects_code",
         "_buffer_payload",
     )
 
@@ -115,6 +115,7 @@ class AioHttpTransport(Transport):
         *,
         metrics_provider: Optional[MetricsProvider] = None,
         network_errors_code: int = 489,
+        too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
     ):
         if metrics_provider is not None:
@@ -124,6 +125,7 @@ class AioHttpTransport(Transport):
         self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
+        self._too_many_redirects_code = too_many_redirects_code
 
     async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if not endpoint.is_absolute():
@@ -162,8 +164,12 @@ class AioHttpTransport(Transport):
             if self._buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
-        except aiohttp.TooManyRedirects:
-            raise TooManyRedirects
+        except aiohttp.TooManyRedirects as e:
+            headers = multidict.CIMultiDict[str]()
+            for redirect_response in e.history:
+                for location_header in redirect_response.headers.getall(Header.LOCATION):
+                    headers.add(Header.LOCATION, location_header)
+            return EmptyResponse(status=self._too_many_redirects_code, headers=multidict.CIMultiDictProxy[str](headers))
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed",
