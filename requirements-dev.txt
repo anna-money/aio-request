@@ -9,6 +9,6 @@ async-timeout==4.0.2;python_version<"3.11"
 yarl==1.9.2
 multidict==6.0.4
 prometheus-client==0.13.1
-opentelemetry-api==1.6.2
+opentelemetry-api==1.18.0
 opentelemetry-semantic-conventions==0.26b1
 backports.zoneinfo;python_version<"3.9"
