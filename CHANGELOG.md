@@ -1,5 +1,7 @@
 ## unreleased
 
+* [Removal of tracing support](https://github.com/anna-money/aio-request/pull/213)
+
 
 ## v0.1.29 (2023-04-27)
 
