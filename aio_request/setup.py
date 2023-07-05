@@ -12,14 +12,12 @@ from .pipeline import (
     CircuitBreakerModule,
     LowTimeoutModule,
     MetricsModule,
-    TracingModule,
     TransportModule,
     build_pipeline,
 )
 from .priority import Priority
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
-from .tracing import Tracer
 from .transport import Transport
 
 
@@ -69,7 +67,6 @@ def setup_v2(
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
     metrics_provider: Optional[MetricsProvider] = None,
-    tracer: Optional[Tracer] = None,
     circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
     request_strategy = MethodBasedStrategy(
@@ -89,11 +86,6 @@ def setup_v2(
         priority=priority,
         send_request=build_pipeline(
             [
-                (
-                    TracingModule(tracer=tracer, emit_system_headers=emit_system_headers)
-                    if tracer is not None
-                    else BypassModule()
-                ),
                 (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else BypassModule()),
                 (
                     CircuitBreakerModule(
