@@ -25,7 +25,6 @@ from .pipeline import (
     MetricsModule,
     NextModuleFunc,
     RequestModule,
-    TracingModule,
     TransportModule,
     build_pipeline,
 )
@@ -47,7 +46,6 @@ from .request_strategy import (
 )
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .setup import setup, setup_v2
-from .tracing import NOOP_TRACER, NoopSpan, NoopTracer, Span, Tracer
 from .transport import Transport
 
 __all__: Tuple[str, ...] = (
@@ -88,7 +86,6 @@ __all__: Tuple[str, ...] = (
     "MetricsModule",
     "NextModuleFunc",
     "RequestModule",
-    "TracingModule",
     "TransportModule",
     "build_pipeline",
     # priority.py
@@ -122,12 +119,6 @@ __all__: Tuple[str, ...] = (
     # setup.py
     "setup",
     "setup_v2",
-    # tracing.py
-    "NOOP_TRACER",
-    "NoopSpan",
-    "NoopTracer",
-    "Span",
-    "Tracer",
     # transport.py
     "Transport",
 )
@@ -138,7 +129,7 @@ try:
     from .aiohttp import AioHttpDnsResolver, AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
 
     __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")
-except ImportError:
+except ImportError as e:
     pass
 
 try:
@@ -150,16 +141,6 @@ try:
 except ImportError:
     pass
 
-try:
-    import opentelemetry.propagate
-    import opentelemetry.semconv
-    import opentelemetry.trace
-
-    from .opentelemetry import OpenTelemetryTracer
-
-    __all__ += ("OpenTelemetryTracer",)
-except ImportError:
-    pass
 
 __version__ = "0.1.29"
 

@@ -12,7 +12,6 @@ from .deadline import Deadline
 from .metrics import MetricsProvider
 from .priority import Priority
 from .response_classifier import ResponseClassifier, ResponseVerdict
-from .tracing import SpanKind, Tracer
 from .transport import Transport
 
 NextModuleFunc = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]]
@@ -150,40 +149,6 @@ class MetricsModule(RequestModule):
         elapsed = max(0.0, time.perf_counter() - started_at)
         self._metrics_provider.increment_counter("aio_request_status", tags)
         self._metrics_provider.observe_value("aio_request_latency", tags, elapsed)
-
-
-class TracingModule(RequestModule):
-    __slots__ = ("_tracer", "_emit_system_headers")
-
-    def __init__(self, tracer: Tracer, *, emit_system_headers: bool):
-        self._tracer = tracer
-        self._emit_system_headers = emit_system_headers
-
-    async def execute(
-        self,
-        next: NextModuleFunc,
-        *,
-        endpoint: yarl.URL,
-        request: Request,
-        deadline: Deadline,
-        priority: Priority,
-    ) -> ClosableResponse:
-        span_name = str(request.url)
-        with self._tracer.start_span(span_name, SpanKind.CLIENT) as span:
-            span.set_request_method(request.method)
-            span.set_request_endpoint(endpoint)
-            span.set_request_path(request.url)
-
-            response = await next(
-                endpoint,
-                (request.update_headers(self._tracer.get_context_headers()) if self._emit_system_headers else request),
-                deadline,
-                priority,
-            )
-
-            span.set_response_status(response.status)
-
-            return response
 
 
 class CircuitBreakerModule(RequestModule):

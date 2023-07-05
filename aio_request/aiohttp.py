@@ -36,7 +36,6 @@ from .context import set_context
 from .deadline import Deadline
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
-from .tracing import NOOP_TRACER, SpanKind, Tracer
 from .transport import Transport
 from .utils import try_parse_float
 
@@ -266,7 +265,6 @@ def aiohttp_middleware_factory(
     metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
-    tracer: Tracer = NOOP_TRACER,
 ) -> _MIDDLEWARE:
     def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
         method = request.method
@@ -288,47 +286,34 @@ def aiohttp_middleware_factory(
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
-        span_name = (
-            request.match_info.route.resource.canonical
-            if request.match_info.route.resource
-            else f"HTTP {request.method}"
-        )
-        with tracer.setup_context(request.headers), tracer.start_span(name=span_name, kind=SpanKind.SERVER) as span:
-            try:
-                span.set_request_method(request.method)
-                if request.match_info.route.resource:
-                    span.set_request_route(request.match_info.route.resource.canonical)
 
-                response: Optional[aiohttp.web_response.StreamResponse]
-                if deadline.expired or deadline.timeout <= low_timeout_threshold:
-                    response = aiohttp.web_response.Response(status=408)
-                else:
-                    with set_context(deadline=deadline, priority=_get_priority(request) or priority):
-                        if not cancel_on_timeout:
-                            response = await handler(request)
-                        else:
-                            try:
-                                async with timeout_ctx(deadline.timeout):
-                                    response = await handler(request)
-                            except asyncio.TimeoutError:
-                                response = aiohttp.web_response.Response(status=408)
+        try:
+            response: Optional[aiohttp.web_response.StreamResponse]
+            if deadline.expired or deadline.timeout <= low_timeout_threshold:
+                response = aiohttp.web_response.Response(status=408)
+            else:
+                with set_context(deadline=deadline, priority=_get_priority(request) or priority):
+                    if not cancel_on_timeout:
+                        response = await handler(request)
+                    else:
+                        try:
+                            async with timeout_ctx(deadline.timeout):
+                                response = await handler(request)
+                        except asyncio.TimeoutError:
+                            response = aiohttp.web_response.Response(status=408)
 
-                capture_metrics(request, response.status, started_at)
-                span.set_response_status(response.status)
+            capture_metrics(request, response.status, started_at)
 
-                return response
-            except asyncio.CancelledError:
-                capture_metrics(request, 499, started_at)
-                span.set_response_status(499)
-                raise
-            except aiohttp.web_exceptions.HTTPException as e:
-                capture_metrics(request, e.status, started_at)
-                span.set_response_status(e.status)
-                raise
-            except Exception:
-                capture_metrics(request, 500, started_at)
-                span.set_response_status(500)
-                raise
+            return response
+        except asyncio.CancelledError:
+            capture_metrics(request, 499, started_at)
+            raise
+        except aiohttp.web_exceptions.HTTPException as e:
+            capture_metrics(request, e.status, started_at)
+            raise
+        except Exception:
+            capture_metrics(request, 500, started_at)
+            raise
 
     return middleware
 
