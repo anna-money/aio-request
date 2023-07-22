@@ -4,7 +4,7 @@ black==23.7.0
 mypy==1.4.1
 pytest==7.4.0
 pytest-aiohttp==1.0.4
-aiohttp==3.8.4
+aiohttp==3.8.5
 async-timeout==4.0.2;python_version<"3.11"
 yarl==1.9.2
 multidict==6.0.4
