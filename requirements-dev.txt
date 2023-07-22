@@ -9,4 +9,3 @@ async-timeout==4.0.2;python_version<"3.11"
 yarl==1.9.2
 multidict==6.0.4
 prometheus-client==0.13.1
-backports.zoneinfo;python_version<"3.9"
