@@ -128,7 +128,7 @@ try:
 
     from .aiohttp import AioHttpDnsResolver, AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
 
-    __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")
+    __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")  # type: ignore
 except ImportError as e:
     pass
 
@@ -137,7 +137,7 @@ try:
 
     from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
 
-    __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")
+    __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")  # type: ignore
 except ImportError:
     pass
 
