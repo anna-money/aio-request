@@ -1,4 +1,0 @@
-aiohttp==3.8.5
-opentelemetry-api>=1.19
-opentelemetry-exporter-prometheus
-prometheus-client
