@@ -2,7 +2,7 @@
 import collections
 import re
 import sys
-from typing import Tuple
+from typing import Any, Tuple
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
 from .circuit_breaker import (
@@ -133,9 +133,10 @@ except ImportError as e:
     pass
 
 try:
-    import prometheus_client
+    PROMETHEUS_METRICS_PROVIDER = object()
 
-    from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
+    def PrometheusMetricsProvider(*args: Any, **kwargs: Any) -> object:
+        return object()
 
     __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")  # type: ignore
 except ImportError:

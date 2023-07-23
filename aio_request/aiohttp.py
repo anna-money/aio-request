@@ -15,6 +15,7 @@ import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
 import multidict
+import opentelemetry.metrics as otel_metrics
 import yarl
 
 if sys.version_info < (3, 11, 0):
@@ -34,7 +35,6 @@ from .base import (
 )
 from .context import set_context
 from .deadline import Deadline
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .transport import Transport
 from .utils import try_parse_float
@@ -112,7 +112,7 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: Optional[MetricsProvider] = None,
+        metrics_provider: Any = None,
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
@@ -121,7 +121,6 @@ class AioHttpTransport(Transport):
             warnings.warn("metrics_provider is deprecated", DeprecationWarning)
 
         self._client_session = client_session
-        self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
         self._too_many_redirects_code = too_many_redirects_code
@@ -262,10 +261,17 @@ def aiohttp_middleware_factory(
     timeout: float = 20,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-    metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+    metrics_provider: Any = None,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
+    if metrics_provider is not None:
+        warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+
+    meter = otel_metrics.get_meter(__package__)
+    status_counter = meter.create_counter("aio_request_server_status")
+    latency_histogram = meter.create_histogram("aio_request_server_latency")
+
     def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
         method = request.method
         path = request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
@@ -277,8 +283,8 @@ def aiohttp_middleware_factory(
             "response_status": str(status),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
-        metrics_provider.increment_counter("aio_request_server_status", tags)
-        metrics_provider.observe_value("aio_request_server_latency", tags, elapsed)
+        status_counter.add(1, tags)
+        latency_histogram.record(elapsed, tags)
 
     @aiohttp.web_middlewares.middleware
     async def middleware(

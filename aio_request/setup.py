@@ -1,4 +1,5 @@
-from typing import Awaitable, Callable, Optional, Union
+import warnings
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import yarl
 
@@ -6,7 +7,6 @@ from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
-from .metrics import MetricsProvider
 from .pipeline import (
     BypassModule,
     CircuitBreakerModule,
@@ -49,7 +49,6 @@ def setup(
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
         request_enricher=_enrich_request,
-        metrics_provider=getattr(transport, "_metrics_provider", None),
         circuit_breaker=circuit_breaker,
     )
 
@@ -66,9 +65,12 @@ def setup_v2(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
-    metrics_provider: Optional[MetricsProvider] = None,
+    metrics_provider: Any = None,
     circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
+    if metrics_provider is not None:
+        warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+
     request_strategy = MethodBasedStrategy(
         {
             Method.GET: safe_method_strategy,
@@ -86,7 +88,7 @@ def setup_v2(
         priority=priority,
         send_request=build_pipeline(
             [
-                (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else BypassModule()),
+                MetricsModule(),
                 (
                     CircuitBreakerModule(
                         circuit_breaker, response_classifier=response_classifier or DefaultResponseClassifier()

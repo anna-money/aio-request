@@ -4,12 +4,12 @@ import time
 from typing import Awaitable, Callable, List, Optional
 
 import multidict
+import opentelemetry.metrics as otel_metrics
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
 from .circuit_breaker import CircuitBreaker
 from .deadline import Deadline
-from .metrics import MetricsProvider
 from .priority import Priority
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
@@ -105,10 +105,10 @@ class TransportModule(RequestModule):
 
 
 class MetricsModule(RequestModule):
-    __slots__ = ("_metrics_provider",)
+    __slots__ = ("_meter", "_status_counter", "_latency_histogram")
 
-    def __init__(self, metrics_provider: MetricsProvider):
-        self._metrics_provider = metrics_provider
+    def __init__(self) -> None:
+        self._meter, self._status_counter, self._latency_histogram = None, None, None
 
     async def execute(
         self,
@@ -139,6 +139,13 @@ class MetricsModule(RequestModule):
     def _capture_metrics(
         self, *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
     ) -> None:
+        if self._meter is None:
+            self._meter = otel_metrics.get_meter(__package__)
+        if self._status_counter is None:
+            self._status_counter = self._meter.create_counter("aio_request_status")
+        if self._latency_histogram is None:
+            self._latency_histogram = self._meter.create_histogram("aio_request_latency")
+
         tags = {
             "request_endpoint": endpoint.human_repr(),
             "request_method": request.method,
@@ -147,8 +154,8 @@ class MetricsModule(RequestModule):
             "circuit_breaker": int(circuit_breaker),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
-        self._metrics_provider.increment_counter("aio_request_status", tags)
-        self._metrics_provider.observe_value("aio_request_latency", tags, elapsed)
+        self._status_counter.add(1, tags)
+        self._latency_histogram.record(elapsed, tags)
 
 
 class CircuitBreakerModule(RequestModule):
