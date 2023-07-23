@@ -33,6 +33,7 @@ async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable
             if not item.cancelled():
                 raise
 
+
 async def cancel_futures(futures: Collection[asyncio.Future[T]]) -> None:
     for future in futures:
         if future.done():
