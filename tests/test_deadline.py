@@ -22,4 +22,6 @@ async def test_invalid_deadline_at():
 
 async def test_parse_str():
     deadline = aio_request.Deadline.from_timeout(1)
-    assert deadline.deadline_at == aio_request.Deadline.try_parse(str(deadline)).deadline_at
+    parsed_deadline = aio_request.Deadline.try_parse(str(deadline))
+    assert parsed_deadline is not None
+    assert deadline.deadline_at == parsed_deadline.deadline_at

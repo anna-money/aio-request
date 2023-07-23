@@ -1,10 +1,10 @@
 import uuid
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pytest
 import yarl
 
-from aio_request.base import QueryParameters, build_query_parameters, substitute_path_parameters
+from aio_request.base import build_query_parameters, substitute_path_parameters
 
 
 @pytest.mark.parametrize(
@@ -50,7 +50,7 @@ sample_uuid = uuid.uuid4()
     ],
 )
 def test_build_query_parameters(
-    query_parameters: QueryParameters, expected_parameters: Dict[str, Union[str, List[str]]]
+    query_parameters: Dict[str, Any], expected_parameters: Dict[str, Union[str, List[str]]]
 ) -> None:
     assert build_query_parameters(query_parameters) == expected_parameters
     assert build_query_parameters(query_parameters.items()) == expected_parameters

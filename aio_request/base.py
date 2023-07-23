@@ -248,7 +248,7 @@ def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union
                 else:
                     parameters[name] = [*existing_value, *values]
             else:
-                parameters[name] = values
+                parameters[name] = values  # type: ignore
         else:
             if name in parameters:
                 existing_value = parameters[name]
@@ -257,7 +257,7 @@ def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union
                 else:
                     parameters[name] = [*existing_value, str(value)]
             else:
-                parameters[name] = str(value)
+                parameters[name] = str(value)  # type: ignore
     return parameters
 
 
