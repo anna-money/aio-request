@@ -1,6 +1,7 @@
-## unreleased
+## v0.1.30 (2023-07-23)
 
 * [Removal of tracing support](https://github.com/anna-money/aio-request/pull/213)
+* [Drop python 3.8 support](https://github.com/anna-money/aio-request/pull/216)
 
 
 ## v0.1.29 (2023-04-27)
