@@ -1,10 +1,7 @@
 import abc
-import asyncio
-import time
 from typing import Awaitable, Callable, List, Optional
 
 import multidict
-import opentelemetry.metrics as otel_metrics
 import yarl
 
 from .base import ClosableResponse, EmptyResponse, Header, Request
@@ -37,7 +34,13 @@ class BypassModule(RequestModule):
     __slots__ = ()
 
     async def execute(
-        self, next: NextModuleFunc, *, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
+        self,
+        next: NextModuleFunc,
+        *,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
     ) -> ClosableResponse:
         return await next(endpoint, request, deadline, priority)
 
@@ -102,60 +105,6 @@ class TransportModule(RequestModule):
         )
 
         return await self._transport.send(endpoint, request, deadline.timeout)
-
-
-class MetricsModule(RequestModule):
-    __slots__ = ("_meter", "_status_counter", "_latency_histogram")
-
-    def __init__(self) -> None:
-        self._meter, self._status_counter, self._latency_histogram = None, None, None
-
-    async def execute(
-        self,
-        next: NextModuleFunc,
-        *,
-        endpoint: yarl.URL,
-        request: Request,
-        deadline: Deadline,
-        priority: Priority,
-    ) -> ClosableResponse:
-        started_at = time.perf_counter()
-        try:
-            response = await next(endpoint, request, deadline, priority)
-            self._capture_metrics(
-                endpoint=endpoint,
-                request=request,
-                status=response.status,
-                circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
-                started_at=started_at,
-            )
-            return response
-        except asyncio.CancelledError:
-            self._capture_metrics(
-                endpoint=endpoint, request=request, status=499, circuit_breaker=False, started_at=started_at
-            )
-            raise
-
-    def _capture_metrics(
-        self, *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
-    ) -> None:
-        if self._meter is None:
-            self._meter = otel_metrics.get_meter(__package__)
-        if self._status_counter is None:
-            self._status_counter = self._meter.create_counter("aio_request_status")
-        if self._latency_histogram is None:
-            self._latency_histogram = self._meter.create_histogram("aio_request_latency")
-
-        tags = {
-            "request_endpoint": endpoint.human_repr(),
-            "request_method": request.method,
-            "request_path": request.url.path,
-            "response_status": str(status),
-            "circuit_breaker": int(circuit_breaker),
-        }
-        elapsed = max(0.0, time.perf_counter() - started_at)
-        self._status_counter.add(1, tags)
-        self._latency_histogram.record(elapsed, tags)
 
 
 class CircuitBreakerModule(RequestModule):

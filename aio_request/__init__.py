@@ -2,7 +2,7 @@
 import collections
 import re
 import sys
-from typing import Any, Tuple
+from typing import Tuple
 
 from .base import (
     ClosableResponse,
@@ -30,7 +30,6 @@ from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvi
 from .pipeline import (
     BypassModule,
     LowTimeoutModule,
-    MetricsModule,
     NextModuleFunc,
     RequestModule,
     TransportModule,
@@ -95,7 +94,6 @@ __all__: Tuple[str, ...] = (
     # pipeline.py
     "BypassModule",
     "LowTimeoutModule",
-    "MetricsModule",
     "NextModuleFunc",
     "RequestModule",
     "TransportModule",
