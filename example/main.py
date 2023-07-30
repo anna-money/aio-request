@@ -7,18 +7,21 @@ from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentor
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import SynchronousMultiSpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import set_tracer_provider
 
 import aio_request
 
+resource = Resource(attributes={"service.name": "example"})
+
 prometheus_metrics_reader = PrometheusMetricReader()
-set_meter_provider(MeterProvider(metric_readers=[prometheus_metrics_reader]))
+set_meter_provider(MeterProvider(metric_readers=[prometheus_metrics_reader], resource=resource))
 
 span_processor = SynchronousMultiSpanProcessor()
-span_processor.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-set_tracer_provider(TracerProvider(active_span_processor=span_processor))
+span_processor.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter("example")))
+set_tracer_provider(TracerProvider(active_span_processor=span_processor, resource=resource))
 
 AioHttpClientInstrumentor().instrument()
 
