@@ -104,24 +104,30 @@ class DefaultClient(Client):
                     response = response_with_verdict.response
 
                     self._capture_metrics(
-                        endpoint=self._endpoint,
                         request=request,
                         status=response.status,
                         circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
                         started_at=started_at,
                     )
-                    self._attach_response_status(span, response.status)
+                    self._attach_response_status(
+                        span=span,
+                        status=response.status,
+                        allow_redirects=request.allow_redirects,
+                    )
 
                     yield response
             except asyncio.CancelledError:
                 self._capture_metrics(
-                    endpoint=self._endpoint,
                     request=request,
                     status=499,
                     circuit_breaker=False,
                     started_at=started_at,
                 )
-                self._attach_response_status(span, 499)
+                self._attach_response_status(
+                    span=span,
+                    status=499,
+                    allow_redirects=request.allow_redirects,
+                )
 
                 raise
 
@@ -138,7 +144,6 @@ class DefaultClient(Client):
     def _capture_metrics(
         self,
         *,
-        endpoint: yarl.URL,
         request: Request,
         status: int,
         circuit_breaker: bool,
@@ -152,7 +157,7 @@ class DefaultClient(Client):
             self._latency_histogram = self._meter.create_histogram("aio_request_latency")
 
         tags = {
-            "request_endpoint": endpoint.human_repr(),
+            "request_endpoint": self._endpoint.human_repr(),
             "request_method": request.method,
             "request_path": request.url.path,
             "response_status": str(status),
@@ -163,7 +168,7 @@ class DefaultClient(Client):
         self._latency_histogram.record(elapsed, tags)
 
     @contextlib.contextmanager
-    def _start_span(self, request: request, started_at: int) -> Iterator[opentelemetry.trace.Span]:  # type: ignore
+    def _start_span(self, request: Request, started_at: int) -> Iterator[opentelemetry.trace.Span]:
         if self._tracer is None:
             self._tracer = opentelemetry.trace.get_tracer(__package__)
 
@@ -171,7 +176,7 @@ class DefaultClient(Client):
             name=f"{request.method} {request.url}",
             kind=opentelemetry.trace.SpanKind.CLIENT,
             attributes={
-                opentelemetry.semconv.trace.SpanAttributes.HTTP_METHOD: request.method,
+                opentelemetry.semconv.trace.SpanAttributes.HTTP_HOST: request.method,
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_ROUTE: str(request.url),
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(self._endpoint),
             },
@@ -179,8 +184,8 @@ class DefaultClient(Client):
         ) as span:
             yield span
 
-    def _attach_response_status(self, span: opentelemetry.trace.Span, status: int) -> None:
-        span.set_status(opentelemetry.trace.Status(self._http_status_to_status_code(status)))
+    def _attach_response_status(self, *, span: opentelemetry.trace.Span, status: int, allow_redirects: bool) -> None:
+        span.set_status(opentelemetry.trace.Status(self._http_status_to_status_code(status, allow_redirects)))
         span.set_attribute(opentelemetry.semconv.trace.SpanAttributes.HTTP_STATUS_CODE, status)
 
     @staticmethod
