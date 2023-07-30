@@ -18,6 +18,8 @@ import multidict
 import opentelemetry.metrics as otel_metrics
 import yarl
 
+from .deprecated import MetricsProvider
+
 if sys.version_info < (3, 11, 0):
     from async_timeout import timeout as timeout_ctx
 else:
@@ -45,7 +47,13 @@ logger = logging.getLogger(__package__)
 class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
     __slots__ = ("_resolver", "_results", "_interval", "_task", "_max_failures")
 
-    def __init__(self, resolver: aiohttp.abc.AbstractResolver, *, interval: float = 30, max_failures: float = 3):
+    def __init__(
+        self,
+        resolver: aiohttp.abc.AbstractResolver,
+        *,
+        interval: float = 30,
+        max_failures: float = 3,
+    ):
         if interval <= 0:
             raise RuntimeError("Interval should be positive")
         if max_failures <= 0:
@@ -57,7 +65,9 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
         self._task = asyncio.create_task(self._resolve())
         self._max_failures = max_failures
 
-    def resolve_no_wait(self, host: str, port: int, family: int) -> Optional[List[Dict[str, Any]]]:
+    def resolve_no_wait(
+        self, host: str, port: int, family: int
+    ) -> Optional[List[Dict[str, Any]]]:
         return self._results.get((host, port, family))
 
     async def resolve(self, host: str, port: int, family: int) -> List[Dict[str, Any]]:
@@ -112,25 +122,32 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: Any = None,
+        metrics_provider: MetricsProvider | None = None,
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
     ):
         if metrics_provider is not None:
-            warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+            warnings.warn(
+                "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+                DeprecationWarning,
+            )
 
         self._client_session = client_session
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
         self._too_many_redirects_code = too_many_redirects_code
 
-    async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
+    async def send(
+        self, endpoint: yarl.URL, request: Request, timeout: float
+    ) -> ClosableResponse:
         if not endpoint.is_absolute():
             raise RuntimeError("Base url should be absolute")
 
         method = request.method
-        url = endpoint.join(substitute_path_parameters(request.url, request.path_parameters))
+        url = endpoint.join(
+            substitute_path_parameters(request.url, request.path_parameters)
+        )
         if request.query_parameters is not None:
             url = url.update_query(build_query_parameters(request.query_parameters))
         headers = request.headers
@@ -176,9 +193,14 @@ class AioHttpTransport(Transport):
 
             headers = multidict.CIMultiDict[str]()
             for redirect_response in e.history:
-                for location_header in redirect_response.headers.getall(Header.LOCATION):
+                for location_header in redirect_response.headers.getall(
+                    Header.LOCATION
+                ):
                     headers.add(Header.LOCATION, location_header)
-            return EmptyResponse(status=self._too_many_redirects_code, headers=multidict.CIMultiDictProxy[str](headers))
+            return EmptyResponse(
+                status=self._too_many_redirects_code,
+                headers=multidict.CIMultiDictProxy[str](headers),
+            )
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed: network error",
@@ -231,11 +253,17 @@ class _AioHttpResponse(ClosableResponse):
         content_type: Optional[str] = "application/json",
     ) -> Any:
         if content_type is not None:
-            response_content_type = self._response.headers.get(Header.CONTENT_TYPE, "").lower()
+            response_content_type = self._response.headers.get(
+                Header.CONTENT_TYPE, ""
+            ).lower()
             if not is_expected_content_type(response_content_type, content_type):
-                raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
+                raise UnexpectedContentTypeError(
+                    f"Expected {content_type}, actual {response_content_type}"
+                )
 
-        return await self._response.json(encoding=encoding, loads=loads, content_type=None)
+        return await self._response.json(
+            encoding=encoding, loads=loads, content_type=None
+        )
 
     async def read(self) -> bytes:
         return await self._response.read()
@@ -244,8 +272,13 @@ class _AioHttpResponse(ClosableResponse):
         return await self._response.text(encoding=encoding)
 
 
-_HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
-_MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
+_HANDLER = Callable[
+    [aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]
+]
+_MIDDLEWARE = Callable[
+    [aiohttp.web_request.Request, _HANDLER],
+    Awaitable[aiohttp.web_response.StreamResponse],
+]
 
 
 def aiohttp_timeout(*, seconds: float) -> Callable[..., Any]:
@@ -261,20 +294,29 @@ def aiohttp_middleware_factory(
     timeout: float = 20,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-    metrics_provider: Any = None,
+    metrics_provider: MetricsProvider | None = None,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
     if metrics_provider is not None:
-        warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+        warnings.warn(
+            "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+            DeprecationWarning,
+        )
 
     meter = otel_metrics.get_meter(__package__)
     status_counter = meter.create_counter("aio_request_server_status")
     latency_histogram = meter.create_histogram("aio_request_server_latency")
 
-    def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
+    def capture_metrics(
+        request: aiohttp.web_request.Request, status: int, started_at: float
+    ) -> None:
         method = request.method
-        path = request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
+        path = (
+            request.match_info.route.resource.canonical
+            if request.match_info.route.resource
+            else request.path
+        )
         client = request.headers.get(client_header_name, "unknown").lower()
         tags = {
             "request_client": client,
@@ -290,7 +332,11 @@ def aiohttp_middleware_factory(
     async def middleware(
         request: aiohttp.web_request.Request, handler: _HANDLER
     ) -> aiohttp.web_response.StreamResponse:
-        deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
+        deadline = (
+            _get_deadline(request)
+            or _get_deadline_from_handler(request)
+            or Deadline.from_timeout(timeout)
+        )
         started_at = time.perf_counter()
 
         try:
@@ -298,7 +344,9 @@ def aiohttp_middleware_factory(
             if deadline.expired or deadline.timeout <= low_timeout_threshold:
                 response = aiohttp.web_response.Response(status=408)
             else:
-                with set_context(deadline=deadline, priority=_get_priority(request) or priority):
+                with set_context(
+                    deadline=deadline, priority=_get_priority(request) or priority
+                ):
                     if not cancel_on_timeout:
                         response = await handler(request)
                     else:
@@ -336,7 +384,9 @@ def _get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
     return Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY))
 
 
-def _get_deadline_from_handler(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+def _get_deadline_from_handler(
+    request: aiohttp.web_request.Request,
+) -> Optional[Deadline]:
     handler = request.match_info.handler
     timeout = getattr(handler, "__aio_request_timeout__", None)
     if timeout is None and _is_subclass(handler, aiohttp.web.View):
