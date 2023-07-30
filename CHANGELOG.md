@@ -1,3 +1,8 @@
+## unreleased
+
+* [Implement metrics/tracing on top of OpenTelemetry](https://github.com/anna-money/aio-request/pull/218)
+
+
 ## v0.1.30 (2023-07-23)
 
 * [Removal of tracing support](https://github.com/anna-money/aio-request/pull/213)
