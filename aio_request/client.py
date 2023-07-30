@@ -191,7 +191,7 @@ class DefaultClient(Client):
     @staticmethod
     def _http_status_to_status_code(
         status: int,
-        allow_redirect: bool = True,
+        allow_redirect: bool,
     ) -> opentelemetry.trace.StatusCode:
         if status < 100:
             return opentelemetry.trace.StatusCode.ERROR
