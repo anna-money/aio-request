@@ -59,7 +59,7 @@ def setup_v2(
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
     request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
-    metrics_provider: MetricsProvider | None = None,
+    metrics_provider: Optional[MetricsProvider] = None,
     circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
     if metrics_provider is not None:

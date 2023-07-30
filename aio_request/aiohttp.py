@@ -120,7 +120,7 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: MetricsProvider | None = None,
+        metrics_provider: Optional[MetricsProvider] = None,
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
@@ -278,7 +278,7 @@ def aiohttp_middleware_factory(
     timeout: float = 20,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-    metrics_provider: MetricsProvider | None = None,
+    metrics_provider: Optional[MetricsProvider] = None,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
