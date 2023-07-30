@@ -6,7 +6,8 @@ from setuptools import setup
 install_requires = (
     "multidict>=4.5,<7.0",
     "yarl>=1.0,<2.0",
-    "opentelemetry-api>=1.19"
+    "opentelemetry-api>=1.19",
+    "opentelemetry-semantic-conventions>=0.40b0",
 )
 
 

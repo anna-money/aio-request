@@ -4,15 +4,7 @@ import re
 import sys
 from typing import Tuple
 
-from .base import (
-    ClosableResponse,
-    EmptyResponse,
-    Header,
-    Method,
-    Request,
-    Response,
-    UnexpectedContentTypeError,
-)
+from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
 from .circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerMetrics,
@@ -27,14 +19,7 @@ from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
-from .pipeline import (
-    BypassModule,
-    LowTimeoutModule,
-    NextModuleFunc,
-    RequestModule,
-    TransportModule,
-    build_pipeline,
-)
+from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import delete, get, patch, patch_json, post, post_json, put, put_json
 from .request_strategy import (
@@ -51,11 +36,7 @@ from .request_strategy import (
     sequential_strategy,
     single_attempt_strategy,
 )
-from .response_classifier import (
-    DefaultResponseClassifier,
-    ResponseClassifier,
-    ResponseVerdict,
-)
+from .response_classifier import DefaultResponseClassifier, ResponseClassifier, ResponseVerdict
 from .setup import setup, setup_v2
 from .transport import Transport
 
@@ -136,12 +117,7 @@ __all__: Tuple[str, ...] = (
 try:
     import aiohttp
 
-    from .aiohttp import (
-        AioHttpDnsResolver,
-        AioHttpTransport,
-        aiohttp_middleware_factory,
-        aiohttp_timeout,
-    )
+    from .aiohttp import AioHttpDnsResolver, AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
 
     __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")  # type: ignore
 except ImportError as e:
@@ -162,16 +138,11 @@ __version__ = "0.1.30"
 
 version = f"{__version__}, Python {sys.version}"
 
-VersionInfo = collections.namedtuple(
-    "VersionInfo", "major minor micro release_level serial"
-)
+VersionInfo = collections.namedtuple("VersionInfo", "major minor micro release_level serial")
 
 
 def _parse_version(v: str) -> VersionInfo:
-    version_re = (
-        r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)"
-        r"((?P<release_level>[a-z]+)(?P<serial>\d+)?)?$"
-    )
+    version_re = r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)" r"((?P<release_level>[a-z]+)(?P<serial>\d+)?)?$"
     match = re.match(version_re, v)
     if not match:
         raise ImportError(f"Invalid package version {v}")
