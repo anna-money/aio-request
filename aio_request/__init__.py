@@ -126,6 +126,8 @@ except ImportError as e:
 try:
     import prometheus_client
 
+    # Deprecated as well as MetricsProvider, NoopMetricsProvider and NOOP_METRICS_PROVIDER.
+    # For backward compatibility.
     PROMETHEUS_METRICS_PROVIDER = NOOP_METRICS_PROVIDER
     PrometheusMetricsProvider = NoopMetricsProvider
 
