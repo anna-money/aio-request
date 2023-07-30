@@ -15,7 +15,7 @@ import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
 import multidict
-import opentelemetry.metrics as otel_metrics
+import opentelemetry.metrics
 import yarl
 
 from .deprecated import MetricsProvider
@@ -288,7 +288,7 @@ def aiohttp_middleware_factory(
             DeprecationWarning,
         )
 
-    meter = otel_metrics.get_meter(__package__)
+    meter = opentelemetry.metrics.get_meter(__package__)
     status_counter = meter.create_counter("aio_request_server_status")
     latency_histogram = meter.create_histogram("aio_request_server_latency")
 
