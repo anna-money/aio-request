@@ -176,7 +176,7 @@ class DefaultClient(Client):
             name=f"{request.method} {request.url}",
             kind=opentelemetry.trace.SpanKind.CLIENT,
             attributes={
-                opentelemetry.semconv.trace.SpanAttributes.HTTP_HOST: request.method,
+                opentelemetry.semconv.trace.SpanAttributes.HTTP_METHOD: request.method,
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_ROUTE: str(request.url),
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(self._endpoint),
             },
