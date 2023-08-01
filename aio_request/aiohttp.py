@@ -15,7 +15,10 @@ import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
 import multidict
+import opentelemetry.metrics
 import yarl
+
+from .deprecated import MetricsProvider
 
 if sys.version_info < (3, 11, 0):
     from async_timeout import timeout as timeout_ctx
@@ -34,7 +37,6 @@ from .base import (
 )
 from .context import set_context
 from .deadline import Deadline
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider
 from .priority import Priority
 from .transport import Transport
 from .utils import try_parse_float
@@ -45,7 +47,13 @@ logger = logging.getLogger(__package__)
 class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
     __slots__ = ("_resolver", "_results", "_interval", "_task", "_max_failures")
 
-    def __init__(self, resolver: aiohttp.abc.AbstractResolver, *, interval: float = 30, max_failures: float = 3):
+    def __init__(
+        self,
+        resolver: aiohttp.abc.AbstractResolver,
+        *,
+        interval: float = 30,
+        max_failures: float = 3,
+    ):
         if interval <= 0:
             raise RuntimeError("Interval should be positive")
         if max_failures <= 0:
@@ -118,10 +126,12 @@ class AioHttpTransport(Transport):
         buffer_payload: bool = True,
     ):
         if metrics_provider is not None:
-            warnings.warn("metrics_provider is deprecated", DeprecationWarning)
+            warnings.warn(
+                "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+                DeprecationWarning,
+            )
 
         self._client_session = client_session
-        self._metrics_provider = metrics_provider
         self._network_errors_code = network_errors_code
         self._buffer_payload = buffer_payload
         self._too_many_redirects_code = too_many_redirects_code
@@ -179,7 +189,10 @@ class AioHttpTransport(Transport):
             for redirect_response in e.history:
                 for location_header in redirect_response.headers.getall(Header.LOCATION):
                     headers.add(Header.LOCATION, location_header)
-            return EmptyResponse(status=self._too_many_redirects_code, headers=multidict.CIMultiDictProxy[str](headers))
+            return EmptyResponse(
+                status=self._too_many_redirects_code,
+                headers=multidict.CIMultiDictProxy[str](headers),
+            )
         except aiohttp.ClientError:
             logger.warning(
                 "Request %s %s has failed: network error",
@@ -246,7 +259,10 @@ class _AioHttpResponse(ClosableResponse):
 
 
 _HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
-_MIDDLEWARE = Callable[[aiohttp.web_request.Request, _HANDLER], Awaitable[aiohttp.web_response.StreamResponse]]
+_MIDDLEWARE = Callable[
+    [aiohttp.web_request.Request, _HANDLER],
+    Awaitable[aiohttp.web_response.StreamResponse],
+]
 
 
 def aiohttp_timeout(*, seconds: float) -> Callable[..., Any]:
@@ -262,10 +278,20 @@ def aiohttp_middleware_factory(
     timeout: float = 20,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-    metrics_provider: MetricsProvider = NOOP_METRICS_PROVIDER,
+    metrics_provider: Optional[MetricsProvider] = None,
     client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
+    if metrics_provider is not None:
+        warnings.warn(
+            "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+            DeprecationWarning,
+        )
+
+    meter = opentelemetry.metrics.get_meter(__package__)
+    status_counter = meter.create_counter("aio_request_server_status")
+    latency_histogram = meter.create_histogram("aio_request_server_latency")
+
     def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
         method = request.method
         path = request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
@@ -277,8 +303,8 @@ def aiohttp_middleware_factory(
             "response_status": str(status),
         }
         elapsed = max(0.0, time.perf_counter() - started_at)
-        metrics_provider.increment_counter("aio_request_server_status", tags)
-        metrics_provider.observe_value("aio_request_server_latency", tags, elapsed)
+        status_counter.add(1, tags)
+        latency_histogram.record(elapsed, tags)
 
     @aiohttp.web_middlewares.middleware
     async def middleware(
@@ -330,7 +356,9 @@ def _get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
     return Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY))
 
 
-def _get_deadline_from_handler(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+def _get_deadline_from_handler(
+    request: aiohttp.web_request.Request,
+) -> Optional[Deadline]:
     handler = request.match_info.handler
     timeout = getattr(handler, "__aio_request_timeout__", None)
     if timeout is None and _is_subclass(handler, aiohttp.web.View):

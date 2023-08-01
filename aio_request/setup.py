@@ -1,3 +1,4 @@
+import warnings
 from typing import Awaitable, Callable, Optional, Union
 
 import yarl
@@ -6,15 +7,8 @@ from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
-from .metrics import MetricsProvider
-from .pipeline import (
-    BypassModule,
-    CircuitBreakerModule,
-    LowTimeoutModule,
-    MetricsModule,
-    TransportModule,
-    build_pipeline,
-)
+from .deprecated import MetricsProvider
+from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
@@ -49,7 +43,6 @@ def setup(
         low_timeout_threshold=low_timeout_threshold,
         emit_system_headers=emit_system_headers,
         request_enricher=_enrich_request,
-        metrics_provider=getattr(transport, "_metrics_provider", None),
         circuit_breaker=circuit_breaker,
     )
 
@@ -69,6 +62,12 @@ def setup_v2(
     metrics_provider: Optional[MetricsProvider] = None,
     circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
+    if metrics_provider is not None:
+        warnings.warn(
+            "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+            DeprecationWarning,
+        )
+
     request_strategy = MethodBasedStrategy(
         {
             Method.GET: safe_method_strategy,
@@ -86,16 +85,20 @@ def setup_v2(
         priority=priority,
         send_request=build_pipeline(
             [
-                (MetricsModule(metrics_provider=metrics_provider) if metrics_provider is not None else BypassModule()),
                 (
                     CircuitBreakerModule(
-                        circuit_breaker, response_classifier=response_classifier or DefaultResponseClassifier()
+                        circuit_breaker,
+                        response_classifier=(response_classifier or DefaultResponseClassifier()),
                     )
                     if circuit_breaker is not None
                     else BypassModule()
                 ),
                 LowTimeoutModule(low_timeout_threshold=low_timeout_threshold),
-                TransportModule(transport, emit_system_headers=emit_system_headers, request_enricher=request_enricher),
+                TransportModule(
+                    transport,
+                    emit_system_headers=emit_system_headers,
+                    request_enricher=request_enricher,
+                ),
             ],
         ),
     )

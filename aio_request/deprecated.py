@@ -1,3 +1,5 @@
+# Deprecated
+
 import abc
 from typing import Any, Dict
 
@@ -16,6 +18,9 @@ class MetricsProvider(abc.ABC):
 
 class NoopMetricsProvider(MetricsProvider):
     __slots__ = ()
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
 
     def increment_counter(self, name: str, tags: Dict[str, Any], value: float = 1) -> None:
         pass

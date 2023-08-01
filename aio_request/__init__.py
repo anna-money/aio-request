@@ -18,16 +18,8 @@ from .client import Client, DefaultClient
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
-from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
-from .pipeline import (
-    BypassModule,
-    LowTimeoutModule,
-    MetricsModule,
-    NextModuleFunc,
-    RequestModule,
-    TransportModule,
-    build_pipeline,
-)
+from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
+from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import delete, get, patch, patch_json, post, post_json, put, put_json
 from .request_strategy import (
@@ -76,14 +68,13 @@ __all__: Tuple[str, ...] = (
     # delays_provider.py
     "constant_delays",
     "linear_delays",
-    # metrics.py
-    "NOOP_METRICS_PROVIDER",
+    # deprecated.py
     "MetricsProvider",
+    "NOOP_METRICS_PROVIDER",
     "NoopMetricsProvider",
     # pipeline.py
     "BypassModule",
     "LowTimeoutModule",
-    "MetricsModule",
     "NextModuleFunc",
     "RequestModule",
     "TransportModule",
@@ -135,7 +126,10 @@ except ImportError as e:
 try:
     import prometheus_client
 
-    from .prometheus import PROMETHEUS_METRICS_PROVIDER, PrometheusMetricsProvider
+    # Deprecated as well as MetricsProvider, NoopMetricsProvider and NOOP_METRICS_PROVIDER.
+    # For backward compatibility.
+    PROMETHEUS_METRICS_PROVIDER = NOOP_METRICS_PROVIDER
+    PrometheusMetricsProvider = NoopMetricsProvider
 
     __all__ += ("PROMETHEUS_METRICS_PROVIDER", "PrometheusMetricsProvider")  # type: ignore
 except ImportError:

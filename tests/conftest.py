@@ -85,7 +85,6 @@ async def client(server):
                 transport=aio_request.AioHttpTransport(client_session),
                 endpoint=f"http://{server.server.host}:{server.server.port}/",
                 emit_system_headers=emit_system_headers,
-                metrics_provider=aio_request.NOOP_METRICS_PROVIDER,
                 circuit_breaker=aio_request.NoopCircuitBreaker[yarl.URL, aio_request.ClosableResponse](),
             )
 

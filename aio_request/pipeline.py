@@ -1,6 +1,4 @@
 import abc
-import asyncio
-import time
 from typing import Awaitable, Callable, List, Optional
 
 import multidict
@@ -9,7 +7,6 @@ import yarl
 from .base import ClosableResponse, EmptyResponse, Header, Request
 from .circuit_breaker import CircuitBreaker
 from .deadline import Deadline
-from .metrics import MetricsProvider
 from .priority import Priority
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
@@ -37,7 +34,13 @@ class BypassModule(RequestModule):
     __slots__ = ()
 
     async def execute(
-        self, next: NextModuleFunc, *, endpoint: yarl.URL, request: Request, deadline: Deadline, priority: Priority
+        self,
+        next: NextModuleFunc,
+        *,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline,
+        priority: Priority,
     ) -> ClosableResponse:
         return await next(endpoint, request, deadline, priority)
 
@@ -102,53 +105,6 @@ class TransportModule(RequestModule):
         )
 
         return await self._transport.send(endpoint, request, deadline.timeout)
-
-
-class MetricsModule(RequestModule):
-    __slots__ = ("_metrics_provider",)
-
-    def __init__(self, metrics_provider: MetricsProvider):
-        self._metrics_provider = metrics_provider
-
-    async def execute(
-        self,
-        next: NextModuleFunc,
-        *,
-        endpoint: yarl.URL,
-        request: Request,
-        deadline: Deadline,
-        priority: Priority,
-    ) -> ClosableResponse:
-        started_at = time.perf_counter()
-        try:
-            response = await next(endpoint, request, deadline, priority)
-            self._capture_metrics(
-                endpoint=endpoint,
-                request=request,
-                status=response.status,
-                circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
-                started_at=started_at,
-            )
-            return response
-        except asyncio.CancelledError:
-            self._capture_metrics(
-                endpoint=endpoint, request=request, status=499, circuit_breaker=False, started_at=started_at
-            )
-            raise
-
-    def _capture_metrics(
-        self, *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
-    ) -> None:
-        tags = {
-            "request_endpoint": endpoint.human_repr(),
-            "request_method": request.method,
-            "request_path": request.url.path,
-            "response_status": str(status),
-            "circuit_breaker": int(circuit_breaker),
-        }
-        elapsed = max(0.0, time.perf_counter() - started_at)
-        self._metrics_provider.increment_counter("aio_request_status", tags)
-        self._metrics_provider.observe_value("aio_request_latency", tags, elapsed)
 
 
 class CircuitBreakerModule(RequestModule):
