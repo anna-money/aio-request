@@ -6,7 +6,12 @@ import dataclasses
 from .deadline import Deadline
 from .priority import Priority
 
-sentinel = object()
+
+class UseClientDefault:
+    __slots__ = ()
+
+
+USE_CLIENT_DEFAULT = UseClientDefault()
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -16,12 +21,12 @@ class Context:
 
     def set(
         self,
-        deadline: Deadline | object | None = sentinel,
-        priority: Priority | object | None = sentinel,
+        deadline: Deadline | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        priority: Priority | UseClientDefault | None = USE_CLIENT_DEFAULT,
     ) -> "Context":
         return Context(
-            deadline=self.deadline if deadline is sentinel else deadline,  # type: ignore
-            priority=self.priority if priority is sentinel else priority,  # type: ignore
+            deadline=self.deadline if isinstance(deadline, UseClientDefault) else deadline,
+            priority=self.priority if isinstance(priority, UseClientDefault) else priority,
         )
 
     def __repr__(self) -> str:
@@ -34,8 +39,8 @@ context_var = contextvars.ContextVar("aio_request_context", default=Context())
 @contextlib.contextmanager
 def set_context(
     *,
-    deadline: Deadline | object | None = sentinel,
-    priority: Deadline | object | None = sentinel,
+    deadline: Deadline | UseClientDefault | None = USE_CLIENT_DEFAULT,
+    priority: Priority | UseClientDefault | None = USE_CLIENT_DEFAULT,
 ) -> collections.abc.Iterator[None]:
     reset_token = context_var.set(context_var.get().set(deadline=deadline, priority=priority))
     try:
