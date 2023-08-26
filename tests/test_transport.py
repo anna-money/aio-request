@@ -1,4 +1,7 @@
+import unittest.mock
+
 import aiohttp
+import httpx
 import multidict
 import pytest
 import yarl
@@ -8,11 +11,14 @@ import aio_request
 DEFAULT_TIMEOUT = 20.0
 
 
-@pytest.fixture(params=["aiohttp"])
+@pytest.fixture(params=("aiohttp", "httpx"))
 async def transport(request):
     if request.param == "aiohttp":
         async with aiohttp.ClientSession() as client_session:
             yield aio_request.AioHttpTransport(client_session)
+    elif request.param == "httpx":
+        async with httpx.AsyncClient() as async_client:
+            yield aio_request.HttpxTransport(async_client)
     else:
         raise ValueError(f"Unknown transport {request.param}")
 
@@ -25,6 +31,57 @@ async def test_success_with_path_parameters(httpbin, transport):
     )
     try:
         assert response.status == 200
+    finally:
+        await response.close()
+
+
+async def test_json(httpbin, transport):
+    response = await transport.send(
+        yarl.URL(httpbin.url),
+        aio_request.get("json"),
+        DEFAULT_TIMEOUT,
+    )
+    try:
+        assert response.status == 200
+        assert await response.json() == {
+            "slideshow": {
+                "author": "Yours Truly",
+                "date": "date of publication",
+                "slides": [
+                    {"title": "Wake up to WonderWidgets!", "type": "all"},
+                    {
+                        "items": ["Why <em>WonderWidgets</em> are great", "Who <em>buys</em> WonderWidgets"],
+                        "title": "Overview",
+                        "type": "all",
+                    },
+                ],
+                "title": "Sample Slide Show",
+            }
+        }
+        assert response.headers == multidict.CIMultiDict[str](
+            {
+                "Date": unittest.mock.ANY,
+                "Server": "Pytest-HTTPBIN/0.1.0",
+                "Content-Type": "application/json",
+                "Content-Length": "275",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": "true",
+                "Connection": "Close",
+            }
+        )
+    finally:
+        await response.close()
+
+
+async def test_utf8_text(httpbin, transport):
+    response = await transport.send(
+        yarl.URL(httpbin.url),
+        aio_request.get("encoding/utf8"),
+        DEFAULT_TIMEOUT,
+    )
+    try:
+        assert response.status == 200
+        assert len(await response.text()) == 7808
     finally:
         await response.close()
 
