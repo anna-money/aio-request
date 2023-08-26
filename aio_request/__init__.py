@@ -124,6 +124,15 @@ except ImportError as e:
     pass
 
 try:
+    import httpx
+
+    from .httpx import HttpxTransport
+
+    __all__ += ("HttpxTransport",)  # type: ignore
+except ImportError as e:
+    pass
+
+try:
     import prometheus_client
 
     # Deprecated as well as MetricsProvider, NoopMetricsProvider and NOOP_METRICS_PROVIDER.
