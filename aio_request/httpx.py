@@ -81,12 +81,18 @@ class HttpxTransport(Transport):
 
         try:
             locations = []
-            for redirect in range(0, request.max_redirects):
+            redirects = 0
+            while True:
                 client_response = await self._client.send(client_request, follow_redirects=False)
                 if client_response.next_request is not None and allow_redirects:
-                    locations.append(client_response.headers.get_list("Location"))
+                    locations.extend(client_response.headers.get_list("Location"))
                     client_request = client_response.next_request
                     await client_response.aclose()
+
+                    if redirects >= request.max_redirects - 1:
+                        break
+
+                    redirects += 1
                     continue
 
                 if self._buffer_payload:
