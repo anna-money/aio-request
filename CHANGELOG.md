@@ -1,6 +1,7 @@
 ## unreleased
 
 * [Implement metrics/tracing on top of OpenTelemetry](https://github.com/anna-money/aio-request/pull/218)
+* [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
 
 
 ## v0.1.30 (2023-07-23)
