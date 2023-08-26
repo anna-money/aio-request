@@ -41,7 +41,7 @@ logger = logging.getLogger(__package__)
 
 class HttpxTransport(Transport):
     __slots__ = (
-        "_httpx_client",
+        "_client",
         "_buffer_payload",
         "_too_many_redirects_code",
         "_network_errors_code",
@@ -54,7 +54,7 @@ class HttpxTransport(Transport):
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
     ):
-        self._httpx_client = client
+        self._client = client
         self._buffer_payload = buffer_payload
         self._too_many_redirects_code = too_many_redirects_code
         self._network_errors_code = network_errors_code
@@ -71,7 +71,7 @@ class HttpxTransport(Transport):
         body = request.body
         allow_redirects = request.allow_redirects
 
-        httpx_request = self._httpx_client.build_request(
+        client_request = self._client.build_request(
             method=method,
             url=httpx.URL(str(url)),
             content=body,
@@ -80,23 +80,22 @@ class HttpxTransport(Transport):
         )
 
         try:
-            httpx_response_history = []
-            for redirect in range(request.max_redirects):
-                httpx_response = await self._httpx_client.send(httpx_request, follow_redirects=False)
-                if httpx_response.next_request is not None and allow_redirects:
-                    await httpx_response.aread()
-                    httpx_response_history.append(httpx_response)
-                    httpx_request = httpx_response.next_request
+            locations = []
+            for redirect in range(0, request.max_redirects):
+                client_response = await self._client.send(client_request, follow_redirects=False)
+                if client_response.next_request is not None and allow_redirects:
+                    locations.append(client_response.headers.get_list("Location"))
+                    client_request = client_response.next_request
+                    await client_response.aclose()
                     continue
 
                 if self._buffer_payload:
-                    await httpx_response.aread()
-                return _HttpxResponse(httpx_response)
+                    await client_response.aread()
+                return _HttpxResponse(client_response)
 
             headers = multidict.CIMultiDict[str]()
-            for httpx_response in httpx_response_history:
-                for location_header in httpx_response.headers.get_list("Location"):
-                    headers.add(Header.LOCATION, location_header)
+            for location in locations:
+                headers.add(Header.LOCATION, location)
             return EmptyResponse(
                 status=self._too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
