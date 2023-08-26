@@ -13,7 +13,7 @@ class CircuitState(str, enum.Enum):
     CLOSED = "CLOSED"
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class CircuitBreakerMetricsSnapshot:
     started_at: float
     successes: int = 0
