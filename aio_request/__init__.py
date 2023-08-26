@@ -2,7 +2,6 @@
 import collections
 import re
 import sys
-from typing import Tuple
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
 from .circuit_breaker import (
@@ -40,7 +39,7 @@ from .response_classifier import DefaultResponseClassifier, ResponseClassifier, 
 from .setup import setup, setup_v2
 from .transport import Transport
 
-__all__: Tuple[str, ...] = (
+__all__: tuple[str, ...] = (
     # base.py
     "ClosableResponse",
     "EmptyResponse",
