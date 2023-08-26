@@ -1,5 +1,6 @@
+import collections.abc
 import json
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import multidict
 import yarl
@@ -8,11 +9,11 @@ from .base import MAX_REDIRECTS, Header, Headers, Method, PathParameters, QueryP
 
 
 def get(
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     *,
-    headers: Optional[Headers] = None,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
+    headers: Headers | None = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
@@ -28,12 +29,12 @@ def get(
 
 
 def post(
-    url: Union[str, yarl.URL],
-    body: Optional[bytes] = None,
+    url: str | yarl.URL,
+    body: bytes | None = None,
     *,
-    headers: Optional[Headers] = None,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
+    headers: Headers | None = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
@@ -50,12 +51,12 @@ def post(
 
 
 def put(
-    url: Union[str, yarl.URL],
-    body: Optional[bytes] = None,
+    url: str | yarl.URL,
+    body: bytes | None = None,
     *,
-    headers: Optional[Headers] = None,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
+    headers: Headers | None = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
@@ -72,12 +73,12 @@ def put(
 
 
 def patch(
-    url: Union[str, yarl.URL],
-    body: Optional[bytes] = None,
+    url: str | yarl.URL,
+    body: bytes | None = None,
     *,
-    headers: Optional[Headers] = None,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
+    headers: Headers | None = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
@@ -94,11 +95,11 @@ def patch(
 
 
 def delete(
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     *,
-    headers: Optional[Headers] = None,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
+    headers: Headers | None = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
@@ -114,14 +115,14 @@ def delete(
 
 
 def post_json(
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     data: Any,
     *,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
-    headers: Optional[Headers] = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
+    headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -142,14 +143,14 @@ def post_json(
 
 
 def put_json(
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     data: Any,
     *,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
-    headers: Optional[Headers] = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
+    headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -170,14 +171,14 @@ def put_json(
 
 
 def patch_json(
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     data: Any,
     *,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
-    headers: Optional[Headers] = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
+    headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[str], Any] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -199,14 +200,14 @@ def patch_json(
 
 def build_json_request(
     method: str,
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     data: Any,
     *,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
-    headers: Optional[Headers] = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
+    headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: Callable[[Any], str] = json.dumps,
+    dumps: collections.abc.Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -230,12 +231,12 @@ def build_json_request(
 
 def build_request(
     method: str,
-    url: Union[str, yarl.URL],
+    url: str | yarl.URL,
     *,
-    path_parameters: Optional[PathParameters] = None,
-    query_parameters: Optional[QueryParameters] = None,
-    headers: Optional[Headers] = None,
-    body: Optional[bytes] = None,
+    path_parameters: PathParameters | None = None,
+    query_parameters: QueryParameters | None = None,
+    headers: Headers | None = None,
+    body: bytes | None = None,
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:

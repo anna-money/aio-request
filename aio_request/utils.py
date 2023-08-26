@@ -1,7 +1,8 @@
 import abc
 import asyncio
+import collections.abc
 import contextlib
-from typing import Callable, Collection, Optional, TypeVar
+from typing import TypeVar
 
 
 class Closable(abc.ABC):
@@ -23,7 +24,9 @@ async def close_single(item: Closable) -> None:
 T = TypeVar("T")
 
 
-async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable[[T], TClosable]) -> None:
+async def close_futures(
+    items: collections.abc.Collection[asyncio.Future[T]], as_close: collections.abc.Callable[[T], TClosable]
+) -> None:
     for item in items:
         if item.cancelled():
             continue
@@ -34,19 +37,19 @@ async def close_futures(items: Collection[asyncio.Future[T]], as_close: Callable
                 raise
 
 
-async def cancel_futures(futures: Collection[asyncio.Future]) -> None:
+async def cancel_futures(futures: collections.abc.Collection[asyncio.Future]) -> None:
     for future in futures:
         if future.done():
             continue
         future.cancel()
 
 
-async def close(items: Collection[TClosable]) -> None:
+async def close(items: collections.abc.Collection[TClosable]) -> None:
     for item in items:
         await close_single(item)
 
 
-def try_parse_float(value: Optional[str]) -> Optional[float]:
+def try_parse_float(value: str | None) -> float | None:
     if value is None:
         return None
 

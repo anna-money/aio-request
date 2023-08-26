@@ -1,11 +1,12 @@
 import asyncio
+import collections.abc
 import contextlib
 import json
 import logging
 import sys
 import time
 import warnings
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any
 
 import aiohttp
 import aiohttp.abc
@@ -61,14 +62,14 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 
         self._interval = interval
         self._resolver = resolver
-        self._results: Dict[Tuple[str, int, int], List[Dict[str, Any]]] = {}
+        self._results: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
         self._task = asyncio.create_task(self._resolve())
         self._max_failures = max_failures
 
-    def resolve_no_wait(self, host: str, port: int, family: int) -> Optional[List[Dict[str, Any]]]:
+    def resolve_no_wait(self, host: str, port: int, family: int) -> list[dict[str, Any]] | None:
         return self._results.get((host, port, family))
 
-    async def resolve(self, host: str, port: int, family: int) -> List[Dict[str, Any]]:
+    async def resolve(self, host: str, port: int, family: int) -> list[dict[str, Any]]:
         key = (host, port, family)
         addresses = self._results.get(key)
         if addresses is not None:
@@ -84,7 +85,7 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
         await self._resolver.close()
 
     async def _resolve(self) -> None:
-        failures_per_endpoint: Dict[Tuple[str, int, int], int] = {}
+        failures_per_endpoint: dict[tuple[str, int, int], int] = {}
         while True:
             await asyncio.sleep(self._interval)
 
@@ -120,7 +121,7 @@ class AioHttpTransport(Transport):
         self,
         client_session: aiohttp.ClientSession,
         *,
-        metrics_provider: Optional[MetricsProvider] = None,
+        metrics_provider: MetricsProvider | None = None,
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
@@ -240,9 +241,9 @@ class _AioHttpResponse(ClosableResponse):
     async def json(
         self,
         *,
-        encoding: Optional[str] = None,
-        loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        encoding: str | None = None,
+        loads: collections.abc.Callable[[str], Any] = json.loads,
+        content_type: str | None = "application/json",
     ) -> Any:
         if content_type is not None:
             response_content_type = self._response.headers.get(Header.CONTENT_TYPE, "").lower()
@@ -254,19 +255,21 @@ class _AioHttpResponse(ClosableResponse):
     async def read(self) -> bytes:
         return await self._response.read()
 
-    async def text(self, encoding: Optional[str] = None) -> str:
+    async def text(self, encoding: str | None = None) -> str:
         return await self._response.text(encoding=encoding)
 
 
-_HANDLER = Callable[[aiohttp.web_request.Request], Awaitable[aiohttp.web_response.StreamResponse]]
-_MIDDLEWARE = Callable[
+_HANDLER = collections.abc.Callable[
+    [aiohttp.web_request.Request], collections.abc.Awaitable[aiohttp.web_response.StreamResponse]
+]
+_MIDDLEWARE = collections.abc.Callable[
     [aiohttp.web_request.Request, _HANDLER],
-    Awaitable[aiohttp.web_response.StreamResponse],
+    collections.abc.Awaitable[aiohttp.web_response.StreamResponse],
 ]
 
 
-def aiohttp_timeout(*, seconds: float) -> Callable[..., Any]:
-    def wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
+def aiohttp_timeout(*, seconds: float) -> collections.abc.Callable[..., Any]:
+    def wrapper(func: collections.abc.Callable[..., Any]) -> collections.abc.Callable[..., Any]:
         setattr(func, "__aio_request_timeout__", seconds)
         return func
 
@@ -278,8 +281,8 @@ def aiohttp_middleware_factory(
     timeout: float = 20,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
-    metrics_provider: Optional[MetricsProvider] = None,
-    client_header_name: Union[str, multidict.istr] = Header.X_SERVICE_NAME,
+    metrics_provider: MetricsProvider | None = None,
+    client_header_name: str | multidict.istr = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
 ) -> _MIDDLEWARE:
     if metrics_provider is not None:
@@ -314,7 +317,7 @@ def aiohttp_middleware_factory(
         started_at = time.perf_counter()
 
         try:
-            response: Optional[aiohttp.web_response.StreamResponse]
+            response: aiohttp.web_response.StreamResponse | None
             if deadline.expired or deadline.timeout <= low_timeout_threshold:
                 response = aiohttp.web_response.Response(status=408)
             else:
@@ -344,7 +347,7 @@ def aiohttp_middleware_factory(
     return middleware
 
 
-def _get_deadline(request: aiohttp.web_request.Request) -> Optional[Deadline]:
+def _get_deadline(request: aiohttp.web_request.Request) -> Deadline | None:
     timeout = try_parse_float(request.headers.get(Header.X_REQUEST_TIMEOUT))
     if timeout is not None:
         return Deadline.from_timeout(timeout)
@@ -352,13 +355,13 @@ def _get_deadline(request: aiohttp.web_request.Request) -> Optional[Deadline]:
     return Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT))
 
 
-def _get_priority(request: aiohttp.web_request.Request) -> Optional[Priority]:
+def _get_priority(request: aiohttp.web_request.Request) -> Priority | None:
     return Priority.try_parse(request.headers.get(Header.X_REQUEST_PRIORITY))
 
 
 def _get_deadline_from_handler(
     request: aiohttp.web_request.Request,
-) -> Optional[Deadline]:
+) -> Deadline | None:
     handler = request.match_info.handler
     timeout = getattr(handler, "__aio_request_timeout__", None)
     if timeout is None and _is_subclass(handler, aiohttp.web.View):
@@ -366,7 +369,7 @@ def _get_deadline_from_handler(
         if method_handler is not None:
             timeout = getattr(method_handler, "__aio_request_timeout__", None)
 
-    return Deadline.from_timeout(cast(float, timeout)) if timeout is not None else None
+    return Deadline.from_timeout(float(timeout)) if timeout is not None else None
 
 
 def _is_subclass(cls: Any, cls_info: type) -> bool:

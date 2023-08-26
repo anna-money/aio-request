@@ -1,5 +1,4 @@
 import datetime
-from typing import Optional
 
 
 class Deadline:
@@ -8,7 +7,7 @@ class Deadline:
         return Deadline(datetime.datetime.utcnow() + datetime.timedelta(seconds=seconds))
 
     @staticmethod
-    def try_parse(value: Optional[str]) -> Optional["Deadline"]:
+    def try_parse(value: str | None) -> "Deadline | None":
         if value is None:
             return None
         try:

@@ -1,8 +1,10 @@
 import abc
 import collections
+import collections.abc
+import dataclasses
 import enum
 import time
-from typing import Awaitable, Callable, DefaultDict, Generic, Mapping, Optional, TypeVar
+from typing import Generic, TypeVar
 
 
 class CircuitState(str, enum.Enum):
@@ -11,13 +13,11 @@ class CircuitState(str, enum.Enum):
     CLOSED = "CLOSED"
 
 
+@dataclasses.dataclass(slots=True, kw_only=True)
 class CircuitBreakerMetricsSnapshot:
-    __slots__ = ("started_at", "successes", "failures")
-
-    def __init__(self, started_at: float, successes: int = 0, failures: int = 0) -> None:
-        self.started_at = started_at
-        self.successes = successes
-        self.failures = failures
+    started_at: float
+    successes: int = 0
+    failures: int = 0
 
 
 class CircuitBreakerMetrics(abc.ABC):
@@ -47,7 +47,7 @@ class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
         self._sampling_duration = sampling_duration
         self._window_duration = sampling_duration / windows_count
         self._last_n: collections.deque = collections.deque()  # type: ignore
-        self._current: Optional[CircuitBreakerMetricsSnapshot] = None
+        self._current: CircuitBreakerMetricsSnapshot | None = None
 
     def increment_successes(self) -> None:
         self._refresh()
@@ -69,12 +69,14 @@ class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
             successes += last.successes
             failures += last.failures
 
-        return CircuitBreakerMetricsSnapshot(self._last_n[0].started_at, successes, failures)
+        return CircuitBreakerMetricsSnapshot(
+            started_at=self._last_n[0].started_at, successes=successes, failures=failures
+        )
 
     def _refresh(self) -> None:
         now = time.time()
         if self._current is None or (now - self._current.started_at) >= self._window_duration:
-            self._current = CircuitBreakerMetricsSnapshot(now)
+            self._current = CircuitBreakerMetricsSnapshot(started_at=now)
             self._last_n.append(self._current)
 
         while self._last_n:
@@ -97,15 +99,15 @@ class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
         self,
         *,
         scope: TScope,
-        operation: Callable[[], Awaitable[TResult]],
+        operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
-        is_successful: Callable[[TResult], bool],
+        is_successful: collections.abc.Callable[[TResult], bool],
     ) -> TResult:
         ...
 
     @property
     @abc.abstractmethod
-    def state(self) -> Mapping[TScope, CircuitState]:
+    def state(self) -> collections.abc.Mapping[TScope, CircuitState]:
         ...
 
 
@@ -148,18 +150,18 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
-        self._per_scope_metrics: DefaultDict[TScope, CircuitBreakerMetrics] = collections.defaultdict(
+        self._per_scope_metrics = collections.defaultdict[TScope, CircuitBreakerMetrics](
             lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
         )
-        self._per_scope_state: DefaultDict[TScope, CircuitState] = collections.defaultdict(lambda: CircuitState.CLOSED)
-        self._per_scope_blocked_till: DefaultDict[TScope, float] = collections.defaultdict(float)
+        self._per_scope_state = collections.defaultdict[TScope, CircuitState](lambda: CircuitState.CLOSED)
+        self._per_scope_blocked_till = collections.defaultdict[TScope, float](float)
 
     async def execute(
         self,
         scope: TScope,
-        operation: Callable[[], Awaitable[TResult]],
+        operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
-        is_successful: Callable[[TResult], bool],
+        is_successful: collections.abc.Callable[[TResult], bool],
     ) -> TResult:
         if not self._is_executable(scope):
             return fallback
@@ -174,7 +176,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         return result
 
     @property
-    def state(self) -> Mapping[TScope, CircuitState]:
+    def state(self) -> collections.abc.Mapping[TScope, CircuitState]:
         return dict(self._per_scope_state)
 
     def _is_executable(self, scope: TScope) -> bool:
@@ -236,12 +238,12 @@ class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):
     async def execute(
         self,
         scope: TScope,
-        operation: Callable[[], Awaitable[TResult]],
+        operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
-        is_successful: Callable[[TResult], bool],
+        is_successful: collections.abc.Callable[[TResult], bool],
     ) -> TResult:
         return await operation()
 
     @property
-    def state(self) -> Mapping[TScope, CircuitState]:
+    def state(self) -> collections.abc.Mapping[TScope, CircuitState]:
         return {}

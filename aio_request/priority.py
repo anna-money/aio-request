@@ -1,5 +1,4 @@
 import enum
-from typing import Optional
 
 
 class Priority(str, enum.Enum):
@@ -14,7 +13,7 @@ class Priority(str, enum.Enum):
         return f"<Priority [{self.value}]>"
 
     @staticmethod
-    def try_parse(value: Optional[str]) -> Optional["Priority"]:
+    def try_parse(value: str | None) -> "Priority | None":
         if value is None:
             return None
         try:
