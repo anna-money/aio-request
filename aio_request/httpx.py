@@ -1,6 +1,7 @@
+import collections.abc
 import json
 import logging
-from typing import Any, Callable, Optional
+from typing import Any
 
 import httpx
 import multidict
@@ -9,19 +10,19 @@ import yarl
 try:
     import cchardet  # type: ignore
 
-    def detect_encoding(content: bytes) -> Optional[str]:
+    def detect_encoding(content: bytes) -> str | None:
         return cchardet.detect(content)["encoding"]
 
 except ImportError:
     try:
         import charset_normalizer  # type: ignore
 
-        def detect_encoding(content: bytes) -> Optional[str]:
+        def detect_encoding(content: bytes) -> str | None:
             return str(charset_normalizer.detect(content)["encoding"])
 
     except ImportError:
 
-        def detect_encoding(content: bytes) -> Optional[str]:
+        def detect_encoding(content: bytes) -> str | None:
             return None
 
 
@@ -141,9 +142,9 @@ class _HttpxResponse(ClosableResponse):
     async def json(
         self,
         *,
-        encoding: Optional[str] = None,
-        loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        encoding: str | None = None,
+        loads: collections.abc.Callable[[str], Any] = json.loads,
+        content_type: str | None = "application/json",
     ) -> Any:
         if content_type is not None:
             response_content_type = self._response.headers.get(Header.CONTENT_TYPE, "").lower()
@@ -155,6 +156,6 @@ class _HttpxResponse(ClosableResponse):
     async def read(self) -> bytes:
         return await self._response.aread()
 
-    async def text(self, encoding: Optional[str] = None) -> str:
+    async def text(self, encoding: str | None = None) -> str:
         content = await self._response.aread()
         return content.decode(encoding or self._response.charset_encoding or detect_encoding(content) or "utf-8")
