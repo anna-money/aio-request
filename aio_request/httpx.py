@@ -10,7 +10,7 @@ try:
     import cchardet  # type: ignore
 
     def detect_encoding(content: bytes) -> Optional[str]:
-        return cchardet.detect(content)["encoding"] or "utf-8"
+        return cchardet.detect(content)["encoding"]
 
 except ImportError:
     try:
