@@ -211,7 +211,7 @@ class EmptyResponse(ClosableResponse):
         self,
         *,
         encoding: Optional[str] = None,
-        loads: Optional[Callable[[str], Any]] = json.loads,
+        loads: Callable[[str], Any] = json.loads,
         content_type: Optional[str] = "application/json",
     ) -> Any:
         if content_type is not None:
