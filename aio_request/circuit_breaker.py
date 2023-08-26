@@ -150,13 +150,11 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         self._break_duration = break_duration
         self._minimum_throughput = minimum_throughput
         self._failure_threshold = failure_threshold
-        self._per_scope_metrics: collections.defaultdict[TScope, CircuitBreakerMetrics] = collections.defaultdict(
+        self._per_scope_metrics = collections.defaultdict[TScope, CircuitBreakerMetrics](
             lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
         )
-        self._per_scope_state: collections.defaultdict[TScope, CircuitState] = collections.defaultdict(
-            lambda: CircuitState.CLOSED
-        )
-        self._per_scope_blocked_till: collections.defaultdict[TScope, float] = collections.defaultdict(float)
+        self._per_scope_state = collections.defaultdict[TScope, CircuitState](lambda: CircuitState.CLOSED)
+        self._per_scope_blocked_till = collections.defaultdict[TScope, float](float)
 
     async def execute(
         self,
