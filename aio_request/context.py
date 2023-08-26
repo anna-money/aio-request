@@ -1,7 +1,7 @@
+import collections.abc
 import contextlib
 import contextvars
 import dataclasses
-from typing import Iterator, Optional, Union, cast
 
 from .deadline import Deadline
 from .priority import Priority
@@ -9,36 +9,34 @@ from .priority import Priority
 sentinel = object()
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Context:
-    __slots__ = ("deadline", "priority")
-
-    deadline: Optional[Deadline]
-    priority: Optional[Priority]
+    deadline: Deadline | None = None
+    priority: Priority | None = None
 
     def set(
         self,
-        deadline: Optional[Union[Deadline, object]] = sentinel,
-        priority: Optional[Union[Priority, object]] = sentinel,
+        deadline: Deadline | object | None = sentinel,
+        priority: Priority | object | None = sentinel,
     ) -> "Context":
         return Context(
-            deadline=self.deadline if deadline is sentinel else cast(Optional[Deadline], deadline),
-            priority=self.priority if priority is sentinel else cast(Optional[Priority], priority),
+            deadline=self.deadline if deadline is sentinel else deadline,  # type: ignore
+            priority=self.priority if priority is sentinel else priority,  # type: ignore
         )
 
     def __repr__(self) -> str:
         return f"<Context [{self.deadline} {self.priority}]>"
 
 
-context_var = contextvars.ContextVar("aio_request_context", default=Context(None, None))
+context_var = contextvars.ContextVar("aio_request_context", default=Context())
 
 
 @contextlib.contextmanager
 def set_context(
     *,
-    deadline: Optional[Union[Deadline, object]] = sentinel,
-    priority: Optional[Union[Deadline, object]] = sentinel,
-) -> Iterator[None]:
+    deadline: Deadline | object | None = sentinel,
+    priority: Deadline | object | None = sentinel,
+) -> collections.abc.Iterator[None]:
     reset_token = context_var.set(context_var.get().set(deadline=deadline, priority=priority))
     try:
         yield

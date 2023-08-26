@@ -1,5 +1,5 @@
+import collections.abc
 import warnings
-from typing import Awaitable, Callable, Optional, Union
 
 import yarl
 
@@ -18,16 +18,16 @@ from .transport import Transport
 def setup(
     *,
     transport: Transport,
-    endpoint: Union[str, yarl.URL],
+    endpoint: str | yarl.URL,
     safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
-    response_classifier: Optional[ResponseClassifier] = None,
+    response_classifier: ResponseClassifier | None = None,
     timeout: float = 20.0,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
-    request_enricher: Optional[Callable[[Request], Request]] = None,
-    circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
+    request_enricher: collections.abc.Callable[[Request], Request] | None = None,
+    circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse] | None = None,
 ) -> Client:
     async def _enrich_request(request: Request, _: bool) -> Request:
         return request_enricher(request) if request_enricher is not None else request
@@ -50,17 +50,17 @@ def setup(
 def setup_v2(
     *,
     transport: Transport,
-    endpoint: Union[str, yarl.URL],
+    endpoint: str | yarl.URL,
     safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
-    response_classifier: Optional[ResponseClassifier] = None,
+    response_classifier: ResponseClassifier | None = None,
     timeout: float = 20.0,
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
-    request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]] = None,
-    metrics_provider: Optional[MetricsProvider] = None,
-    circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
+    request_enricher: collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]] | None = None,
+    metrics_provider: MetricsProvider | None = None,
+    circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse] | None = None,
 ) -> Client:
     if metrics_provider is not None:
         warnings.warn(

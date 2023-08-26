@@ -1,7 +1,8 @@
 import abc
+import collections.abc
 import json
 import re
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any
 
 import multidict
 import yarl
@@ -32,15 +33,14 @@ class Header:
     X_CIRCUIT_BREAKER = multidict.istr("X-Circuit-Breaker")
 
 
-_MultiDict = Union[
-    Mapping[Union[str, multidict.istr], str], multidict.CIMultiDictProxy[str], multidict.CIMultiDict[str]
-]
-
+_MultiDict = (
+    collections.abc.Mapping[str | multidict.istr, str] | multidict.CIMultiDictProxy[str] | multidict.CIMultiDict[str]
+)
 
 json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json", re.RegexFlag.IGNORECASE)
 
-PathParameters = Mapping[str, Any]
-QueryParameters = Union[Mapping[str, Any], Iterable[Tuple[str, Any]], _MultiDict]
+PathParameters = collections.abc.Mapping[str, Any]
+QueryParameters = collections.abc.Mapping[str, Any] | collections.abc.Iterable[tuple[str, Any]] | _MultiDict
 Headers = _MultiDict
 
 
@@ -71,10 +71,10 @@ class Request:
         *,
         method: str,
         url: yarl.URL,
-        path_parameters: Optional[PathParameters] = None,
-        query_parameters: Optional[QueryParameters] = None,
-        headers: Optional[Headers] = None,
-        body: Optional[bytes] = None,
+        path_parameters: PathParameters | None = None,
+        query_parameters: QueryParameters | None = None,
+        headers: Headers | None = None,
+        body: bytes | None = None,
         allow_redirects: bool = True,
         max_redirects: int = MAX_REDIRECTS,
     ):
@@ -143,9 +143,9 @@ class Response(abc.ABC):
     async def json(
         self,
         *,
-        encoding: Optional[str] = None,
-        loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        encoding: str | None = None,
+        loads: collections.abc.Callable[[str], Any] = json.loads,
+        content_type: str | None = "application/json",
     ) -> Any:
         ...
 
@@ -154,7 +154,7 @@ class Response(abc.ABC):
         ...
 
     @abc.abstractmethod
-    async def text(self, encoding: Optional[str] = None) -> str:
+    async def text(self, encoding: str | None = None) -> str:
         ...
 
     def is_informational(self) -> bool:
@@ -173,7 +173,7 @@ class Response(abc.ABC):
         return 500 <= self.status < 600
 
     @property
-    def content_type(self) -> Optional[str]:
+    def content_type(self) -> str | None:
         return self.headers.get(Header.CONTENT_TYPE)
 
     @property
@@ -210,9 +210,9 @@ class EmptyResponse(ClosableResponse):
     async def json(
         self,
         *,
-        encoding: Optional[str] = None,
-        loads: Callable[[str], Any] = json.loads,
-        content_type: Optional[str] = "application/json",
+        encoding: str | None = None,
+        loads: collections.abc.Callable[[str], Any] = json.loads,
+        content_type: str | None = "application/json",
     ) -> Any:
         if content_type is not None:
             response_content_type = self._headers.get(Header.CONTENT_TYPE, "").lower()
@@ -224,19 +224,21 @@ class EmptyResponse(ClosableResponse):
     async def read(self) -> bytes:
         return bytes()
 
-    async def text(self, encoding: Optional[str] = None) -> str:
+    async def text(self, encoding: str | None = None) -> str:
         return ""
 
     async def close(self) -> None:
         pass
 
 
-def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union[str, List[str]]]:
-    parameters: Dict[str, Union[str, List[str]]] = {}
-    for name, value in query_parameters.items() if isinstance(query_parameters, Mapping) else query_parameters:
+def build_query_parameters(query_parameters: QueryParameters) -> dict[str, str | list[str]]:
+    parameters: dict[str, str | list[str]] = {}
+    for name, value in (
+        query_parameters.items() if isinstance(query_parameters, collections.abc.Mapping) else query_parameters
+    ):
         if value is None:
             continue
-        if not isinstance(value, str) and isinstance(value, Iterable):
+        if not isinstance(value, str) and isinstance(value, collections.abc.Iterable):
             values = [str(v) for v in value if v is not None]
             if not values:
                 continue
@@ -261,7 +263,7 @@ def build_query_parameters(query_parameters: QueryParameters) -> Dict[str, Union
     return parameters
 
 
-def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameters] = None) -> yarl.URL:
+def substitute_path_parameters(url: yarl.URL, parameters: PathParameters | None = None) -> yarl.URL:
     if not parameters:
         return url
 
@@ -269,7 +271,7 @@ def substitute_path_parameters(url: yarl.URL, parameters: Optional[PathParameter
     for name, value in parameters.items():
         path = path.replace(f"%7B{name}%7D", str(value))
 
-    build_parameters: Dict[str, Any] = dict(
+    build_parameters: dict[str, Any] = dict(
         scheme=url.scheme,
         user=url.raw_user,
         password=url.raw_password,

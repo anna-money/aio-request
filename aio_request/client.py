@@ -1,8 +1,8 @@
 import abc
 import asyncio
+import collections.abc
 import contextlib
 import time
-from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Iterator, Optional
 
 import opentelemetry.metrics
 import opentelemetry.semconv.trace
@@ -25,10 +25,10 @@ class Client(abc.ABC):
         self,
         request: Request,
         *,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Priority] = None,
-        strategy: Optional[RequestStrategy] = None,
-    ) -> AsyncContextManager[Response]:
+        deadline: Deadline | None = None,
+        priority: Priority | None = None,
+        strategy: RequestStrategy | None = None,
+    ) -> contextlib.AbstractAsyncContextManager[Response]:
         ...
 
 
@@ -56,7 +56,9 @@ class DefaultClient(Client):
         request_strategy: RequestStrategy,
         timeout: float,
         priority: Priority,
-        send_request: Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]],
+        send_request: collections.abc.Callable[
+            [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
+        ],
     ):
         self._endpoint = endpoint
         self._response_classifier = response_classifier
@@ -73,10 +75,10 @@ class DefaultClient(Client):
         self,
         request: Request,
         *,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Priority] = None,
-        strategy: Optional[RequestStrategy] = None,
-    ) -> AsyncContextManager[Response]:
+        deadline: Deadline | None = None,
+        priority: Priority | None = None,
+        strategy: RequestStrategy | None = None,
+    ) -> contextlib.AbstractAsyncContextManager[Response]:
         return self._request(request, deadline=deadline, priority=priority, strategy=strategy)
 
     @contextlib.asynccontextmanager
@@ -84,10 +86,10 @@ class DefaultClient(Client):
         self,
         request: Request,
         *,
-        deadline: Optional[Deadline] = None,
-        priority: Optional[Priority] = None,
-        strategy: Optional[RequestStrategy] = None,
-    ) -> AsyncIterator[Response]:
+        deadline: Deadline | None = None,
+        priority: Priority | None = None,
+        strategy: RequestStrategy | None = None,
+    ) -> collections.abc.AsyncIterator[Response]:
         context = get_context()
         started_at = time.time_ns()
 
@@ -168,7 +170,7 @@ class DefaultClient(Client):
         self._latency_histogram.record(elapsed, tags)
 
     @contextlib.contextmanager
-    def _start_span(self, request: Request, started_at: int) -> Iterator[opentelemetry.trace.Span]:
+    def _start_span(self, request: Request, started_at: int) -> collections.abc.Iterator[opentelemetry.trace.Span]:
         if self._tracer is None:
             self._tracer = opentelemetry.trace.get_tracer(__package__)
 
@@ -204,7 +206,7 @@ class DefaultClient(Client):
         return opentelemetry.trace.StatusCode.ERROR
 
     @staticmethod
-    def _normalize_priority(priority: Priority, context_priority: Optional[Priority]) -> Priority:
+    def _normalize_priority(priority: Priority, context_priority: Priority | None) -> Priority:
         if context_priority is None:
             return priority
 

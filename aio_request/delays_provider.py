@@ -1,7 +1,7 @@
+import collections.abc
 import random
-from typing import Callable
 
-DELAY_PROVIDER = Callable[[int], float]
+DELAY_PROVIDER = collections.abc.Callable[[int], float]
 
 
 def constant_delays(*, delay: float = 0) -> DELAY_PROVIDER:

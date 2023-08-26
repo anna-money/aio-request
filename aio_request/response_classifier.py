@@ -1,6 +1,5 @@
 import abc
 import enum
-from typing import Dict, Optional
 
 from .base import Header, Response
 
@@ -29,7 +28,7 @@ class DefaultResponseClassifier(ResponseClassifier):
         self,
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
-        verdict_for_status: Optional[Dict[int, ResponseVerdict]] = None,
+        verdict_for_status: dict[int, ResponseVerdict] | None = None,
     ):
         self._network_errors_code = network_errors_code
         self._too_many_redirects_code = too_many_redirects_code

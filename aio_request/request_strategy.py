@@ -1,7 +1,8 @@
 import abc
 import asyncio
+import collections.abc
 import contextlib
-from typing import AsyncContextManager, AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, Set, TypeVar
+from typing import Generic, TypeVar
 
 import yarl
 
@@ -27,7 +28,9 @@ class ResponseWithVerdict(Generic[TResponse], Closable):
             await self.response.close()
 
 
-SendRequestFunc = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ResponseWithVerdict[ClosableResponse]]]
+SendRequestFunc = collections.abc.Callable[
+    [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ResponseWithVerdict[ClosableResponse]]
+]
 
 
 class RequestStrategy(abc.ABC):
@@ -41,14 +44,14 @@ class RequestStrategy(abc.ABC):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncContextManager[ResponseWithVerdict[Response]]:
+    ) -> contextlib.AbstractAsyncContextManager[ResponseWithVerdict[Response]]:
         ...
 
 
 class MethodBasedStrategy(RequestStrategy):
     __slots__ = ("_strategy_by_method",)
 
-    def __init__(self, strategy_by_method: Dict[str, RequestStrategy]):
+    def __init__(self, strategy_by_method: dict[str, RequestStrategy]):
         self._strategy_by_method = strategy_by_method
 
     def request(
@@ -58,7 +61,7 @@ class MethodBasedStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncContextManager[ResponseWithVerdict[Response]]:
+    ) -> contextlib.AbstractAsyncContextManager[ResponseWithVerdict[Response]]:
         return self._strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
 
 
@@ -67,19 +70,19 @@ def single_attempt_strategy() -> RequestStrategy:
 
 
 def sequential_strategy(
-    *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
+    *, attempts_count: int = 3, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
 ) -> RequestStrategy:
     return SequentialRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
 
 def parallel_strategy(
-    *, attempts_count: int = 3, delays_provider: Callable[[int], float] = linear_delays()
+    *, attempts_count: int = 3, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
 ) -> RequestStrategy:
     return ParallelRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
 
 def retry_until_deadline_expired(
-    strategy: RequestStrategy, *, delays_provider: Callable[[int], float] = linear_delays()
+    strategy: RequestStrategy, *, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
 ) -> RequestStrategy:
     return RetryUntilDeadlineExpiredStrategy(strategy, delays_provider)
 
@@ -95,8 +98,8 @@ class SingleAttemptRequestStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncIterator[ResponseWithVerdict[Response]]:
-        send_result: Optional[ResponseWithVerdict[ClosableResponse]] = None
+    ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
+        send_result: ResponseWithVerdict[ClosableResponse] | None = None
         try:
             send_result = await send_request(endpoint, request, deadline, priority)
             yield ResponseWithVerdict[Response](send_result.response, send_result.verdict)
@@ -118,7 +121,7 @@ class SequentialRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: Callable[[int], float],
+        delays_provider: collections.abc.Callable[[int], float],
     ):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
@@ -134,8 +137,8 @@ class SequentialRequestStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncIterator[ResponseWithVerdict[Response]]:
-        responses: List[ResponseWithVerdict[ClosableResponse]] = []
+    ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
+        responses: list[ResponseWithVerdict[ClosableResponse]] = []
         try:
             for attempt in range(self._attempts_count):
                 response = await send_request(endpoint, request, deadline, priority)
@@ -167,7 +170,7 @@ class ParallelRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: Callable[[int], float],
+        delays_provider: collections.abc.Callable[[int], float],
     ):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
@@ -183,15 +186,15 @@ class ParallelRequestStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncIterator[ResponseWithVerdict[Response]]:
-        completed_tasks: Set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
-        pending_tasks: Set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
+    ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
+        completed_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
+        pending_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
         for attempt in range(0, self._attempts_count):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
-        accepted_responses: List[ResponseWithVerdict[ClosableResponse]] = []
-        not_accepted_responses: List[ResponseWithVerdict[ClosableResponse]] = []
+        accepted_responses: list[ResponseWithVerdict[ClosableResponse]] = []
+        not_accepted_responses: list[ResponseWithVerdict[ClosableResponse]] = []
         try:
             try:
                 while pending_tasks:
@@ -241,7 +244,7 @@ class ParallelRequestStrategy(RequestStrategy):
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     __slots__ = ("_base_strategy", "_delays_provider")
 
-    def __init__(self, base_strategy: RequestStrategy, delays_provider: Callable[[int], float]):
+    def __init__(self, base_strategy: RequestStrategy, delays_provider: collections.abc.Callable[[int], float]):
         self._delays_provider = delays_provider
         self._base_strategy = base_strategy
 
@@ -253,7 +256,7 @@ class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> AsyncIterator[ResponseWithVerdict[Response]]:
+    ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
         attempt = 0
         while True:
             response_ctx = self._base_strategy.request(send_request, endpoint, request, deadline, priority)

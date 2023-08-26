@@ -1,5 +1,5 @@
 import abc
-from typing import Awaitable, Callable, List, Optional
+import collections.abc
 
 import multidict
 import yarl
@@ -11,7 +11,9 @@ from .priority import Priority
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
 
-NextModuleFunc = Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]]
+NextModuleFunc = collections.abc.Callable[
+    [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
+]
 
 
 class RequestModule(abc.ABC):
@@ -74,7 +76,7 @@ class TransportModule(RequestModule):
         transport: Transport,
         *,
         emit_system_headers: bool,
-        request_enricher: Optional[Callable[[Request, bool], Awaitable[Request]]],
+        request_enricher: collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]] | None,
     ):
         self._transport = transport
         self._emit_system_headers = emit_system_headers
@@ -145,7 +147,7 @@ class CircuitBreakerModule(RequestModule):
         )
 
 
-def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
+def build_pipeline(modules: list[RequestModule]) -> NextModuleFunc:
     async def _unsupported(
         _: yarl.URL,
         __: Request,
@@ -166,9 +168,8 @@ def build_pipeline(modules: List[RequestModule]) -> NextModuleFunc:
 
 
 def _response_verdict_to_bool(response_verdict: ResponseVerdict) -> bool:
-    if response_verdict == ResponseVerdict.ACCEPT:
-        return True
-    if response_verdict == ResponseVerdict.REJECT:
-        return False
-
-    raise RuntimeError(f"Unexpected {response_verdict}")
+    match response_verdict:
+        case ResponseVerdict.ACCEPT:
+            return True
+        case ResponseVerdict.REJECT:
+            return False
