@@ -1,17 +1,17 @@
 import asyncio
-from typing import Awaitable, Callable
+import collections.abc
 
 import aio_request
 
 
-def do(result: int) -> Callable[[], Awaitable[int]]:
+def do(result: int) -> collections.abc.Callable[[], collections.abc.Awaitable[int]]:
     async def _do() -> int:
         return result
 
     return _do
 
 
-def delay(result: int, *, seconds: float) -> Callable[[], Awaitable[int]]:
+def delay(result: int, *, seconds: float) -> collections.abc.Callable[[], collections.abc.Awaitable[int]]:
     async def _do() -> int:
         await asyncio.sleep(seconds)
         return result
