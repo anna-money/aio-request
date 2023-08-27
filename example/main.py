@@ -19,9 +19,7 @@ resource = Resource(attributes={"service.name": "example"})
 prometheus_metrics_reader = PrometheusMetricReader()
 set_meter_provider(MeterProvider(metric_readers=[prometheus_metrics_reader], resource=resource))
 
-span_processor = SynchronousMultiSpanProcessor()
-span_processor.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter("example")))
-set_tracer_provider(TracerProvider(active_span_processor=span_processor, resource=resource))
+set_tracer_provider(TracerProvider(active_span_processor=BatchSpanProcessor(ConsoleSpanExporter("example")), resource=resource))
 
 AioHttpClientInstrumentor().instrument()
 
