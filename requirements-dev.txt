@@ -15,4 +15,4 @@ opentelemetry-api>=1.19
 opentelemetry-semantic-conventions
 opentelemetry-exporter-prometheus
 opentelemetry-instrumentation-aiohttp-client
-werkzeug<=2.3.7
+werkzeug<=3.0.1
