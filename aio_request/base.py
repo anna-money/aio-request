@@ -37,7 +37,7 @@ _MultiDict = (
     collections.abc.Mapping[str | multidict.istr, str] | multidict.CIMultiDictProxy[str] | multidict.CIMultiDict[str]
 )
 
-json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json", re.RegexFlag.IGNORECASE)
+json_re = re.compile(r"^application/(?:[\w.+-]+?\+)?json(;\w+charset\w+=\w+utf-8\w+)?", re.RegexFlag.IGNORECASE)
 
 PathParameters = collections.abc.Mapping[str, Any]
 QueryParameters = collections.abc.Mapping[str, Any] | collections.abc.Iterable[tuple[str, Any]] | _MultiDict
