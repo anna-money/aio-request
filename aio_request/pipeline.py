@@ -84,7 +84,7 @@ class TransportModule(RequestModule):
 
     async def execute(
         self,
-        _: NextModuleFunc,
+        next: NextModuleFunc,
         *,
         endpoint: yarl.URL,
         request: Request,
