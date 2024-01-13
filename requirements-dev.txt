@@ -1,7 +1,7 @@
 flake8==6.1.0
 isort==5.13.2
 black==23.12.1
-pyright==1.1.325
+pyright==1.1.345
 pytest==7.4.4
 pytest-aiohttp==1.0.5
 pytest-httpbin==2.0.0
