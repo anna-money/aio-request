@@ -6,6 +6,10 @@ updates:
     interval: monthly
     time: "00:00"
   open-pull-requests-limit: 10
+  groups:
+    pip-packages:
+      patterns:
+        - "*"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
