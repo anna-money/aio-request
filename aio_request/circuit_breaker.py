@@ -158,6 +158,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
     async def execute(
         self,
+        *,
         scope: TScope,
         operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
@@ -237,6 +238,7 @@ class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
     async def execute(
         self,
+        *,
         scope: TScope,
         operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
