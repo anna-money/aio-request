@@ -1,11 +1,11 @@
 flake8==7.0.0
 isort==5.13.2
-black==23.12.1
-pyright==1.1.345
-pytest==7.4.4
+black==24.1.1
+pyright==1.1.349
+pytest==8.0.0
 pytest-aiohttp==1.0.5
 pytest-httpbin==2.0.0
-aiohttp==3.9.1
+aiohttp==3.9.3
 async-timeout==4.0.2;python_version<"3.11"
 yarl==1.9.4
 multidict==6.0.4
