@@ -24,20 +24,16 @@ class CircuitBreakerMetrics(abc.ABC):
     __slots__ = ()
 
     @abc.abstractmethod
-    def increment_successes(self) -> None:
-        ...
+    def increment_successes(self) -> None: ...
 
     @abc.abstractmethod
-    def increment_failures(self) -> None:
-        ...
+    def increment_failures(self) -> None: ...
 
     @abc.abstractmethod
-    def reset(self) -> None:
-        ...
+    def reset(self) -> None: ...
 
     @abc.abstractmethod
-    def collect(self) -> CircuitBreakerMetricsSnapshot:
-        ...
+    def collect(self) -> CircuitBreakerMetricsSnapshot: ...
 
 
 class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
@@ -102,13 +98,11 @@ class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
         operation: collections.abc.Callable[[], collections.abc.Awaitable[TResult]],
         fallback: TResult,
         is_successful: collections.abc.Callable[[TResult], bool],
-    ) -> TResult:
-        ...
+    ) -> TResult: ...
 
     @property
     @abc.abstractmethod
-    def state(self) -> collections.abc.Mapping[TScope, CircuitState]:
-        ...
+    def state(self) -> collections.abc.Mapping[TScope, CircuitState]: ...
 
 
 class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):

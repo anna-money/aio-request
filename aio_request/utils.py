@@ -9,8 +9,7 @@ class Closable(abc.ABC):
     __slots__ = ()
 
     @abc.abstractmethod
-    async def close(self) -> None:
-        ...
+    async def close(self) -> None: ...
 
 
 TClosable = TypeVar("TClosable", bound=Closable)

@@ -131,13 +131,11 @@ class Response(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def status(self) -> int:
-        ...
+    def status(self) -> int: ...
 
     @property
     @abc.abstractmethod
-    def headers(self) -> multidict.CIMultiDictProxy[str]:
-        ...
+    def headers(self) -> multidict.CIMultiDictProxy[str]: ...
 
     @abc.abstractmethod
     async def json(
@@ -146,16 +144,13 @@ class Response(abc.ABC):
         encoding: str | None = None,
         loads: collections.abc.Callable[[str], Any] = json.loads,
         content_type: str | None = "application/json",
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     @abc.abstractmethod
-    async def read(self) -> bytes:
-        ...
+    async def read(self) -> bytes: ...
 
     @abc.abstractmethod
-    async def text(self, encoding: str | None = None) -> str:
-        ...
+    async def text(self, encoding: str | None = None) -> str: ...
 
     def is_informational(self) -> bool:
         return 100 <= self.status < 200
@@ -188,8 +183,7 @@ class ClosableResponse(Response, Closable):
     __slots__ = ()
 
     @abc.abstractmethod
-    async def close(self) -> None:
-        ...
+    async def close(self) -> None: ...
 
 
 class EmptyResponse(ClosableResponse):

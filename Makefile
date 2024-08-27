@@ -13,7 +13,7 @@ pyright:
 	pyright
 
 flake8:
-	@flake8 --max-line-length 120 --ignore C901,C812,E203 --extend-ignore W503 aio_request tests example
+	@flake8 --max-line-length 120 --ignore C901,C812,E203,E704 --extend-ignore W503 aio_request tests example
 
 lint: black isort flake8 pyright
 

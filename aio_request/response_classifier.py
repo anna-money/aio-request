@@ -13,8 +13,7 @@ class ResponseClassifier(abc.ABC):
     __slots__ = ()
 
     @abc.abstractmethod
-    def classify(self, response: Response) -> ResponseVerdict:
-        ...
+    def classify(self, response: Response) -> ResponseVerdict: ...
 
 
 class DefaultResponseClassifier(ResponseClassifier):

@@ -44,8 +44,7 @@ class RequestStrategy(abc.ABC):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> contextlib.AbstractAsyncContextManager[ResponseWithVerdict[Response]]:
-        ...
+    ) -> contextlib.AbstractAsyncContextManager[ResponseWithVerdict[Response]]: ...
 
 
 class MethodBasedStrategy(RequestStrategy):

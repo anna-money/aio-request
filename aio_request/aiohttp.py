@@ -291,7 +291,7 @@ def aiohttp_middleware_factory(
             DeprecationWarning,
         )
 
-    meter = opentelemetry.metrics.get_meter(__package__)
+    meter = opentelemetry.metrics.get_meter(__package__)  # type: ignore
     status_counter = meter.create_counter("aio_request_server_status")
     latency_histogram = meter.create_histogram("aio_request_server_latency")
 
