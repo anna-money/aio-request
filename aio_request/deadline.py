@@ -20,10 +20,10 @@ class Deadline:
     deadline_at: datetime.datetime
 
     def __init__(self, deadline_at: datetime.datetime):
-        if deadline_at.tzinfo is not None:
-            raise RuntimeError("Deadline should not be zone aware")
-
-        self.deadline_at = deadline_at
+        if deadline_at.tzinfo is None:
+            self.deadline_at = deadline_at.replace(tzinfo=datetime.timezone.utc)
+        else:
+            self.deadline_at = deadline_at
 
     @property
     def timeout(self) -> float:
