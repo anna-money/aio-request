@@ -8,7 +8,7 @@ import yarl
 
 from .base import ClosableResponse, Request, Response
 from .deadline import Deadline
-from .delays_provider import linear_delays
+from .delays_provider import DelaysProvider, linear_backoff_delays
 from .priority import Priority
 from .response_classifier import ResponseVerdict
 from .utils import Closable, cancel_futures, close, close_futures, close_single
@@ -69,19 +69,19 @@ def single_attempt_strategy() -> RequestStrategy:
 
 
 def sequential_strategy(
-    *, attempts_count: int = 3, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
+    *, attempts_count: int = 3, delays_provider: DelaysProvider = linear_backoff_delays()
 ) -> RequestStrategy:
     return SequentialRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
 
 def parallel_strategy(
-    *, attempts_count: int = 3, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
+    *, attempts_count: int = 3, delays_provider: DelaysProvider = linear_backoff_delays()
 ) -> RequestStrategy:
     return ParallelRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
 
 def retry_until_deadline_expired(
-    strategy: RequestStrategy, *, delays_provider: collections.abc.Callable[[int], float] = linear_delays()
+    strategy: RequestStrategy, *, delays_provider: DelaysProvider = linear_backoff_delays()
 ) -> RequestStrategy:
     return RetryUntilDeadlineExpiredStrategy(strategy, delays_provider)
 
@@ -120,7 +120,7 @@ class SequentialRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: collections.abc.Callable[[int], float],
+        delays_provider: DelaysProvider,
     ):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
@@ -169,7 +169,7 @@ class ParallelRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: collections.abc.Callable[[int], float],
+        delays_provider: DelaysProvider,
     ):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
@@ -243,7 +243,7 @@ class ParallelRequestStrategy(RequestStrategy):
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     __slots__ = ("_base_strategy", "_delays_provider")
 
-    def __init__(self, base_strategy: RequestStrategy, delays_provider: collections.abc.Callable[[int], float]):
+    def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider):
         self._delays_provider = delays_provider
         self._base_strategy = base_strategy
 

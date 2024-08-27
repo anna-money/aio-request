@@ -15,7 +15,7 @@ async def test_timeout_because_of_expiration():
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
-        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_delays()),
+        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_backoff_delays()),
     )
     async with response_ctx as response:
         assert response.status == 408
@@ -31,7 +31,7 @@ async def test_succeed_response_received():
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
-        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_delays()),
+        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_backoff_delays()),
     )
     async with response_ctx as response:
         assert response.status == 200
@@ -47,7 +47,7 @@ async def test_succeed_response_not_received_too_many_failures():
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
-        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_delays()),
+        strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_backoff_delays()),
     )
     async with response_ctx as response:
         assert response.status == 499
@@ -64,7 +64,9 @@ async def test_cancellation():
         response_ctx = client.request(
             aio_request.get("hello"),
             deadline=deadline,
-            strategy=aio_request.sequential_strategy(attempts_count=3, delays_provider=aio_request.linear_delays()),
+            strategy=aio_request.sequential_strategy(
+                attempts_count=3, delays_provider=aio_request.linear_backoff_delays()
+            ),
         )
         async with response_ctx:
             raise RuntimeError("Should not be here")

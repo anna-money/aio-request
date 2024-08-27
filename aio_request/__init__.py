@@ -16,7 +16,7 @@ from .circuit_breaker import (
 from .client import Client, DefaultClient
 from .context import get_context, set_context
 from .deadline import Deadline
-from .delays_provider import constant_delays, linear_delays
+from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
@@ -66,6 +66,7 @@ __all__: tuple[str, ...] = (
     "Deadline",
     # delays_provider.py
     "constant_delays",
+    "linear_backoff_delays",
     "linear_delays",
     # deprecated.py
     "MetricsProvider",
