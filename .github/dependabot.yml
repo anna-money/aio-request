@@ -10,10 +10,6 @@ updates:
     pip-packages:
       patterns:
         - "*"
-  ignore:
-    - dependency-name: werkzeug
-      versions:
-        - ">=3.0.0"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
