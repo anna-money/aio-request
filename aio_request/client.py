@@ -28,8 +28,7 @@ class Client(abc.ABC):
         deadline: Deadline | None = None,
         priority: Priority | None = None,
         strategy: RequestStrategy | None = None,
-    ) -> contextlib.AbstractAsyncContextManager[Response]:
-        ...
+    ) -> contextlib.AbstractAsyncContextManager[Response]: ...
 
 
 class DefaultClient(Client):
@@ -152,7 +151,7 @@ class DefaultClient(Client):
         started_at: int,
     ) -> None:
         if self._meter is None:
-            self._meter = opentelemetry.metrics.get_meter(__package__)
+            self._meter = opentelemetry.metrics.get_meter(__package__)  # type: ignore
         if self._status_counter is None:
             self._status_counter = self._meter.create_counter("aio_request_status")
         if self._latency_histogram is None:
@@ -172,7 +171,7 @@ class DefaultClient(Client):
     @contextlib.contextmanager
     def _start_span(self, request: Request, started_at: int) -> collections.abc.Iterator[opentelemetry.trace.Span]:
         if self._tracer is None:
-            self._tracer = opentelemetry.trace.get_tracer(__package__)
+            self._tracer = opentelemetry.trace.get_tracer(__package__)  # type: ignore
 
         with self._tracer.start_as_current_span(
             name=f"{request.method} {request.url}",

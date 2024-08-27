@@ -28,8 +28,7 @@ class RequestModule(abc.ABC):
         request: Request,
         deadline: Deadline,
         priority: Priority,
-    ) -> ClosableResponse:
-        ...
+    ) -> ClosableResponse: ...
 
 
 class BypassModule(RequestModule):
