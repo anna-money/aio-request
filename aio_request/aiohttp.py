@@ -3,6 +3,7 @@ import collections.abc
 import contextlib
 import json
 import logging
+import socket
 import sys
 import time
 import warnings
@@ -10,6 +11,7 @@ from typing import Any
 
 import aiohttp
 import aiohttp.abc
+import aiohttp.typedefs
 import aiohttp.web
 import aiohttp.web_exceptions
 import aiohttp.web_middlewares
@@ -62,14 +64,18 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 
         self._interval = interval
         self._resolver = resolver
-        self._results: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
+        self._results: dict[tuple[str, int, socket.AddressFamily], list[aiohttp.abc.ResolveResult]] = {}
         self._task = asyncio.create_task(self._resolve())
         self._max_failures = max_failures
 
-    def resolve_no_wait(self, host: str, port: int, family: int) -> list[dict[str, Any]] | None:
+    def resolve_no_wait(
+        self, host: str, port: int = 0, family: socket.AddressFamily = socket.AF_INET
+    ) -> list[aiohttp.abc.ResolveResult] | None:
         return self._results.get((host, port, family))
 
-    async def resolve(self, host: str, port: int, family: int) -> list[dict[str, Any]]:
+    async def resolve(
+        self, host: str, port: int = 0, family: socket.AddressFamily = socket.AF_INET
+    ) -> list[aiohttp.abc.ResolveResult]:
         key = (host, port, family)
         addresses = self._results.get(key)
         if addresses is not None:
@@ -85,7 +91,7 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
         await self._resolver.close()
 
     async def _resolve(self) -> None:
-        failures_per_endpoint: dict[tuple[str, int, int], int] = {}
+        failures_per_endpoint: dict[tuple[str, int, socket.AddressFamily], int] = {}
         while True:
             await asyncio.sleep(self._interval)
 
@@ -167,7 +173,7 @@ class AioHttpTransport(Transport):
                 url,
                 headers=headers,
                 data=body,
-                timeout=timeout,
+                timeout=aiohttp.ClientTimeout(total=timeout),
                 allow_redirects=allow_redirects,
                 max_redirects=max_redirects,
             )
@@ -259,15 +265,6 @@ class _AioHttpResponse(ClosableResponse):
         return await self._response.text(encoding=encoding)
 
 
-_HANDLER = collections.abc.Callable[
-    [aiohttp.web_request.Request], collections.abc.Awaitable[aiohttp.web_response.StreamResponse]
-]
-_MIDDLEWARE = collections.abc.Callable[
-    [aiohttp.web_request.Request, _HANDLER],
-    collections.abc.Awaitable[aiohttp.web_response.StreamResponse],
-]
-
-
 def aiohttp_timeout(*, seconds: float) -> collections.abc.Callable[..., Any]:
     def wrapper(func: collections.abc.Callable[..., Any]) -> collections.abc.Callable[..., Any]:
         setattr(func, "__aio_request_timeout__", seconds)
@@ -284,7 +281,7 @@ def aiohttp_middleware_factory(
     metrics_provider: MetricsProvider | None = None,
     client_header_name: str | multidict.istr = Header.X_SERVICE_NAME,
     cancel_on_timeout: bool = False,
-) -> _MIDDLEWARE:
+) -> aiohttp.typedefs.Middleware:
     if metrics_provider is not None:
         warnings.warn(
             "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
@@ -311,7 +308,7 @@ def aiohttp_middleware_factory(
 
     @aiohttp.web_middlewares.middleware
     async def middleware(
-        request: aiohttp.web_request.Request, handler: _HANDLER
+        request: aiohttp.web_request.Request, handler: aiohttp.typedefs.Handler
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
