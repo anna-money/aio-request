@@ -17,7 +17,7 @@ async def test_deadline_expired():
 
 async def test_invalid_deadline_at():
     with pytest.raises(RuntimeError):
-        aio_request.Deadline(datetime.datetime.utcnow().replace(tzinfo=zoneinfo.ZoneInfo("UTC")))
+        aio_request.Deadline(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=zoneinfo.ZoneInfo("UTC")))
 
 
 async def test_parse_str():

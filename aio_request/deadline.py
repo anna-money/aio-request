@@ -4,7 +4,7 @@ import datetime
 class Deadline:
     @staticmethod
     def from_timeout(seconds: float) -> "Deadline":
-        return Deadline(datetime.datetime.utcnow() + datetime.timedelta(seconds=seconds))
+        return Deadline(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds))
 
     @staticmethod
     def try_parse(value: str | None) -> "Deadline | None":
@@ -27,11 +27,13 @@ class Deadline:
 
     @property
     def timeout(self) -> float:
-        return max((self.deadline_at - datetime.datetime.utcnow()).total_seconds(), 0.001)  # 0 is infinite
+        return max(
+            (self.deadline_at - datetime.datetime.now(datetime.timezone.utc)).total_seconds(), 0.001
+        )  # 0 is infinite
 
     @property
     def expired(self) -> bool:
-        return (self.deadline_at - datetime.datetime.utcnow()).total_seconds() <= 0
+        return (self.deadline_at - datetime.datetime.now(datetime.timezone.utc)).total_seconds() <= 0
 
     def __repr__(self) -> str:
         return f"<Deadline [{self.deadline_at.isoformat()}]>"
