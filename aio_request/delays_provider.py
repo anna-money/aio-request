@@ -8,7 +8,7 @@ def constant_delays(*, delay: float = 0) -> DELAY_PROVIDER:
     return lambda _: delay
 
 
-def linear_delays(
+def linear_backoff_delays(
     *, min_delay_seconds: float = 0, delay_multiplier: float = 0.05, jitter: float = 0.2
 ) -> DELAY_PROVIDER:
     def _linear(attempt: int) -> float:
@@ -19,3 +19,6 @@ def linear_delays(
         return delay + jitter_amount
 
     return _linear
+
+
+linear_delays = linear_backoff_delays

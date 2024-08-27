@@ -32,6 +32,7 @@ The following strategies are supported:
 Attempts count and delays are configurable.
 
 Example:
+
 ```python
 import aiohttp
 import aio_request
@@ -46,7 +47,7 @@ async with aiohttp.ClientSession() as client_session:
         deadline=aio_request.Deadline.from_timeout(5),
         strategy=aio_request.parallel_strategy(
             attempts_count=3,
-            delays_provider=aio_request.linear_delays(min_delay_seconds=0.1, delay_multiplier=0.1)
+            delays_provider=aio_request.linear_backoff_delays(min_delay_seconds=0.1, delay_multiplier=0.1)
         )
     )
     async with response_ctx as response:

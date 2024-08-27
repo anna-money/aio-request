@@ -6,7 +6,7 @@ import yarl
 from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
-from .delays_provider import linear_delays
+from .delays_provider import linear_backoff_delays
 from .deprecated import MetricsProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
@@ -19,7 +19,9 @@ def setup(
     *,
     transport: Transport,
     endpoint: str | yarl.URL,
-    safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
+    safe_method_strategy: RequestStrategy = sequential_strategy(
+        attempts_count=3, delays_provider=linear_backoff_delays()
+    ),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
     response_classifier: ResponseClassifier | None = None,
     timeout: float = 20.0,
@@ -51,7 +53,9 @@ def setup_v2(
     *,
     transport: Transport,
     endpoint: str | yarl.URL,
-    safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
+    safe_method_strategy: RequestStrategy = sequential_strategy(
+        attempts_count=3, delays_provider=linear_backoff_delays()
+    ),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
     response_classifier: ResponseClassifier | None = None,
     timeout: float = 20.0,
