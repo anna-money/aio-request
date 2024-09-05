@@ -5,7 +5,7 @@ from setuptools import setup
 
 install_requires = [
     "multidict>=4.5,<7.0",
-    "yarl>=1.0,<2.0",
+    "yarl>=1.0,<1.9.10",
 ]
 
 
