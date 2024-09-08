@@ -4,7 +4,6 @@ import contextlib
 import json
 import logging
 import socket
-import sys
 import time
 import warnings
 from typing import Any
@@ -21,13 +20,6 @@ import multidict
 import opentelemetry.metrics
 import yarl
 
-from .deprecated import MetricsProvider
-
-if sys.version_info < (3, 11, 0):
-    from async_timeout import timeout as timeout_ctx
-else:
-    from asyncio import timeout as timeout_ctx  # type: ignore
-
 from .base import (
     ClosableResponse,
     EmptyResponse,
@@ -40,6 +32,7 @@ from .base import (
 )
 from .context import set_context
 from .deadline import Deadline
+from .deprecated import MetricsProvider
 from .priority import Priority
 from .transport import Transport
 from .utils import try_parse_float
@@ -323,7 +316,7 @@ def aiohttp_middleware_factory(
                         response = await handler(request)
                     else:
                         try:
-                            async with timeout_ctx(deadline.timeout):
+                            async with asyncio.timeout(deadline.timeout):
                                 response = await handler(request)
                         except asyncio.TimeoutError:
                             response = aiohttp.web_response.Response(status=408)

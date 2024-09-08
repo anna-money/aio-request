@@ -1,16 +1,10 @@
 import enum
 
 
-class Priority(str, enum.Enum):
-    HIGH = "high"
-    NORMAL = "normal"
-    LOW = "low"
-
-    def __str__(self) -> str:
-        return self.value
-
-    def __repr__(self) -> str:
-        return f"<Priority [{self.value}]>"
+class Priority(enum.StrEnum):
+    HIGH = enum.auto()
+    NORMAL = enum.auto()
+    LOW = enum.auto()
 
     @staticmethod
     def try_parse(value: str | None) -> "Priority | None":

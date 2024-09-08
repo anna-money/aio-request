@@ -47,10 +47,10 @@ class BypassModule(RequestModule):
 
 
 class LowTimeoutModule(RequestModule):
-    __slots__ = ("_low_timeout_threshold",)
+    __slots__ = ("__low_timeout_threshold",)
 
     def __init__(self, low_timeout_threshold: float):
-        self._low_timeout_threshold = low_timeout_threshold
+        self.__low_timeout_threshold = low_timeout_threshold
 
     async def execute(
         self,
@@ -61,14 +61,18 @@ class LowTimeoutModule(RequestModule):
         deadline: Deadline,
         priority: Priority,
     ) -> ClosableResponse:
-        if deadline.expired or deadline.timeout < self._low_timeout_threshold:
+        if deadline.expired or deadline.timeout < self.__low_timeout_threshold:
             return EmptyResponse(status=408)
 
         return await next(endpoint, request, deadline, priority)
 
 
 class TransportModule(RequestModule):
-    __slots__ = ("_transport", "_emit_system_headers", "_request_enricher")
+    __slots__ = (
+        "__transport",
+        "__emit_system_headers",
+        "__request_enricher"
+    )
 
     def __init__(
         self,
@@ -77,9 +81,9 @@ class TransportModule(RequestModule):
         emit_system_headers: bool,
         request_enricher: collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]] | None,
     ):
-        self._transport = transport
-        self._emit_system_headers = emit_system_headers
-        self._request_enricher = request_enricher
+        self.__transport = transport
+        self.__emit_system_headers = emit_system_headers
+        self.__request_enricher = request_enricher
 
     async def execute(
         self,
@@ -90,7 +94,7 @@ class TransportModule(RequestModule):
         deadline: Deadline,
         priority: Priority,
     ) -> ClosableResponse:
-        if self._emit_system_headers:
+        if self.__emit_system_headers:
             request = request.update_headers(
                 {
                     Header.X_REQUEST_DEADLINE_AT: str(deadline),  # for backward compatibility
@@ -100,16 +104,20 @@ class TransportModule(RequestModule):
             )
 
         request = (
-            await self._request_enricher(request, self._emit_system_headers)
-            if self._request_enricher is not None
+            await self.__request_enricher(request, self.__emit_system_headers)
+            if self.__request_enricher is not None
             else request
         )
 
-        return await self._transport.send(endpoint, request, deadline.timeout)
+        return await self.__transport.send(endpoint, request, deadline.timeout)
 
 
 class CircuitBreakerModule(RequestModule):
-    __slots__ = ("_circuit_breaker", "_fallback", "_response_classifier")
+    __slots__ = (
+        "__circuit_breaker",
+        "__fallback",
+        "__response_classifier"
+    )
 
     def __init__(
         self,
@@ -118,13 +126,13 @@ class CircuitBreakerModule(RequestModule):
         status_code: int = 502,
         response_classifier: ResponseClassifier,
     ):
-        self._circuit_breaker = circuit_breaker
-        self._response_classifier = response_classifier
+        self.__circuit_breaker = circuit_breaker
+        self.__response_classifier = response_classifier
 
         headers = multidict.CIMultiDict[str]()
         headers[Header.X_DO_NOT_RETRY] = "1"
         headers[Header.X_CIRCUIT_BREAKER] = "1"
-        self._fallback = EmptyResponse(
+        self.__fallback = EmptyResponse(
             status=status_code,
             headers=multidict.CIMultiDictProxy[str](headers),
         )
@@ -138,12 +146,20 @@ class CircuitBreakerModule(RequestModule):
         deadline: Deadline,
         priority: Priority,
     ) -> ClosableResponse:
-        return await self._circuit_breaker.execute(
+        return await self.__circuit_breaker.execute(
             scope=endpoint,
             operation=lambda: next(endpoint, request, deadline, priority),
-            fallback=self._fallback,
-            is_successful=lambda x: _response_verdict_to_bool(self._response_classifier.classify(x)),
+            fallback=self.__fallback,
+            is_successful=lambda x: self.__response_verdict_to_bool(self.__response_classifier.classify(x)),
         )
+
+    @staticmethod
+    def __response_verdict_to_bool(response_verdict: ResponseVerdict) -> bool:
+        match response_verdict:
+            case ResponseVerdict.ACCEPT:
+                return True
+            case ResponseVerdict.REJECT:
+                return False
 
 
 def build_pipeline(modules: list[RequestModule]) -> NextModuleFunc:
@@ -164,11 +180,3 @@ def build_pipeline(modules: list[RequestModule]) -> NextModuleFunc:
             continue
         pipeline = _execute_module(module, pipeline)
     return pipeline
-
-
-def _response_verdict_to_bool(response_verdict: ResponseVerdict) -> bool:
-    match response_verdict:
-        case ResponseVerdict.ACCEPT:
-            return True
-        case ResponseVerdict.REJECT:
-            return False
