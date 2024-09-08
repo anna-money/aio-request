@@ -5,8 +5,8 @@ from .base import Header, Response
 
 
 class ResponseVerdict(enum.Enum):
-    ACCEPT = 1
-    REJECT = 2
+    ACCEPT = enum.auto()
+    REJECT = enum.auto()
 
 
 class ResponseClassifier(abc.ABC):

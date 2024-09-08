@@ -48,10 +48,10 @@ class RequestStrategy(abc.ABC):
 
 
 class MethodBasedStrategy(RequestStrategy):
-    __slots__ = ("_strategy_by_method",)
+    __slots__ = ("__strategy_by_method",)
 
     def __init__(self, strategy_by_method: dict[str, RequestStrategy]):
-        self._strategy_by_method = strategy_by_method
+        self.__strategy_by_method = strategy_by_method
 
     def request(
         self,
@@ -61,7 +61,7 @@ class MethodBasedStrategy(RequestStrategy):
         deadline: Deadline,
         priority: Priority,
     ) -> contextlib.AbstractAsyncContextManager[ResponseWithVerdict[Response]]:
-        return self._strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
+        return self.__strategy_by_method[request.method].request(send_request, endpoint, request, deadline, priority)
 
 
 def single_attempt_strategy() -> RequestStrategy:
@@ -112,8 +112,8 @@ class SingleAttemptRequestStrategy(RequestStrategy):
 
 class SequentialRequestStrategy(RequestStrategy):
     __slots__ = (
-        "_attempts_count",
-        "_delays_provider",
+        "__attempts_count",
+        "__delays_provider",
     )
 
     def __init__(
@@ -125,8 +125,8 @@ class SequentialRequestStrategy(RequestStrategy):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
-        self._delays_provider = delays_provider
-        self._attempts_count = attempts_count
+        self.__delays_provider = delays_provider
+        self.__attempts_count = attempts_count
 
     @contextlib.asynccontextmanager
     async def request(
@@ -139,14 +139,14 @@ class SequentialRequestStrategy(RequestStrategy):
     ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
         responses: list[ResponseWithVerdict[ClosableResponse]] = []
         try:
-            for attempt in range(self._attempts_count):
+            for attempt in range(self.__attempts_count):
                 response = await send_request(endpoint, request, deadline, priority)
                 responses.append(response)
                 if response.verdict == ResponseVerdict.ACCEPT:
                     break
-                if attempt + 1 == self._attempts_count:
+                if attempt + 1 == self.__attempts_count:
                     break
-                retry_delay = self._delays_provider(attempt + 1)
+                retry_delay = self.__delays_provider(attempt + 1)
                 if deadline.timeout < retry_delay:
                     break
                 await asyncio.sleep(retry_delay)
@@ -156,13 +156,13 @@ class SequentialRequestStrategy(RequestStrategy):
             await asyncio.shield(close(responses))
 
     def __repr__(self) -> str:
-        return f"<SequentialRequestStrategy [{self._attempts_count}]>"
+        return f"<SequentialRequestStrategy [{self.__attempts_count}]>"
 
 
 class ParallelRequestStrategy(RequestStrategy):
     __slots__ = (
-        "_attempts_count",
-        "_delays_provider",
+        "__attempts_count",
+        "__delays_provider",
     )
 
     def __init__(
@@ -174,8 +174,8 @@ class ParallelRequestStrategy(RequestStrategy):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
-        self._delays_provider = delays_provider
-        self._attempts_count = attempts_count
+        self.__delays_provider = delays_provider
+        self.__attempts_count = attempts_count
 
     @contextlib.asynccontextmanager
     async def request(
@@ -188,7 +188,7 @@ class ParallelRequestStrategy(RequestStrategy):
     ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
         completed_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
         pending_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
-        for attempt in range(0, self._attempts_count):
+        for attempt in range(0, self.__attempts_count):
             schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
@@ -233,19 +233,22 @@ class ParallelRequestStrategy(RequestStrategy):
         priority: Priority,
     ) -> ResponseWithVerdict[ClosableResponse]:
         if attempt > 0:
-            await asyncio.sleep(min(self._delays_provider(attempt), deadline.timeout))
+            await asyncio.sleep(min(self.__delays_provider(attempt), deadline.timeout))
         return await send_request(endpoint, request, deadline, priority)
 
     def __repr__(self) -> str:
-        return f"<ParallelRequestStrategy [{self._attempts_count}]>"
+        return f"<ParallelRequestStrategy [{self.__attempts_count}]>"
 
 
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
-    __slots__ = ("_base_strategy", "_delays_provider")
+    __slots__ = (
+        "__base_strategy",
+        "__delays_provider"
+    )
 
     def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider):
-        self._delays_provider = delays_provider
-        self._base_strategy = base_strategy
+        self.__delays_provider = delays_provider
+        self.__base_strategy = base_strategy
 
     @contextlib.asynccontextmanager
     async def request(
@@ -258,14 +261,14 @@ class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
         attempt = 0
         while True:
-            response_ctx = self._base_strategy.request(send_request, endpoint, request, deadline, priority)
+            response_ctx = self.__base_strategy.request(send_request, endpoint, request, deadline, priority)
             async with response_ctx as response:
                 if response.verdict == ResponseVerdict.ACCEPT or deadline.expired:
                     yield response
                     return
 
             attempt += 1
-            await asyncio.sleep(min(self._delays_provider(attempt), deadline.timeout))
+            await asyncio.sleep(min(self.__delays_provider(attempt), deadline.timeout))
 
     def __repr__(self) -> str:
         return "<RetryUntilDeadlineExpiredStrategy>"

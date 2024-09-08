@@ -7,10 +7,10 @@ import time
 from typing import Generic, TypeVar
 
 
-class CircuitState(str, enum.Enum):
-    OPEN = "OPEN"
-    HALF_OPEN = "HALF_OPEN"
-    CLOSED = "CLOSED"
+class CircuitState(enum.StrEnum):
+    OPEN = enum.auto()
+    HALF_OPEN = enum.auto()
+    CLOSED = enum.auto()
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)

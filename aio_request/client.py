@@ -33,18 +33,18 @@ class Client(abc.ABC):
 
 class DefaultClient(Client):
     __slots__ = (
-        "_endpoint",
-        "_response_classifier",
-        "_request_strategy",
-        "_priority",
-        "_timeout",
-        "_send_request",
+        "__endpoint",
+        "__response_classifier",
+        "__request_strategy",
+        "__priority",
+        "__timeout",
+        "__send_request",
         # otel metrics
-        "_meter",
-        "_status_counter",
-        "_latency_histogram",
+        "__meter",
+        "__status_counter",
+        "__latency_histogram",
         # otel tracing
-        "_tracer",
+        "__tracer",
     )
 
     def __init__(
@@ -59,16 +59,16 @@ class DefaultClient(Client):
             [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
         ],
     ):
-        self._endpoint = endpoint
-        self._response_classifier = response_classifier
-        self._request_strategy = request_strategy
-        self._priority = priority
-        self._timeout = timeout
-        self._send_request = send_request
+        self.__endpoint = endpoint
+        self.__response_classifier = response_classifier
+        self.__request_strategy = request_strategy
+        self.__priority = priority
+        self.__timeout = timeout
+        self.__send_request = send_request
         # otel metrics
-        self._meter, self._status_counter, self._latency_histogram = None, None, None
+        self.__meter, self.__status_counter, self.__latency_histogram = None, None, None
         # otel tracing
-        self._tracer = None
+        self.__tracer = None
 
     def request(
         self,
@@ -94,12 +94,12 @@ class DefaultClient(Client):
 
         with self._start_span(request, started_at) as span:
             try:
-                response_ctx = (strategy or self._request_strategy).request(
+                response_ctx = (strategy or self.__request_strategy).request(
                     self._send,
-                    self._endpoint,
+                    self.__endpoint,
                     request,
-                    deadline or context.deadline or Deadline.from_timeout(self._timeout),
-                    self._normalize_priority(priority or self._priority, context.priority),
+                    deadline or context.deadline or Deadline.from_timeout(self.__timeout),
+                    self._normalize_priority(priority or self.__priority, context.priority),
                 )
                 async with response_ctx as response_with_verdict:
                     response = response_with_verdict.response
@@ -139,8 +139,8 @@ class DefaultClient(Client):
         deadline: Deadline,
         priority: Priority,
     ) -> ResponseWithVerdict[ClosableResponse]:
-        response = await self._send_request(endpoint, request, deadline, priority)
-        return ResponseWithVerdict(response, self._response_classifier.classify(response))
+        response = await self.__send_request(endpoint, request, deadline, priority)
+        return ResponseWithVerdict(response, self.__response_classifier.classify(response))
 
     def _capture_metrics(
         self,
@@ -150,36 +150,36 @@ class DefaultClient(Client):
         circuit_breaker: bool,
         started_at: int,
     ) -> None:
-        if self._meter is None:
-            self._meter = opentelemetry.metrics.get_meter(__package__)  # type: ignore
-        if self._status_counter is None:
-            self._status_counter = self._meter.create_counter("aio_request_status")
-        if self._latency_histogram is None:
-            self._latency_histogram = self._meter.create_histogram("aio_request_latency")
+        if self.__meter is None:
+            self.__meter = opentelemetry.metrics.get_meter(__package__)  # type: ignore
+        if self.__status_counter is None:
+            self.__status_counter = self.__meter.create_counter("aio_request_status")
+        if self.__latency_histogram is None:
+            self.__latency_histogram = self.__meter.create_histogram("aio_request_latency")
 
         tags = {
-            "request_endpoint": self._endpoint.human_repr(),
+            "request_endpoint": self.__endpoint.human_repr(),
             "request_method": request.method,
             "request_path": request.url.path,
             "response_status": str(status),
             "circuit_breaker": int(circuit_breaker),
         }
         elapsed = max(0, time.time_ns() - started_at)
-        self._status_counter.add(1, tags)
-        self._latency_histogram.record(elapsed, tags)
+        self.__status_counter.add(1, tags)
+        self.__latency_histogram.record(elapsed, tags)
 
     @contextlib.contextmanager
     def _start_span(self, request: Request, started_at: int) -> collections.abc.Iterator[opentelemetry.trace.Span]:
-        if self._tracer is None:
-            self._tracer = opentelemetry.trace.get_tracer(__package__)  # type: ignore
+        if self.__tracer is None:
+            self.__tracer = opentelemetry.trace.get_tracer(__package__)  # type: ignore
 
-        with self._tracer.start_as_current_span(
+        with self.__tracer.start_as_current_span(
             name=f"{request.method} {request.url}",
             kind=opentelemetry.trace.SpanKind.CLIENT,
             attributes={
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_METHOD: request.method,
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_ROUTE: str(request.url),
-                opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(self._endpoint),
+                opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(self.__endpoint),
             },
             start_time=started_at,
         ) as span:
