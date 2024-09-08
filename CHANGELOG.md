@@ -1,8 +1,9 @@
-## v0.2.0a1 (2023-08-27)
+## unreleased
 
 * [Implement metrics/tracing on top of OpenTelemetry](https://github.com/anna-money/aio-request/pull/218)
 * [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
 * [Drop python 3.9 support](https://github.com/anna-money/aio-request/pull/222)
+* [Support only python 3.11 and 3.12](https://github.com/anna-money/aio-request/pull/266)
 
 
 ## v0.1.30 (2023-07-23)
