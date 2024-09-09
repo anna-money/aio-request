@@ -241,10 +241,7 @@ class ParallelRequestStrategy(RequestStrategy):
 
 
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
-    __slots__ = (
-        "__base_strategy",
-        "__delays_provider"
-    )
+    __slots__ = ("__base_strategy", "__delays_provider")
 
     def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider):
         self.__delays_provider = delays_provider

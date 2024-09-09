@@ -68,11 +68,7 @@ class LowTimeoutModule(RequestModule):
 
 
 class TransportModule(RequestModule):
-    __slots__ = (
-        "__transport",
-        "__emit_system_headers",
-        "__request_enricher"
-    )
+    __slots__ = ("__transport", "__emit_system_headers", "__request_enricher")
 
     def __init__(
         self,
@@ -113,11 +109,7 @@ class TransportModule(RequestModule):
 
 
 class CircuitBreakerModule(RequestModule):
-    __slots__ = (
-        "__circuit_breaker",
-        "__fallback",
-        "__response_classifier"
-    )
+    __slots__ = ("__circuit_breaker", "__fallback", "__response_classifier")
 
     def __init__(
         self,
