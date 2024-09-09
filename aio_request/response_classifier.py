@@ -18,9 +18,9 @@ class ResponseClassifier(abc.ABC):
 
 class DefaultResponseClassifier(ResponseClassifier):
     __slots__ = (
-        "_network_errors_code",
-        "_too_many_redirects_code",
-        "_verdict_for_status",
+        "__network_errors_code",
+        "__too_many_redirects_code",
+        "__verdict_for_status",
     )
 
     def __init__(
@@ -29,21 +29,21 @@ class DefaultResponseClassifier(ResponseClassifier):
         too_many_redirects_code: int = 488,
         verdict_for_status: dict[int, ResponseVerdict] | None = None,
     ):
-        self._network_errors_code = network_errors_code
-        self._too_many_redirects_code = too_many_redirects_code
-        self._verdict_for_status = verdict_for_status or {}
+        self.__network_errors_code = network_errors_code
+        self.__too_many_redirects_code = too_many_redirects_code
+        self.__verdict_for_status = verdict_for_status or {}
 
     def classify(self, response: Response) -> ResponseVerdict:
-        verdict = self._verdict_for_status.get(response.status)
+        verdict = self.__verdict_for_status.get(response.status)
         if verdict is not None:
             return verdict
         if Header.X_DO_NOT_RETRY in response.headers:
             return ResponseVerdict.ACCEPT
         if response.is_server_error():
             return ResponseVerdict.REJECT
-        if response.status == self._network_errors_code:
+        if response.status == self.__network_errors_code:
             return ResponseVerdict.REJECT
-        if response.status == self._too_many_redirects_code:
+        if response.status == self.__too_many_redirects_code:
             return ResponseVerdict.ACCEPT
         if response.status == 408:
             return ResponseVerdict.REJECT
