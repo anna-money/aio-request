@@ -1,9 +1,12 @@
 ## unreleased
 
 * [Implement metrics/tracing on top of OpenTelemetry](https://github.com/anna-money/aio-request/pull/218)
+* [Move OpenTelemetry support to a separate package](https://github.com/anna-money/aio-request/pull/268)
 * [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
 * [Drop python 3.9 support](https://github.com/anna-money/aio-request/pull/222)
 * [Support only python 3.11 and 3.12](https://github.com/anna-money/aio-request/pull/266)
+* [Removal of unused Client interface](https://github.com/anna-money/aio-request/commit/fe75660af8e7520a6fa5143f982c5aacd2ea079a)
+
 
 ## v0.1.31 (2024-09-05)
 
