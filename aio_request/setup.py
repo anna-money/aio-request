@@ -5,7 +5,7 @@ import yarl
 
 from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
-from .client import Client, DefaultClient
+from .client import Client
 from .delays_provider import linear_backoff_delays
 from .deprecated import MetricsProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
@@ -81,7 +81,7 @@ def setup_v2(
             Method.PATCH: unsafe_method_strategy,
         }
     )
-    return DefaultClient(
+    return Client(
         endpoint=yarl.URL(endpoint) if isinstance(endpoint, str) else endpoint,
         response_classifier=response_classifier or DefaultResponseClassifier(),
         request_strategy=request_strategy,

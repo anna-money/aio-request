@@ -1,4 +1,3 @@
-import abc
 import asyncio
 import collections.abc
 import contextlib
@@ -17,21 +16,7 @@ from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
 
 
-class Client(abc.ABC):
-    __slots__ = ()
-
-    @abc.abstractmethod
-    def request(
-        self,
-        request: Request,
-        *,
-        deadline: Deadline | None = None,
-        priority: Priority | None = None,
-        strategy: RequestStrategy | None = None,
-    ) -> contextlib.AbstractAsyncContextManager[Response]: ...
-
-
-class DefaultClient(Client):
+class Client:
     __slots__ = (
         "__endpoint",
         "__response_classifier",

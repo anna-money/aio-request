@@ -13,7 +13,7 @@ from .circuit_breaker import (
     NoopCircuitBreaker,
     RollingCircuitBreakerMetrics,
 )
-from .client import Client, DefaultClient
+from .client import Client
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
@@ -58,7 +58,6 @@ __all__: tuple[str, ...] = (
     "RollingCircuitBreakerMetrics",
     # client.py
     "Client",
-    "DefaultClient",
     # context.py
     "get_context",
     "set_context",
@@ -113,7 +112,6 @@ __all__: tuple[str, ...] = (
     # transport.py
     "Transport",
 )
-
 try:
     import aiohttp
 
