@@ -104,7 +104,7 @@ def setup_v2(
                 (
                     CircuitBreakerModule(
                         circuit_breaker,
-                        response_classifier=(response_classifier or DefaultResponseClassifier()),
+                        response_classifier=response_classifier or DefaultResponseClassifier(),
                     )
                     if circuit_breaker is not None
                     else BypassModule()
