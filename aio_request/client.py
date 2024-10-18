@@ -11,6 +11,7 @@ import yarl
 from .base import ClosableResponse, Header, Request, Response
 from .context import get_context
 from .deadline import Deadline
+from .endpoint_provider import EndpointProvider
 from .priority import Priority
 from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
@@ -18,7 +19,7 @@ from .response_classifier import ResponseClassifier
 
 class Client:
     __slots__ = (
-        "__endpoint",
+        "__endpoint_provider",
         "__response_classifier",
         "__request_strategy",
         "__priority",
@@ -35,7 +36,7 @@ class Client:
     def __init__(
         self,
         *,
-        endpoint: yarl.URL,
+        endpoint_provider: EndpointProvider,
         response_classifier: ResponseClassifier,
         request_strategy: RequestStrategy,
         timeout: float,
@@ -44,7 +45,7 @@ class Client:
             [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
         ],
     ):
-        self.__endpoint = endpoint
+        self.__endpoint_provider = endpoint_provider
         self.__response_classifier = response_classifier
         self.__request_strategy = request_strategy
         self.__priority = priority
@@ -76,12 +77,12 @@ class Client:
     ) -> collections.abc.AsyncIterator[Response]:
         context = get_context()
         started_at = time.time_ns()
-
-        with self._start_span(request, started_at) as span:
+        endpoint = await self.__endpoint_provider.get()
+        with self._start_span(endpoint, request, started_at) as span:
             try:
                 response_ctx = (strategy or self.__request_strategy).request(
                     self._send,
-                    self.__endpoint,
+                    endpoint,
                     request,
                     deadline or context.deadline or Deadline.from_timeout(self.__timeout),
                     self._normalize_priority(priority or self.__priority, context.priority),
@@ -90,6 +91,7 @@ class Client:
                     response = response_with_verdict.response
 
                     self._capture_metrics(
+                        endpoint=endpoint,
                         request=request,
                         status=response.status,
                         circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
@@ -104,6 +106,7 @@ class Client:
                     yield response
             except asyncio.CancelledError:
                 self._capture_metrics(
+                    endpoint=endpoint,
                     request=request,
                     status=499,
                     circuit_breaker=False,
@@ -130,6 +133,7 @@ class Client:
     def _capture_metrics(
         self,
         *,
+        endpoint: yarl.URL,
         request: Request,
         status: int,
         circuit_breaker: bool,
@@ -143,7 +147,7 @@ class Client:
             self.__latency_histogram = self.__meter.create_histogram("aio_request_latency")
 
         tags = {
-            "request_endpoint": self.__endpoint.human_repr(),
+            "request_endpoint": endpoint.human_repr(),
             "request_method": request.method,
             "request_path": request.url.path,
             "response_status": str(status),
@@ -154,7 +158,9 @@ class Client:
         self.__latency_histogram.record(elapsed, tags)
 
     @contextlib.contextmanager
-    def _start_span(self, request: Request, started_at: int) -> collections.abc.Iterator[opentelemetry.trace.Span]:
+    def _start_span(
+        self, endpoint: yarl.URL, request: Request, started_at: int
+    ) -> collections.abc.Iterator[opentelemetry.trace.Span]:
         if self.__tracer is None:
             self.__tracer = opentelemetry.trace.get_tracer(__package__)  # type: ignore
 
@@ -164,7 +170,7 @@ class Client:
             attributes={
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_METHOD: request.method,
                 opentelemetry.semconv.trace.SpanAttributes.HTTP_ROUTE: str(request.url),
-                opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(self.__endpoint),
+                opentelemetry.semconv.trace.SpanAttributes.HTTP_URL: str(endpoint),
             },
             start_time=started_at,
         ) as span:

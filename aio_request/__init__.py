@@ -18,6 +18,7 @@ from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
+from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import delete, get, patch, patch_json, post, post_json, put, put_json
@@ -71,6 +72,10 @@ __all__: tuple[str, ...] = (
     "MetricsProvider",
     "NOOP_METRICS_PROVIDER",
     "NoopMetricsProvider",
+    # endpoint_provider.py
+    "EndpointProvider",
+    "DelegateEndpointProvider",
+    "StaticEndpointProvider",
     # pipeline.py
     "BypassModule",
     "LowTimeoutModule",
