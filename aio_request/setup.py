@@ -1,12 +1,12 @@
-from typing import Awaitable, Callable, Optional, Union
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import yarl
 
-from . import EndpointProvider, StaticEndpointProvider
 from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
+from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .metrics import MetricsProvider
 from .pipeline import (
     BypassModule,
@@ -21,7 +21,7 @@ from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_s
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
 
-MISSING = object()
+MISSING: Any = object()
 
 
 def setup(
