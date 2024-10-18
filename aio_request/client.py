@@ -7,6 +7,7 @@ import yarl
 from .base import ClosableResponse, Request, Response
 from .context import get_context
 from .deadline import Deadline
+from .endpoint_provider import EndpointProvider
 from .priority import Priority
 from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
@@ -29,7 +30,7 @@ class Client(abc.ABC):
 
 class DefaultClient(Client):
     __slots__ = (
-        "_endpoint",
+        "_endpoint_provider",
         "_response_classifier",
         "_request_strategy",
         "_priority",
@@ -40,14 +41,14 @@ class DefaultClient(Client):
     def __init__(
         self,
         *,
-        endpoint: yarl.URL,
+        endpoint_provider: EndpointProvider,
         response_classifier: ResponseClassifier,
         request_strategy: RequestStrategy,
         timeout: float,
         priority: Priority,
         send_request: Callable[[yarl.URL, Request, Deadline, Priority], Awaitable[ClosableResponse]],
     ):
-        self._endpoint = endpoint
+        self._endpoint_provider = endpoint_provider
         self._response_classifier = response_classifier
         self._request_strategy = request_strategy
         self._priority = priority
@@ -76,7 +77,7 @@ class DefaultClient(Client):
         context = get_context()
         response_ctx = (strategy or self._request_strategy).request(
             self._send,
-            self._endpoint,
+            await self._endpoint_provider.get(),
             request,
             deadline or context.deadline or Deadline.from_timeout(self._timeout),
             self.normalize_priority(priority or self._priority, context.priority),

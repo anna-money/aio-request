@@ -18,6 +18,7 @@ from .client import Client, DefaultClient
 from .context import get_context, set_context
 from .deadline import Deadline
 from .delays_provider import constant_delays, linear_delays
+from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
 from .metrics import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .pipeline import (
     BypassModule,
@@ -76,6 +77,10 @@ __all__: Tuple[str, ...] = (
     # delays_provider.py
     "constant_delays",
     "linear_delays",
+    # endpoint_provider.py
+    "EndpointProvider",
+    "DelegateEndpointProvider",
+    "StaticEndpointProvider",
     # metrics.py
     "NOOP_METRICS_PROVIDER",
     "MetricsProvider",
