@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable, Optional, Union
+from typing import Awaitable, Callable, Optional, Union
 
 import yarl
 
@@ -21,7 +21,7 @@ from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_s
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
 
-MISSING = Any()
+MISSING = object()
 
 
 def setup(

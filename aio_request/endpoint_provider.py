@@ -1,5 +1,6 @@
 import abc
-from typing import Callable, Union
+import asyncio
+from typing import Awaitable, Callable, Union
 
 import yarl
 
@@ -25,12 +26,14 @@ class StaticEndpointProvider(EndpointProvider):
 class DelegateEndpointProvider(EndpointProvider):
     __slots__ = ("__provider",)
 
-    def __init__(self, provider: Callable[[], Union[str, yarl.URL]]):
+    def __init__(
+        self, provider: Union[Callable[[], Union[str, yarl.URL]], Callable[[], Awaitable[Union[str, yarl.URL]]]]
+    ):
         self.__provider = provider
 
     async def get(self) -> yarl.URL:
-        endpoint = self.__provider()
-        return ensure_url(endpoint)
+        result = self.__provider()
+        return ensure_url(await result if asyncio.iscoroutine(result) else result)  # type: ignore
 
 
 def ensure_url(endpoint: Union[str, yarl.URL]) -> yarl.URL:
