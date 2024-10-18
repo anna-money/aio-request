@@ -1,3 +1,8 @@
+## v0.1.32 (2024-10-18)
+
+* [Endpoint provider](https://github.com/anna-money/aio-request/pull/270)
+
+
 ## v0.1.31 (2024-09-05)
 
 * [Only yarl < 1.9.10 is supported](https://github.com/anna-money/aio-request/commit/ed8141e6a7a6b30d46190da4514f5ddb8e8db2ca)

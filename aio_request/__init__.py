@@ -147,7 +147,7 @@ except ImportError:
     pass
 
 
-__version__ = "0.1.31"
+__version__ = "0.1.32"
 
 version = f"{__version__}, Python {sys.version}"
 
