@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable, Optional, Union
+from typing import Any, Awaitable, Callable, Optional, Union
 
 import yarl
 
@@ -6,6 +6,7 @@ from .base import ClosableResponse, Method, Request
 from .circuit_breaker import CircuitBreaker
 from .client import Client, DefaultClient
 from .delays_provider import linear_delays
+from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .metrics import MetricsProvider
 from .pipeline import (
     BypassModule,
@@ -20,11 +21,14 @@ from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_s
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
 
+MISSING: Any = object()
+
 
 def setup(
     *,
     transport: Transport,
-    endpoint: Union[str, yarl.URL],
+    endpoint: Union[str, yarl.URL] = MISSING,
+    endpoint_provider: EndpointProvider = MISSING,
     safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
     response_classifier: Optional[ResponseClassifier] = None,
@@ -41,6 +45,7 @@ def setup(
     return setup_v2(
         transport=transport,
         endpoint=endpoint,
+        endpoint_provider=endpoint_provider,
         safe_method_strategy=safe_method_strategy,
         unsafe_method_strategy=unsafe_method_strategy,
         response_classifier=response_classifier,
@@ -57,7 +62,8 @@ def setup(
 def setup_v2(
     *,
     transport: Transport,
-    endpoint: Union[str, yarl.URL],
+    endpoint: Union[str, yarl.URL] = MISSING,
+    endpoint_provider: EndpointProvider = MISSING,
     safe_method_strategy: RequestStrategy = sequential_strategy(attempts_count=3, delays_provider=linear_delays()),
     unsafe_method_strategy: RequestStrategy = single_attempt_strategy(),
     response_classifier: Optional[ResponseClassifier] = None,
@@ -69,6 +75,11 @@ def setup_v2(
     metrics_provider: Optional[MetricsProvider] = None,
     circuit_breaker: Optional[CircuitBreaker[yarl.URL, ClosableResponse]] = None,
 ) -> Client:
+    if endpoint is MISSING and endpoint_provider is MISSING:
+        raise ValueError("Either endpoint or endpoint_provider must be provided")
+    if endpoint is not MISSING and endpoint_provider is not MISSING:
+        raise ValueError("Only one of endpoint or endpoint_provider must be provided")
+
     request_strategy = MethodBasedStrategy(
         {
             Method.GET: safe_method_strategy,
@@ -78,8 +89,9 @@ def setup_v2(
             Method.PATCH: unsafe_method_strategy,
         }
     )
+
     return DefaultClient(
-        endpoint=yarl.URL(endpoint) if isinstance(endpoint, str) else endpoint,
+        endpoint_provider=(StaticEndpointProvider(endpoint) if endpoint is not MISSING else endpoint_provider),
         response_classifier=response_classifier or DefaultResponseClassifier(),
         request_strategy=request_strategy,
         timeout=timeout,
