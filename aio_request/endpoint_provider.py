@@ -14,25 +14,25 @@ class EndpointProvider(abc.ABC):
 
 
 class StaticEndpointProvider(EndpointProvider):
-    __slots__ = ("__endpoint",)
+    __slots__ = ("_endpoint",)
 
     def __init__(self, endpoint: Union[str, yarl.URL]):
-        self.__endpoint = ensure_url(endpoint)
+        self._endpoint = ensure_url(endpoint)
 
     async def get(self) -> yarl.URL:
-        return self.__endpoint
+        return self._endpoint
 
 
 class DelegateEndpointProvider(EndpointProvider):
-    __slots__ = ("__provider",)
+    __slots__ = ("_provider",)
 
     def __init__(
         self, provider: Union[Callable[[], Union[str, yarl.URL]], Callable[[], Awaitable[Union[str, yarl.URL]]]]
     ):
-        self.__provider = provider
+        self._provider = provider
 
     async def get(self) -> yarl.URL:
-        result = self.__provider()
+        result = self._provider()
         return ensure_url(await result if asyncio.iscoroutine(result) else result)  # type: ignore
 
 
