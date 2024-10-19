@@ -16,15 +16,18 @@ from .response_classifier import ResponseClassifier
 try:
     import prometheus_client as prom
 
-    label_names = (
-        "request_endpoint",
-        "request_method",
-        "request_path",
-        "response_status",
-        "circuit_breaker",
+    latency_histogram = prom.Histogram(
+        "aio_request_latency",
+        "Duration of HTTP client requests.",
+        labelnames=(
+            "request_endpoint",
+            "request_method",
+            "request_path",
+            "response_status",
+            "circuit_breaker",
+        ),
+        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0),
     )
-    status_counter = prom.Counter("aio_request_status", "", labelnames=label_names)
-    latency_histogram = prom.Histogram("aio_request_latency", "", labelnames=label_names)
 
     def capture_metrics(
         *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
@@ -37,7 +40,6 @@ try:
             str(circuit_breaker),
         )
         elapsed = max(0.0, time.perf_counter() - started_at)
-        status_counter.labels(*label_values).inc()
         latency_histogram.labels(*label_values).observe(elapsed)
 
 except ImportError:

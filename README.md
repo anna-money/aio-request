@@ -66,7 +66,7 @@ app = aiohttp.web.Application(middlewares=[aio_request.aiohttp_middleware_factor
 
 # Expose client/server metrics
 
-To enable client metrics, just install prometheus_client
+To enable client metrics, just install prometheus-client
 ```python
 import aiohttp
 import aio_request
@@ -82,7 +82,7 @@ async with aiohttp.ClientSession() as client_session:
 
 It is an example of how it should be done for aiohttp and prometheus.
 
-To enable client metrics just install prometheus_client and use the following code:
+To enable client metrics just install prometheus-client and use the following code:
 ```python
 import aiohttp.web
 import aio_request

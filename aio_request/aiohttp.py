@@ -39,14 +39,17 @@ from .utils import try_parse_float
 try:
     import prometheus_client as prom
 
-    label_names = (
-        "request_client",
-        "request_method",
-        "request_path",
-        "response_status",
+    latency_histogram = prom.Histogram(
+        "aio_request_server_latency",
+        "Duration of HTTP server requests.",
+        labelnames=(
+            "request_client",
+            "request_method",
+            "request_path",
+            "response_status",
+        ),
+        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0),
     )
-    status_counter = prom.Counter("aio_request_server_status", "", labelnames=label_names)
-    latency_histogram = prom.Histogram("aio_request_server_latency", "", labelnames=label_names)
 
     def capture_metrics(*, method: str, path: str, client: str, status: int, started_at: float) -> None:
         label_values = (
@@ -56,7 +59,6 @@ try:
             str(status),
         )
         elapsed = max(0.0, time.perf_counter() - started_at)
-        status_counter.labels(*label_values).inc()
         latency_histogram.labels(*label_values).observe(elapsed)
 
 except ImportError:
