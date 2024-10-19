@@ -85,7 +85,7 @@ class Client:
         deadline: Deadline | None = None,
         priority: Priority | None = None,
         strategy: RequestStrategy | None = None,
-    ) -> collections.abc.Iterator[Response]:
+    ) -> collections.abc.AsyncIterator[Response]:
         started_at = time.perf_counter()
         endpoint = await self.__endpoint_provider.get()
         try:
