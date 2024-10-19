@@ -1,6 +1,6 @@
 import abc
 import asyncio
-from typing import Awaitable, Callable
+import collections.abc
 
 import yarl
 
@@ -22,14 +22,18 @@ class StaticEndpointProvider(EndpointProvider):
         return self.__endpoint
 
 
-class DelegateEndpointProvider(EndpointProvider):
-    __slots__ = ("__provider",)
+EndpointDelegate = collections.abc.Callable[[], str | yarl.URL]
+AsyncEndpointDelete = collections.abc.Callable[[], collections.abc.Awaitable[str | yarl.URL]]
 
-    def __init__(self, provider: Callable[[], str | yarl.URL] | Callable[[], Awaitable[str | yarl.URL]]):
-        self.__provider = provider
+
+class DelegateEndpointProvider(EndpointProvider):
+    __slots__ = ("__endpoint_delegate",)
+
+    def __init__(self, endpoint_delegate: EndpointDelegate | AsyncEndpointDelete):
+        self.__endpoint_delegate = endpoint_delegate
 
     async def get(self) -> yarl.URL:
-        result = self.__provider()
+        result = self.__endpoint_delegate()
         return ensure_url(await result if asyncio.iscoroutine(result) else result)  # type: ignore
 
 

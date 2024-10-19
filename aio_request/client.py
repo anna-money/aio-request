@@ -1,15 +1,51 @@
+import asyncio
 import collections.abc
 import contextlib
+import time
 
 import yarl
 
-from .base import ClosableResponse, Request, Response
+from .base import ClosableResponse, Request, Response, Header
 from .context import get_context
 from .deadline import Deadline
 from .endpoint_provider import EndpointProvider
 from .priority import Priority
 from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
+
+try:
+    import prometheus_client as prom
+
+    label_names = (
+        "request_endpoint",
+        "request_method",
+        "request_path",
+        "response_status",
+        "circuit_breaker",
+    )
+    status_counter = prom.Counter("aio_request_status", "", labelnames=label_names)
+    latency_histogram = prom.Histogram("aio_request_latency", "", labelnames=label_names)
+
+    def capture_metrics(
+        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+    ) -> None:
+        label_values = (
+            endpoint.human_repr(),
+            request.method,
+            request.url.path,
+            str(status),
+            str(circuit_breaker),
+        )
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        status_counter.labels(*label_values).inc()
+        latency_histogram.labels(*label_values).observe(elapsed)
+
+except ImportError:
+
+    def capture_metrics(
+        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+    ) -> None:
+        pass
 
 
 class Client:
@@ -49,11 +85,46 @@ class Client:
         deadline: Deadline | None = None,
         priority: Priority | None = None,
         strategy: RequestStrategy | None = None,
+    ) -> collections.abc.Iterator[Response]:
+        started_at = time.perf_counter()
+        endpoint = await self.__endpoint_provider.get()
+        try:
+            response_ctx = self._request(
+                endpoint=endpoint, request=request, deadline=deadline, priority=priority, strategy=strategy
+            )
+            async with response_ctx as response:
+                capture_metrics(
+                    endpoint=endpoint,
+                    request=request,
+                    status=response.status,
+                    circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
+                    started_at=started_at,
+                )
+                yield response
+        except asyncio.CancelledError:
+            capture_metrics(
+                endpoint=endpoint,
+                request=request,
+                status=499,
+                circuit_breaker=False,
+                started_at=started_at,
+            )
+            raise
+
+    @contextlib.asynccontextmanager
+    async def _request(
+        self,
+        *,
+        endpoint: yarl.URL,
+        request: Request,
+        deadline: Deadline | None = None,
+        priority: Priority | None = None,
+        strategy: RequestStrategy | None = None,
     ) -> collections.abc.AsyncIterator[Response]:
         context = get_context()
         response_ctx = (strategy or self.__request_strategy).request(
             self.__send,
-            await self.__endpoint_provider.get(),
+            endpoint,
             request,
             deadline or context.deadline or Deadline.from_timeout(self.__timeout),
             self.__normalize_priority(priority or self.__priority, context.priority),

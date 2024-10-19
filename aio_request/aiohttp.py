@@ -17,7 +17,6 @@ import aiohttp.web_middlewares
 import aiohttp.web_request
 import aiohttp.web_response
 import multidict
-import opentelemetry.metrics
 import yarl
 
 from .base import (
@@ -37,11 +36,41 @@ from .priority import Priority
 from .transport import Transport
 from .utils import try_parse_float
 
+
+try:
+    import prometheus_client as prom
+
+    label_names = (
+        "request_client",
+        "request_method",
+        "request_path",
+        "response_status",
+    )
+    status_counter = prom.Counter("aio_request_server_status", "", labelnames=label_names)
+    latency_histogram = prom.Histogram("aio_request_server_latency", "", labelnames=label_names)
+
+    def capture_metrics(*, method: str, path: str, client: str, status: int, started_at: float) -> None:
+        label_values = (
+            client,
+            method,
+            path,
+            str(status),
+        )
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        status_counter.labels(*label_values).inc()
+        latency_histogram.labels(*label_values).observe(elapsed)
+
+except ImportError:
+
+    def capture_metrics(*, method: str, path: str, client: str, status: int, started_at: float) -> None:
+        pass
+
+
 logger = logging.getLogger(__package__)
 
 
 class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
-    __slots__ = ("_resolver", "_results", "_interval", "_task", "_max_failures")
+    __slots__ = ("__resolver", "__results", "__interval", "__task", "__max_failures")
 
     def __init__(
         self,
@@ -55,48 +84,48 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
         if max_failures <= 0:
             raise RuntimeError("Max failures should be positive")
 
-        self._interval = interval
-        self._resolver = resolver
-        self._results: dict[tuple[str, int, socket.AddressFamily], list[aiohttp.abc.ResolveResult]] = {}
-        self._task = asyncio.create_task(self._resolve())
-        self._max_failures = max_failures
+        self.__interval = interval
+        self.__resolver = resolver
+        self.__results: dict[tuple[str, int, socket.AddressFamily], list[aiohttp.abc.ResolveResult]] = {}
+        self.__task = asyncio.create_task(self._resolve())
+        self.__max_failures = max_failures
 
     def resolve_no_wait(
         self, host: str, port: int = 0, family: socket.AddressFamily = socket.AF_INET
     ) -> list[aiohttp.abc.ResolveResult] | None:
-        return self._results.get((host, port, family))
+        return self.__results.get((host, port, family))
 
     async def resolve(
         self, host: str, port: int = 0, family: socket.AddressFamily = socket.AF_INET
     ) -> list[aiohttp.abc.ResolveResult]:
         key = (host, port, family)
-        addresses = self._results.get(key)
+        addresses = self.__results.get(key)
         if addresses is not None:
             return addresses
-        addresses = await self._resolver.resolve(host, port, family)
-        self._results[key] = addresses
+        addresses = await self.__resolver.resolve(host, port, family)
+        self.__results[key] = addresses
         return addresses
 
     async def close(self) -> None:
-        self._task.cancel()
+        self.__task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await self._task
-        await self._resolver.close()
+            await self.__task
+        await self.__resolver.close()
 
     async def _resolve(self) -> None:
         failures_per_endpoint: dict[tuple[str, int, socket.AddressFamily], int] = {}
         while True:
-            await asyncio.sleep(self._interval)
+            await asyncio.sleep(self.__interval)
 
             keys_to_pop = []
 
-            for key in list(self._results.keys()):
+            for key in list(self.__results.keys()):
                 try:
                     (h, p, f) = key
-                    self._results[key] = await self._resolver.resolve(h, p, f)
+                    self.__results[key] = await self.__resolver.resolve(h, p, f)
                 except Exception:
                     failures = failures_per_endpoint.pop(key, 0)
-                    if failures + 1 >= self._max_failures:
+                    if failures + 1 >= self.__max_failures:
                         keys_to_pop.append(key)
                     else:
                         failures_per_endpoint[key] = failures + 1
@@ -104,16 +133,16 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
                     failures_per_endpoint.pop(key, 0)
 
             for key_to_pop in keys_to_pop:
-                self._results.pop(key_to_pop, None)
+                self.__results.pop(key_to_pop, None)
 
 
 class AioHttpTransport(Transport):
     __slots__ = (
-        "_client_session",
+        "__client_session",
         "_metrics_provider",
-        "_network_errors_code",
-        "_too_many_redirects_code",
-        "_buffer_payload",
+        "__network_errors_code",
+        "__too_many_redirects_code",
+        "__buffer_payload",
     )
 
     def __init__(
@@ -131,10 +160,10 @@ class AioHttpTransport(Transport):
                 DeprecationWarning,
             )
 
-        self._client_session = client_session
-        self._network_errors_code = network_errors_code
-        self._buffer_payload = buffer_payload
-        self._too_many_redirects_code = too_many_redirects_code
+        self.__client_session = client_session
+        self.__network_errors_code = network_errors_code
+        self.__buffer_payload = buffer_payload
+        self.__too_many_redirects_code = too_many_redirects_code
 
     async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if not endpoint.is_absolute():
@@ -161,7 +190,7 @@ class AioHttpTransport(Transport):
                     "request_timeout": timeout,
                 },
             )
-            response = await self._client_session.request(
+            response = await self.__client_session.request(
                 method,
                 url,
                 headers=headers,
@@ -170,7 +199,7 @@ class AioHttpTransport(Transport):
                 allow_redirects=allow_redirects,
                 max_redirects=max_redirects,
             )
-            if self._buffer_payload:
+            if self.__buffer_payload:
                 await response.read()  # force response to buffer its body
             return _AioHttpResponse(response)
         except aiohttp.TooManyRedirects as e:
@@ -190,7 +219,7 @@ class AioHttpTransport(Transport):
                 for location_header in redirect_response.headers.getall(Header.LOCATION):
                     headers.add(Header.LOCATION, location_header)
             return EmptyResponse(
-                status=self._too_many_redirects_code,
+                status=self.__too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
             )
         except aiohttp.ClientError:
@@ -204,7 +233,7 @@ class AioHttpTransport(Transport):
                     "request_url": url,
                 },
             )
-            return EmptyResponse(status=self._network_errors_code)
+            return EmptyResponse(status=self.__network_errors_code)
         except asyncio.TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
@@ -221,21 +250,21 @@ class AioHttpTransport(Transport):
 
 
 class _AioHttpResponse(ClosableResponse):
-    __slots__ = ("_response",)
+    __slots__ = ("__response",)
 
     def __init__(self, response: aiohttp.ClientResponse):
-        self._response = response
+        self.__response = response
 
     async def close(self) -> None:
-        await self._response.release()
+        await self.__response.release()
 
     @property
     def status(self) -> int:
-        return self._response.status
+        return self.__response.status
 
     @property
     def headers(self) -> multidict.CIMultiDictProxy[str]:
-        return self._response.headers
+        return self.__response.headers
 
     async def json(
         self,
@@ -245,17 +274,17 @@ class _AioHttpResponse(ClosableResponse):
         content_type: str | None = "application/json",
     ) -> Any:
         if content_type is not None:
-            response_content_type = self._response.headers.get(Header.CONTENT_TYPE, "").lower()
+            response_content_type = self.__response.headers.get(Header.CONTENT_TYPE, "").lower()
             if not is_expected_content_type(response_content_type, content_type):
                 raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
 
-        return await self._response.json(encoding=encoding, loads=loads, content_type=None)
+        return await self.__response.json(encoding=encoding, loads=loads, content_type=None)
 
     async def read(self) -> bytes:
-        return await self._response.read()
+        return await self.__response.read()
 
     async def text(self, encoding: str | None = None) -> str:
-        return await self._response.text(encoding=encoding)
+        return await self.__response.text(encoding=encoding)
 
 
 def aiohttp_timeout(*, seconds: float) -> collections.abc.Callable[..., Any]:
@@ -281,31 +310,12 @@ def aiohttp_middleware_factory(
             DeprecationWarning,
         )
 
-    meter = opentelemetry.metrics.get_meter(__package__)  # type: ignore
-    status_counter = meter.create_counter("aio_request_server_status")
-    latency_histogram = meter.create_histogram("aio_request_server_latency")
-
-    def capture_metrics(request: aiohttp.web_request.Request, status: int, started_at: float) -> None:
-        method = request.method
-        path = request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
-        client = request.headers.get(client_header_name, "unknown").lower()
-        tags = {
-            "request_client": client,
-            "request_method": method,
-            "request_path": path,
-            "response_status": str(status),
-        }
-        elapsed = max(0.0, time.perf_counter() - started_at)
-        status_counter.add(1, tags)
-        latency_histogram.record(elapsed, tags)
-
     @aiohttp.web_middlewares.middleware
     async def middleware(
         request: aiohttp.web_request.Request, handler: aiohttp.typedefs.Handler
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
         started_at = time.perf_counter()
-
         try:
             response: aiohttp.web_response.StreamResponse | None
             if deadline.expired or deadline.timeout <= low_timeout_threshold:
@@ -321,20 +331,48 @@ def aiohttp_middleware_factory(
                         except asyncio.TimeoutError:
                             response = aiohttp.web_response.Response(status=408)
 
-            capture_metrics(request, response.status, started_at)
+            capture_metrics(
+                method=request.method,
+                path=_get_route_path(request),
+                client=request.headers.get(client_header_name, "unknown").lower(),
+                status=response.status,
+                started_at=started_at,
+            )
 
             return response
         except asyncio.CancelledError:
-            capture_metrics(request, 499, started_at)
+            capture_metrics(
+                method=request.method,
+                path=_get_route_path(request),
+                client=request.headers.get(client_header_name, "unknown").lower(),
+                status=499,
+                started_at=started_at,
+            )
             raise
         except aiohttp.web_exceptions.HTTPException as e:
-            capture_metrics(request, e.status, started_at)
+            capture_metrics(
+                method=request.method,
+                path=_get_route_path(request),
+                client=request.headers.get(client_header_name, "unknown").lower(),
+                status=e.status,
+                started_at=started_at,
+            )
             raise
         except Exception:
-            capture_metrics(request, 500, started_at)
+            capture_metrics(
+                method=request.method,
+                path=_get_route_path(request),
+                client=request.headers.get(client_header_name, "unknown").lower(),
+                status=500,
+                started_at=started_at,
+            )
             raise
 
     return middleware
+
+
+def _get_route_path(request: aiohttp.web_request.Request) -> str:
+    return request.match_info.route.resource.canonical if request.match_info.route.resource else request.path
 
 
 def _get_deadline(request: aiohttp.web_request.Request) -> Deadline | None:
