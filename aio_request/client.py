@@ -5,7 +5,7 @@ import time
 
 import yarl
 
-from .base import ClosableResponse, Request, Response, Header
+from .base import ClosableResponse, Header, Request, Response
 from .context import get_context
 from .deadline import Deadline
 from .endpoint_provider import EndpointProvider

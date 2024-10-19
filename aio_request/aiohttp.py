@@ -36,7 +36,6 @@ from .priority import Priority
 from .transport import Transport
 from .utils import try_parse_float
 
-
 try:
     import prometheus_client as prom
 
