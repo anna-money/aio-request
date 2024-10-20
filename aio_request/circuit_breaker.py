@@ -107,12 +107,12 @@ class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
 
 class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
     __slots__ = (
-        "_break_duration",
-        "_minimum_throughput",
-        "_failure_threshold",
-        "_per_scope_metrics",
-        "_per_scope_state",
-        "_per_scope_blocked_till",
+        "__break_duration",
+        "__minimum_throughput",
+        "__failure_threshold",
+        "__per_scope_metrics",
+        "__per_scope_state",
+        "__per_scope_blocked_till",
     )
 
     def __init__(
@@ -141,14 +141,14 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         if windows_count <= 0:
             raise RuntimeError("Windows count should be positive")
 
-        self._break_duration = break_duration
-        self._minimum_throughput = minimum_throughput
-        self._failure_threshold = failure_threshold
-        self._per_scope_metrics = collections.defaultdict[TScope, CircuitBreakerMetrics](
+        self.__break_duration = break_duration
+        self.__minimum_throughput = minimum_throughput
+        self.__failure_threshold = failure_threshold
+        self.__per_scope_metrics = collections.defaultdict[TScope, CircuitBreakerMetrics](
             lambda: RollingCircuitBreakerMetrics(sampling_duration, windows_count)
         )
-        self._per_scope_state = collections.defaultdict[TScope, CircuitState](lambda: CircuitState.CLOSED)
-        self._per_scope_blocked_till = collections.defaultdict[TScope, float](float)
+        self.__per_scope_state = collections.defaultdict[TScope, CircuitState](lambda: CircuitState.CLOSED)
+        self.__per_scope_blocked_till = collections.defaultdict[TScope, float](float)
 
     async def execute(
         self,
@@ -172,36 +172,36 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
 
     @property
     def state(self) -> collections.abc.Mapping[TScope, CircuitState]:
-        return dict(self._per_scope_state)
+        return dict(self.__per_scope_state)
 
     def _is_executable(self, scope: TScope) -> bool:
-        state = self._per_scope_state[scope]
+        state = self.__per_scope_state[scope]
         if state == CircuitState.CLOSED:
             return True
 
-        blocked_till = self._per_scope_blocked_till[scope]
+        blocked_till = self.__per_scope_blocked_till[scope]
         now = time.time()
         if blocked_till > now:
             return False
 
         # Only one operation should win and be executed
-        self._per_scope_blocked_till[scope] = now + self._break_duration
-        self._per_scope_state[scope] = CircuitState.HALF_OPEN
+        self.__per_scope_blocked_till[scope] = now + self.__break_duration
+        self.__per_scope_state[scope] = CircuitState.HALF_OPEN
         return True
 
     def _on_success(self, scope: TScope) -> None:
-        state = self._per_scope_state[scope]
+        state = self.__per_scope_state[scope]
         if state == CircuitState.HALF_OPEN:
             self._close(scope)
-        self._per_scope_metrics[scope].increment_successes()
+        self.__per_scope_metrics[scope].increment_successes()
 
     def _on_failure(self, scope: TScope) -> None:
-        state = self._per_scope_state[scope]
+        state = self.__per_scope_state[scope]
         if state == CircuitState.CLOSED:
             self._increment_failures(scope)
             snapshot = self._collect_metrics(scope)
             throughput = float(snapshot.successes + snapshot.failures)
-            if throughput >= self._minimum_throughput and (snapshot.failures / throughput >= self._failure_threshold):
+            if throughput >= self.__minimum_throughput and (snapshot.failures / throughput >= self.__failure_threshold):
                 self._open(scope)
         elif state == CircuitState.OPEN:
             self._increment_failures(scope)
@@ -209,22 +209,22 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
             self._open(scope)
 
     def _increment_failures(self, scope: TScope) -> None:
-        self._per_scope_metrics[scope].increment_failures()
+        self.__per_scope_metrics[scope].increment_failures()
 
     def _increment_successes(self, scope: TScope) -> None:
-        self._per_scope_metrics[scope].increment_successes()
+        self.__per_scope_metrics[scope].increment_successes()
 
     def _collect_metrics(self, scope: TScope) -> CircuitBreakerMetricsSnapshot:
-        return self._per_scope_metrics[scope].collect()
+        return self.__per_scope_metrics[scope].collect()
 
     def _close(self, scope: TScope) -> None:
-        self._per_scope_metrics[scope].reset()
-        self._per_scope_state[scope] = CircuitState.CLOSED
-        self._per_scope_blocked_till[scope] = 0
+        self.__per_scope_metrics[scope].reset()
+        self.__per_scope_state[scope] = CircuitState.CLOSED
+        self.__per_scope_blocked_till[scope] = 0
 
     def _open(self, scope: TScope) -> None:
-        self._per_scope_blocked_till[scope] = time.time() + self._break_duration
-        self._per_scope_state[scope] = CircuitState.OPEN
+        self.__per_scope_blocked_till[scope] = time.time() + self.__break_duration
+        self.__per_scope_state[scope] = CircuitState.OPEN
 
 
 class NoopCircuitBreaker(CircuitBreaker[TScope, TResult]):
