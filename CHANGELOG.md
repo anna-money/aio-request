@@ -1,7 +1,7 @@
 ## unreleased
 
 * [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
-* Drop python 3.9/3.10 support, support only 3.11/3.12. Related PRs: [#222](https://github.com/anna-money/aio-request/pull/222), [#266](https://github.com/anna-money/aio-request/pull/266)
+* Drop python 3.9/3.10 support, support only 3.11/3.12/3.13. Related PRs: [#222](https://github.com/anna-money/aio-request/pull/222), [#266](https://github.com/anna-money/aio-request/pull/266), [#275](https://github.com/anna-money/aio-request/pull/275)
 * Deprecation of MetricsProvider interface. For the backward compatibility, prometheus-client is conditionally imported. To use it, install prometheus-client. Related PRs: [#271](https://github.com/anna-money/aio-request/pull/271), [#218](https://github.com/anna-money/aio-request/pull/218), [#268](https://github.com/anna-money/aio-request/pull/268)
 * [Removal of unused Client interface](https://github.com/anna-money/aio-request/commit/fe75660af8e7520a6fa5143f982c5aacd2ea079a)
 
