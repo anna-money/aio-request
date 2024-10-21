@@ -187,19 +187,19 @@ class ClosableResponse(Response, Closable):
 
 
 class EmptyResponse(ClosableResponse):
-    __slots__ = ("_status", "_headers")
+    __slots__ = ("__status", "__headers")
 
     def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS):
-        self._status = status
-        self._headers = headers
+        self.__status = status
+        self.__headers = headers
 
     @property
     def status(self) -> int:
-        return self._status
+        return self.__status
 
     @property
     def headers(self) -> multidict.CIMultiDictProxy[str]:
-        return self._headers
+        return self.__headers
 
     async def json(
         self,
@@ -209,7 +209,7 @@ class EmptyResponse(ClosableResponse):
         content_type: str | None = "application/json",
     ) -> Any:
         if content_type is not None:
-            response_content_type = self._headers.get(Header.CONTENT_TYPE, "").lower()
+            response_content_type = self.__headers.get(Header.CONTENT_TYPE, "").lower()
             if not is_expected_content_type(response_content_type, content_type):
                 raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
 

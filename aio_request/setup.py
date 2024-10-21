@@ -94,7 +94,7 @@ def setup_v2(
         }
     )
     return Client(
-        endpoint_provider=(StaticEndpointProvider(endpoint) if endpoint is not MISSING else endpoint_provider),
+        endpoint_provider=StaticEndpointProvider(endpoint) if endpoint is not MISSING else endpoint_provider,
         response_classifier=response_classifier or DefaultResponseClassifier(),
         request_strategy=request_strategy,
         timeout=timeout,
