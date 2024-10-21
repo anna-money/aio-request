@@ -16,7 +16,7 @@ from aio_request.base import build_query_parameters, substitute_path_parameters
         (yarl.URL("{a}/do?b=2"), {"a": "1"}, yarl.URL("1/do?b=2")),
         (yarl.URL("do/{a}"), {"a": "1"}, yarl.URL("do/1")),
         (yarl.URL("https://site.com/"), {}, yarl.URL("https://site.com/")),
-        (yarl.URL("https://site.com/{a}"), {"a": "1"}, yarl.URL("https://site.com:443/1")),
+        (yarl.URL("https://site.com/{a}"), {"a": "1"}, yarl.URL("https://site.com/1")),
         (yarl.URL("{a}/do?b=2"), {"a": "x/y"}, yarl.URL("x/y/do?b=2")),
         (yarl.URL("{a}/do%2Fsmth/?b=!%2F^"), {"a": "x/y"}, yarl.URL("x/y/do%2Fsmth/?b=!%2F^")),
         (yarl.URL("{a}/do%2Fsmth/?b=!%2F^#%2F"), {"a": "x/y"}, yarl.URL("x/y/do%2Fsmth/?b=!%2F^#%2F")),
