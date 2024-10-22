@@ -47,10 +47,17 @@ class BypassModule(RequestModule):
 
 
 class LowTimeoutModule(RequestModule):
-    __slots__ = ("__low_timeout_threshold",)
+    __slots__ = ("__low_timeout_threshold", "__timeout_response")
 
     def __init__(self, low_timeout_threshold: float):
         self.__low_timeout_threshold = low_timeout_threshold
+
+        headers = multidict.CIMultiDict[str]()
+        headers[Header.X_DO_NOT_RETRY] = "1"
+        self.__timeout_response = EmptyResponse(
+            status=408,
+            headers=multidict.CIMultiDictProxy[str](headers),
+        )
 
     async def execute(
         self,
@@ -62,7 +69,7 @@ class LowTimeoutModule(RequestModule):
         priority: Priority,
     ) -> ClosableResponse:
         if deadline.expired or deadline.timeout < self.__low_timeout_threshold:
-            return EmptyResponse(status=408)
+            return self.__timeout_response
 
         return await next(endpoint, request, deadline, priority)
 
