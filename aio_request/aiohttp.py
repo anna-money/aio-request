@@ -140,7 +140,6 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 class AioHttpTransport(Transport):
     __slots__ = (
         "__client_session",
-        "_metrics_provider",
         "__network_errors_code",
         "__too_many_redirects_code",
         "__buffer_payload",
