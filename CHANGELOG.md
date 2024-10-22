@@ -6,6 +6,7 @@
 * [Removal of unused Client interface](https://github.com/anna-money/aio-request/commit/fe75660af8e7520a6fa5143f982c5aacd2ea079a)
 * [Do not retry low timeout response](https://github.com/anna-money/aio-request/pull/276)
 
+
 ## v0.1.32 (2024-10-18)
 * [Endpoint provider](https://github.com/anna-money/aio-request/pull/270)
 
