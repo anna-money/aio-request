@@ -3,7 +3,24 @@ import aio_request
 from .conftest import FakeResponseConfiguration, FakeTransport
 
 
-async def test_timeout_because_of_expiration():
+async def test_timeout_due_to_low_timeout():
+    client = aio_request.setup(
+        transport=FakeTransport([FakeResponseConfiguration(status=200)]),
+        endpoint="http://service.com",
+    )
+    deadline = aio_request.Deadline.from_timeout(0.004)
+    response_ctx = client.request(
+        aio_request.get("hello"),
+        deadline=deadline,
+        strategy=aio_request.parallel_strategy(),
+    )
+    async with response_ctx as response:
+        assert response.status == 408
+        assert aio_request.Header.X_DO_NOT_RETRY in response.headers
+        assert not deadline.expired
+
+
+async def test_timeout_due_to_expiration():
     client = aio_request.setup(
         transport=FakeTransport(
             [

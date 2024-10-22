@@ -17,7 +17,7 @@ logging.basicConfig(level="DEBUG")
 @dataclasses.dataclass(frozen=True)
 class FakeResponseConfiguration:
     status: int
-    delay_seconds: float
+    delay_seconds: float = 0
 
 
 class FakeTransport(aio_request.Transport):
