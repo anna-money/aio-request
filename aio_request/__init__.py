@@ -21,7 +21,18 @@ from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvi
 from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
-from .request import delete, get, patch, patch_json, post, post_json, put, put_json
+from .request import (
+    delete,
+    get,
+    patch,
+    patch_json,
+    post,
+    post_json,
+    put,
+    put_json,
+    RequestEnricher,
+    AsyncRequestEnricher,
+)
 from .request_strategy import (
     MethodBasedStrategy,
     ParallelRequestStrategy,
@@ -94,6 +105,8 @@ __all__: tuple[str, ...] = (
     "post_json",
     "put",
     "put_json",
+    "RequestEnricher",
+    "AsyncRequestEnricher",
     # request_strategy.py
     "MethodBasedStrategy",
     "ParallelRequestStrategy",
