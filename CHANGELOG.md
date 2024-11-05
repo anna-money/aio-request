@@ -8,6 +8,11 @@
 * [Merge setup functions](https://github.com/anna-money/aio-request/pull/277)
 
 
+## v0.1.34 (2024-11-05)
+
+* [Try to get metrics provider from transport in setup_v2 if no metrics provider is passed](https://github.com/anna-money/aio-request/pull/280)
+π
+
 ## v0.1.33 (2024-10-29)
 
 * [Only yarl >= 1.12 is supported](https://github.com/anna-money/aio-request/commit/1a443f2ec6637bbfb86b717ac03b56a3ff0650b8)
