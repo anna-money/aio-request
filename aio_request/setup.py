@@ -79,6 +79,7 @@ def setup_v2(
         raise ValueError("Either endpoint or endpoint_provider must be provided")
     if endpoint is not MISSING and endpoint_provider is not MISSING:
         raise ValueError("Only one of endpoint or endpoint_provider must be provided")
+    metrics_provider = metrics_provider or getattr(transport, "_metrics_provider", None)
 
     request_strategy = MethodBasedStrategy(
         {
