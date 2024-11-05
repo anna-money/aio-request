@@ -1,4 +1,4 @@
-## unreleased
+## v0.1.34 (2024-11-05)
 
 * [Try to get metrics provider from transport in setup_v2 if no metrics provider is passed](https://github.com/anna-money/aio-request/pull/280)
 
