@@ -21,7 +21,7 @@ test:
 	@python3 -m pytest -vv --rootdir tests .
 
 pyenv:
-	echo aio-request > .python-version && pyenv install -s 3.12 && pyenv virtualenv -f 3.12 aio-request
+	echo aio-request > .python-version && pyenv install -s 3.13 && pyenv virtualenv -f 3.13 aio-request
 
 pyenv-delete:
 	pyenv virtualenv-delete -f aio-request
