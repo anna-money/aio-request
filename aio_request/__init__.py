@@ -22,6 +22,8 @@ from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, Stati
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import (
+    AsyncRequestEnricher,
+    RequestEnricher,
     delete,
     get,
     patch,
@@ -30,8 +32,6 @@ from .request import (
     post_json,
     put,
     put_json,
-    RequestEnricher,
-    AsyncRequestEnricher,
 )
 from .request_strategy import (
     MethodBasedStrategy,
