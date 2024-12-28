@@ -1,3 +1,4 @@
+import asyncio
 import warnings
 from typing import Any
 
@@ -11,7 +12,7 @@ from .deprecated import MetricsProvider
 from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
-from .request import AsyncRequestEnricher, RequestEnricher
+from .request import RequestEnricher, Request, SimpleRequestEnricher
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
@@ -33,7 +34,7 @@ def setup_v2(
     priority: Priority = Priority.NORMAL,
     low_timeout_threshold: float = 0.005,
     emit_system_headers: bool = True,
-    request_enricher: RequestEnricher | AsyncRequestEnricher | None = None,
+    request_enricher: SimpleRequestEnricher | RequestEnricher | None = None,
     metrics_provider: MetricsProvider | None = None,
     circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse] | None = None,
 ) -> Client:
@@ -77,11 +78,24 @@ def setup_v2(
                 TransportModule(
                     transport,
                     emit_system_headers=emit_system_headers,
-                    request_enricher=request_enricher,
+                    request_enricher=_get_enricher(request_enricher),
                 ),
             ],
         ),
     )
+
+
+def _get_enricher(enricher: SimpleRequestEnricher | RequestEnricher | None) -> RequestEnricher | None:
+    if enricher is None:
+        return None
+
+    if asyncio.iscoroutinefunction(enricher):
+        return enricher
+
+    async def _async_enricher(r: Request, _: bool) -> Request:
+        return enricher(r)  # type: ignore
+
+    return _async_enricher
 
 
 setup = setup_v2
