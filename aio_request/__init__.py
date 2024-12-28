@@ -22,8 +22,8 @@ from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, Stati
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import (
-    AsyncRequestEnricher,
     RequestEnricher,
+    SimpleRequestEnricher,
     delete,
     get,
     patch,
@@ -105,8 +105,8 @@ __all__: tuple[str, ...] = (
     "post_json",
     "put",
     "put_json",
+    "SimpleRequestEnricher",
     "RequestEnricher",
-    "AsyncRequestEnricher",
     # request_strategy.py
     "MethodBasedStrategy",
     "ParallelRequestStrategy",
