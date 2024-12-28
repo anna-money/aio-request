@@ -6,6 +6,7 @@
 * [Removal of unused Client interface](https://github.com/anna-money/aio-request/commit/fe75660af8e7520a6fa5143f982c5aacd2ea079a)
 * [Do not retry low timeout response](https://github.com/anna-money/aio-request/pull/276)
 * [Merge setup functions](https://github.com/anna-money/aio-request/pull/277)
+* [Fix request enrichers backward compatibility](https://github.com/anna-money/aio-request/pull/282)
 
 
 ## v0.1.34 (2024-11-05)
