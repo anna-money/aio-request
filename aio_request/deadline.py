@@ -5,6 +5,9 @@ from typing import Any
 class Deadline:
     @staticmethod
     def from_timeout(seconds: float) -> "Deadline":
+        if seconds < 0:
+            raise ValueError("seconds cannot be negative")
+
         return Deadline(started_at=time.perf_counter(), seconds=seconds)
 
     __slots__ = ("__seconds", "__started_at")
