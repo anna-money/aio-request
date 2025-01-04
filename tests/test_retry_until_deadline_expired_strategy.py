@@ -5,7 +5,7 @@ from .conftest import FakeTransport
 
 async def test_timeout_because_of_expiration():
     client = aio_request.setup(
-        transport=FakeTransport([500, 500, 500, 500, 500, 500, 500]),
+        transport=FakeTransport(500, 500, 500, 500, 500, 500, 500),
         endpoint="http://service.com",
     )
     deadline = aio_request.Deadline.from_timeout(1)
@@ -22,7 +22,7 @@ async def test_timeout_because_of_expiration():
 
 async def test_success_from_first_attempt():
     client = aio_request.setup(
-        transport=FakeTransport([200]),
+        transport=FakeTransport(200),
         endpoint="http://service.com",
     )
     deadline = aio_request.Deadline.from_timeout(1)
@@ -39,7 +39,7 @@ async def test_success_from_first_attempt():
 
 async def test_success_from_second_attempt():
     client = aio_request.setup(
-        transport=FakeTransport([500, 200]),
+        transport=FakeTransport(500, 200),
         endpoint="http://service.com",
     )
     deadline = aio_request.Deadline.from_timeout(1)

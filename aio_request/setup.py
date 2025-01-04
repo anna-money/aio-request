@@ -12,7 +12,7 @@ from .deprecated import MetricsProvider
 from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
-from .request import RequestEnricher, Request, SimpleRequestEnricher
+from .request import Request, RequestEnricher, SimpleRequestEnricher
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport

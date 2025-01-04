@@ -1,0 +1,37 @@
+import asyncio
+
+import aio_request
+
+
+async def test_split_deadline_between_attempt():
+    provider = aio_request.split_deadline_between_attempts()
+    deadline = aio_request.Deadline.from_timeout(1)
+
+    attempt_deadline = provider(deadline, 0, 3)
+    assert 0.3 <= attempt_deadline.timeout <= 0.34
+
+    await asyncio.sleep(attempt_deadline.timeout)
+
+    attempt_deadline = provider(deadline, 1, 3)
+    assert 0.3 <= attempt_deadline.timeout <= 0.34
+    await asyncio.sleep(attempt_deadline.timeout)
+
+    attempt_deadline = provider(deadline, 2, 3)
+    assert 0.3 <= attempt_deadline.timeout <= 0.34
+
+
+async def test_split_deadline_between_attempts_fast_attempt_failure():
+    provider = aio_request.split_deadline_between_attempts()
+    deadline = aio_request.Deadline.from_timeout(1)
+
+    attempt_deadline = provider(deadline, 0, 3)
+    assert 0.3 <= attempt_deadline.timeout <= 0.34
+
+    await asyncio.sleep(0.1)  # fast attempt failure
+
+    attempt_deadline = provider(deadline, 1, 3)
+    assert 0.4 <= attempt_deadline.timeout <= 0.45
+    await asyncio.sleep(0.1)  # fast attempt failure
+
+    attempt_deadline = provider(deadline, 2, 3)
+    assert 0.75 <= attempt_deadline.timeout <= 0.8

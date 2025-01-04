@@ -1,42 +1,63 @@
-import datetime
+import time
+from typing import Any
+
+MIN_TIMEOUT_SECONDS = 0.001
+INFINITE_TIMEOUT_SECONDS = 0
 
 
 class Deadline:
     @staticmethod
     def from_timeout(seconds: float) -> "Deadline":
-        return Deadline(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds))
+        return Deadline(started_at=time.perf_counter(), seconds=seconds)
 
-    @staticmethod
-    def try_parse(value: str | None) -> "Deadline | None":
-        if value is None:
-            return None
-        try:
-            return Deadline(datetime.datetime.fromisoformat(value))
-        except ValueError:
-            return None
+    __slots__ = ("__seconds", "__started_at")
 
-    __slots__ = ("deadline_at",)
-
-    deadline_at: datetime.datetime
-
-    def __init__(self, deadline_at: datetime.datetime):
-        if deadline_at.tzinfo is None:
-            self.deadline_at = deadline_at.replace(tzinfo=datetime.timezone.utc)
-        else:
-            self.deadline_at = deadline_at
+    def __init__(self, started_at: float, seconds: float):
+        self.__seconds = seconds
+        self.__started_at = started_at
 
     @property
     def timeout(self) -> float:
-        return max(
-            (self.deadline_at - datetime.datetime.now(datetime.timezone.utc)).total_seconds(), 0.001
-        )  # 0 is infinite
+        if self.__started_at == 0:
+            return INFINITE_TIMEOUT_SECONDS
+
+        remaining = self.__seconds - self.__get_elapsed()
+        return remaining if remaining > MIN_TIMEOUT_SECONDS else MIN_TIMEOUT_SECONDS
 
     @property
     def expired(self) -> bool:
-        return (self.deadline_at - datetime.datetime.now(datetime.timezone.utc)).total_seconds() <= 0
+        if self.__started_at == 0:
+            return False
+        return self.__seconds - self.__get_elapsed() <= MIN_TIMEOUT_SECONDS
+
+    @property
+    def infinite(self) -> bool:
+        return self.__started_at == 0
+
+    def __truediv__(self, divisor: Any) -> "Deadline":
+        if not isinstance(divisor, (int, float)):
+            raise ValueError(f"unsupported operand type(s) for /: 'Deadline' and {type(divisor)}")
+
+        if divisor == 0:
+            raise ValueError("division by zero")
+
+        if divisor < 0:
+            raise ValueError("division by negative number")
+
+        if self.infinite:
+            return self
+
+        return Deadline.from_timeout(self.timeout / divisor)
+
+    def __float__(self) -> float:
+        return self.timeout
 
     def __repr__(self) -> str:
-        return f"<Deadline [{self.deadline_at.isoformat()}]>"
+        if self.infinite:
+            return "<Deadline [infinite]>"
+        if self.expired:
+            return "<Deadline [expired]>"
+        return f"<Deadline [timeout={self.timeout}]>"
 
-    def __str__(self) -> str:
-        return str(self.deadline_at.isoformat())
+    def __get_elapsed(self) -> float:
+        return time.perf_counter() - self.__started_at

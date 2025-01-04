@@ -16,6 +16,7 @@ from .circuit_breaker import (
 from .client import Client
 from .context import get_context, set_context
 from .deadline import Deadline
+from .deadline_provider import DeadlineProvider, pass_deadline_through, split_deadline_between_attempts
 from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
@@ -75,6 +76,10 @@ __all__: tuple[str, ...] = (
     "set_context",
     # deadline.py
     "Deadline",
+    # deadline_provider.py
+    "DeadlineProvider",
+    "pass_deadline_through",
+    "split_deadline_between_attempts",
     # delays_provider.py
     "constant_delays",
     "linear_backoff_delays",
