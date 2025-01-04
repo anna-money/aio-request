@@ -1,9 +1,6 @@
 import time
 from typing import Any
 
-MIN_TIMEOUT_SECONDS = 0.001
-INFINITE_TIMEOUT_SECONDS = 0
-
 
 class Deadline:
     @staticmethod
@@ -18,21 +15,12 @@ class Deadline:
 
     @property
     def timeout(self) -> float:
-        if self.__started_at == 0:
-            return INFINITE_TIMEOUT_SECONDS
-
         remaining = self.__seconds - self.__get_elapsed()
-        return remaining if remaining > MIN_TIMEOUT_SECONDS else MIN_TIMEOUT_SECONDS
+        return remaining if remaining > 0 else 0
 
     @property
     def expired(self) -> bool:
-        if self.__started_at == 0:
-            return False
-        return self.__seconds - self.__get_elapsed() <= MIN_TIMEOUT_SECONDS
-
-    @property
-    def infinite(self) -> bool:
-        return self.__started_at == 0
+        return self.__seconds - self.__get_elapsed() <= 0
 
     def __truediv__(self, divisor: Any) -> "Deadline":
         if not isinstance(divisor, (int, float)):
@@ -44,17 +32,12 @@ class Deadline:
         if divisor < 0:
             raise ValueError("division by negative number")
 
-        if self.infinite:
-            return self
-
         return Deadline.from_timeout(self.timeout / divisor)
 
     def __float__(self) -> float:
         return self.timeout
 
     def __repr__(self) -> str:
-        if self.infinite:
-            return "<Deadline [infinite]>"
         if self.expired:
             return "<Deadline [expired]>"
         return f"<Deadline [timeout={self.timeout}]>"

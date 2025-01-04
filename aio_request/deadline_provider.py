@@ -19,9 +19,6 @@ def split_deadline_between_attempts() -> DeadlineProvider:
     """
 
     def __provider(deadline: Deadline, attempt: int, attempts_count: int) -> Deadline:
-        if deadline.infinite:
-            return deadline
-
         if deadline.expired:
             return deadline
 
