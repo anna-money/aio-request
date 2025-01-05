@@ -5,8 +5,7 @@
 * Deprecation of MetricsProvider interface. For the backward compatibility, prometheus-client is conditionally imported. To use it, install prometheus-client. Related PRs: [#271](https://github.com/anna-money/aio-request/pull/271), [#218](https://github.com/anna-money/aio-request/pull/218), [#268](https://github.com/anna-money/aio-request/pull/268)
 * [Removal of unused Client interface](https://github.com/anna-money/aio-request/commit/fe75660af8e7520a6fa5143f982c5aacd2ea079a)
 * [Do not retry low timeout response](https://github.com/anna-money/aio-request/pull/276)
-* [Merge setup functions](https://github.com/anna-money/aio-request/pull/277)
-* [Fix request enrichers backward compatibility](https://github.com/anna-money/aio-request/pull/282)
+* Refactoring around request enrichers and deprecation of setup_v2. Related PRs: [#277](https://github.com/anna-money/aio-request/pull/277), [#282](https://github.com/anna-money/aio-request/pull/282), [#285](https://github.com/anna-money/aio-request/pull/285)
 * [Deadline provider for sequential strategy](https://github.com/anna-money/aio-request/pull/284)
 
 

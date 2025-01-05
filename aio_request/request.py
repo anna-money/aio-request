@@ -7,8 +7,9 @@ import yarl
 
 from .base import MAX_REDIRECTS, Header, Headers, Method, PathParameters, QueryParameters, Request
 
-SimpleRequestEnricher = collections.abc.Callable[[Request], Request]
-RequestEnricher = collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]]
+RequestEnricher = collections.abc.Callable[[Request], Request]
+AsyncRequestEnricher = collections.abc.Callable[[Request], collections.abc.Awaitable[Request]]
+DeprecatedAsyncRequestEnricher = collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]]
 
 
 def get(
