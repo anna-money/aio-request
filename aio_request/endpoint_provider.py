@@ -33,8 +33,10 @@ class DelegateEndpointProvider(EndpointProvider):
         self.__endpoint_delegate = endpoint_delegate
 
     async def get(self) -> yarl.URL:
-        result = self.__endpoint_delegate()
-        return ensure_url(await result if asyncio.iscoroutine(result) else result)  # type: ignore
+        endpoint = self.__endpoint_delegate()
+        if asyncio.iscoroutine(endpoint):
+            endpoint = await endpoint
+        return ensure_url(endpoint)  # type: ignore
 
 
 def ensure_url(endpoint: str | yarl.URL) -> yarl.URL:

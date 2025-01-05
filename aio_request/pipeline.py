@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import collections.abc
 
 import multidict
@@ -8,7 +9,7 @@ from .base import ClosableResponse, EmptyResponse, Header, Request
 from .circuit_breaker import CircuitBreaker
 from .deadline import Deadline
 from .priority import Priority
-from .request import RequestEnricher
+from .request import AsyncRequestEnricher, RequestEnricher
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
 
@@ -83,7 +84,7 @@ class TransportModule(RequestModule):
         transport: Transport,
         *,
         emit_system_headers: bool,
-        request_enricher: RequestEnricher | None,
+        request_enricher: AsyncRequestEnricher | RequestEnricher | None,
     ):
         self.__transport = transport
         self.__emit_system_headers = emit_system_headers
@@ -107,7 +108,10 @@ class TransportModule(RequestModule):
             )
 
         if self.__request_enricher is not None:
-            request = await self.__request_enricher(request, self.__emit_system_headers)
+            enriched_request = self.__request_enricher(request)
+            if asyncio.iscoroutine(enriched_request):
+                enriched_request = await enriched_request
+            request = enriched_request  # type: ignore
 
         return await self.__transport.send(endpoint, request, deadline.timeout)
 
