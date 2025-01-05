@@ -101,7 +101,6 @@ class TransportModule(RequestModule):
         if self.__emit_system_headers:
             request = request.update_headers(
                 {
-                    Header.X_REQUEST_DEADLINE_AT: str(deadline),  # for backward compatibility
                     Header.X_REQUEST_PRIORITY: str(priority),
                     Header.X_REQUEST_TIMEOUT: str(deadline.timeout),
                 }

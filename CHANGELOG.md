@@ -7,6 +7,7 @@
 * [Do not retry low timeout response](https://github.com/anna-money/aio-request/pull/276)
 * [Merge setup functions](https://github.com/anna-money/aio-request/pull/277)
 * [Fix request enrichers backward compatibility](https://github.com/anna-money/aio-request/pull/282)
+* [Deadline provider for sequential strategy](https://github.com/anna-money/aio-request/pull/284)
 
 
 ## v0.1.34 (2024-11-05)

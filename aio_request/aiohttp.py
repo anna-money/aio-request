@@ -377,10 +377,7 @@ def _get_route_path(request: aiohttp.web_request.Request) -> str:
 
 def _get_deadline(request: aiohttp.web_request.Request) -> Deadline | None:
     timeout = try_parse_float(request.headers.get(Header.X_REQUEST_TIMEOUT))
-    if timeout is not None:
-        return Deadline.from_timeout(timeout)
-
-    return Deadline.try_parse(request.headers.get(Header.X_REQUEST_DEADLINE_AT))
+    return None if timeout is None else Deadline.from_timeout(timeout)
 
 
 def _get_priority(request: aiohttp.web_request.Request) -> Priority | None:
@@ -397,7 +394,7 @@ def _get_deadline_from_handler(
         if method_handler is not None:
             timeout = getattr(method_handler, "__aio_request_timeout__", None)
 
-    return Deadline.from_timeout(float(timeout)) if timeout is not None else None
+    return None if timeout is None else Deadline.from_timeout(timeout)
 
 
 def _is_subclass(cls: Any, cls_info: type) -> bool:

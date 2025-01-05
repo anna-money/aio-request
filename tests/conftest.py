@@ -1,7 +1,5 @@
 import asyncio
-import dataclasses
 import logging
-import queue
 
 import aiohttp.web
 import aiohttp.web_request
@@ -14,37 +12,27 @@ import aio_request
 logging.basicConfig(level="DEBUG")
 
 
-@dataclasses.dataclass(frozen=True)
-class FakeResponseConfiguration:
-    status: int
-    delay_seconds: float = 0
-
-
 class FakeTransport(aio_request.Transport):
     __slots__ = ("_responses",)
 
-    def __init__(self, responses: list[int | FakeResponseConfiguration]):
-        self._responses = queue.Queue()
-        for response in responses:
-            self._responses.put(response)
+    def __init__(self, *responses: int | tuple[int, float]):
+        self._responses = list(reversed(responses))
 
     async def send(
         self, endpoint: yarl.URL, request: aio_request.Request, timeout: float
     ) -> aio_request.ClosableResponse:
-        if self._responses.empty():
+        if not self._responses:
             raise RuntimeError("No response left")
 
-        response_or_configuration = self._responses.get_nowait()
-        if isinstance(response_or_configuration, FakeResponseConfiguration):
-            delay_seconds = response_or_configuration.delay_seconds
+        response = self._responses.pop()
+        if isinstance(response, tuple):
+            status, delay_seconds = response
             if delay_seconds >= timeout:
                 status = 408
                 delay_seconds = timeout
-            else:
-                status = response_or_configuration.status
             await asyncio.sleep(delay_seconds)
         else:
-            status = response_or_configuration
+            status = response
 
         return aio_request.EmptyResponse(status=status)
 

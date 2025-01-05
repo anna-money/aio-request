@@ -8,6 +8,7 @@ import yarl
 
 from .base import ClosableResponse, Request, Response
 from .deadline import Deadline
+from .deadline_provider import DeadlineProvider, pass_deadline_through
 from .delays_provider import DelaysProvider, linear_backoff_delays
 from .priority import Priority
 from .response_classifier import ResponseVerdict
@@ -69,13 +70,22 @@ def single_attempt_strategy() -> RequestStrategy:
 
 
 def sequential_strategy(
-    *, attempts_count: int = 3, delays_provider: DelaysProvider = linear_backoff_delays()
+    *,
+    attempts_count: int = 3,
+    delays_provider: DelaysProvider = linear_backoff_delays(),
+    deadline_provider: DeadlineProvider = pass_deadline_through(),
 ) -> RequestStrategy:
-    return SequentialRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
+    return SequentialRequestStrategy(
+        attempts_count=attempts_count,
+        delays_provider=delays_provider,
+        deadline_provider=deadline_provider,
+    )
 
 
 def parallel_strategy(
-    *, attempts_count: int = 3, delays_provider: DelaysProvider = linear_backoff_delays()
+    *,
+    attempts_count: int = 3,
+    delays_provider: DelaysProvider = linear_backoff_delays(),
 ) -> RequestStrategy:
     return ParallelRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
 
@@ -114,6 +124,7 @@ class SequentialRequestStrategy(RequestStrategy):
     __slots__ = (
         "__attempts_count",
         "__delays_provider",
+        "__deadline_provider",
     )
 
     def __init__(
@@ -121,12 +132,14 @@ class SequentialRequestStrategy(RequestStrategy):
         *,
         attempts_count: int,
         delays_provider: DelaysProvider,
+        deadline_provider: DeadlineProvider = pass_deadline_through(),
     ):
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
-        self.__delays_provider = delays_provider
         self.__attempts_count = attempts_count
+        self.__delays_provider = delays_provider
+        self.__deadline_provider = deadline_provider
 
     @contextlib.asynccontextmanager
     async def request(
@@ -140,7 +153,8 @@ class SequentialRequestStrategy(RequestStrategy):
         responses: list[ResponseWithVerdict[ClosableResponse]] = []
         try:
             for attempt in range(self.__attempts_count):
-                response = await send_request(endpoint, request, deadline, priority)
+                attempt_deadline = self.__deadline_provider(deadline, attempt, self.__attempts_count)
+                response = await send_request(endpoint, request, attempt_deadline, priority)
                 responses.append(response)
                 if response.verdict == ResponseVerdict.ACCEPT:
                     break
@@ -188,8 +202,8 @@ class ParallelRequestStrategy(RequestStrategy):
     ) -> collections.abc.AsyncIterator[ResponseWithVerdict[Response]]:
         completed_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
         pending_tasks: set[asyncio.Future[ResponseWithVerdict[ClosableResponse]]] = set()
-        for attempt in range(0, self.__attempts_count):
-            schedule_request = self._schedule_request(attempt, send_request, endpoint, request, deadline, priority)
+        for attempt in range(self.__attempts_count):
+            schedule_request = self.__schedule_request(attempt, send_request, endpoint, request, deadline, priority)
             pending_tasks.add(asyncio.create_task(schedule_request))
 
         accepted_responses: list[ResponseWithVerdict[ClosableResponse]] = []
@@ -223,7 +237,7 @@ class ParallelRequestStrategy(RequestStrategy):
                 )
             )
 
-    async def _schedule_request(
+    async def __schedule_request(
         self,
         attempt: int,
         send_request: SendRequestFunc,

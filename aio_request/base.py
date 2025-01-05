@@ -25,7 +25,6 @@ class Header:
     CONTENT_TYPE = multidict.istr("Content-Type")
     CONTENT_LENGTH = multidict.istr("Content-Length")
     LOCATION = multidict.istr("Location")
-    X_REQUEST_DEADLINE_AT = multidict.istr("X-Request-Deadline-At")
     X_REQUEST_PRIORITY = multidict.istr("X-Request-Priority")
     X_REQUEST_TIMEOUT = multidict.istr("X-Request-Timeout")
     X_SERVICE_NAME = multidict.istr("X-Service-Name")

@@ -1,6 +1,4 @@
 import asyncio
-import datetime
-import zoneinfo
 
 import aio_request
 
@@ -13,38 +11,22 @@ async def test_deadline_expired():
     assert deadline.expired
 
 
-async def test_no_timezone_deadline_at():
-    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
-    deadline = aio_request.Deadline(now + datetime.timedelta(seconds=1))
-    assert not deadline.expired
-    assert 0.5 < deadline.timeout < 1.0
-
-
-async def test_utc_timezone_deadline_at_1():
-    now = datetime.datetime.now(datetime.timezone.utc)
-    deadline = aio_request.Deadline(now + datetime.timedelta(seconds=1))
-    assert not deadline.expired
-    assert 0.5 < deadline.timeout < 1.0
-
-
-async def test_utc_timezone_deadline_at_2():
-    utc_timezone = zoneinfo.ZoneInfo("UTC")
-    now = datetime.datetime.now(utc_timezone)
-    deadline = aio_request.Deadline(now + datetime.timedelta(seconds=1))
-    assert not deadline.expired
-    assert 0.5 < deadline.timeout < 1.0
-
-
-async def test_los_angeles_timezone_deadline():
-    los_angeles_timezone = zoneinfo.ZoneInfo("America/Los_Angeles")
-    now = datetime.datetime.now(los_angeles_timezone)
-    deadline = aio_request.Deadline(now + datetime.timedelta(seconds=1))
-    assert not deadline.expired
-    assert 0.5 < deadline.timeout < 1.0
-
-
-async def test_parse_str():
+async def test_deadline_division():
     deadline = aio_request.Deadline.from_timeout(1)
-    parsed_deadline = aio_request.Deadline.try_parse(str(deadline))
-    assert parsed_deadline is not None
-    assert deadline.deadline_at == parsed_deadline.deadline_at
+    assert not deadline.expired
+    assert 0.75 < deadline.timeout < 1
+
+    half_deadline = deadline / 2
+
+    assert not half_deadline.expired
+    assert 0.25 < half_deadline.timeout < 0.5
+
+    await asyncio.sleep(0.5)
+
+    assert half_deadline.expired
+    assert not deadline.expired
+
+    await asyncio.sleep(0.5)
+
+    assert half_deadline.expired
+    assert deadline.expired
