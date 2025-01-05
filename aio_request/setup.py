@@ -12,7 +12,7 @@ from .deprecated import MetricsProvider
 from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
-from .request import RequestEnricher, Request, SimpleRequestEnricher
+from .request import Request, RequestEnricher, SimpleRequestEnricher
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
@@ -45,7 +45,7 @@ def setup_v2(
 
     if metrics_provider is not None:
         warnings.warn(
-            "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+            "metrics_provider is deprecated, it will not be used, please use builtin prometheus support",
             DeprecationWarning,
         )
 

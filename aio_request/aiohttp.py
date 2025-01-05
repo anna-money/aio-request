@@ -156,7 +156,7 @@ class AioHttpTransport(Transport):
     ):
         if metrics_provider is not None:
             warnings.warn(
-                "metrics_provider is deprecated, it will not be used, consider a migration to OpenTelemetry",
+                "metrics_provider is deprecated, it will not be used, please use builtin prometheus support",
                 DeprecationWarning,
             )
 
