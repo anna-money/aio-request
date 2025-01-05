@@ -9,7 +9,7 @@ from .base import MAX_REDIRECTS, Header, Headers, Method, PathParameters, QueryP
 
 RequestEnricher = collections.abc.Callable[[Request], Request]
 AsyncRequestEnricher = collections.abc.Callable[[Request], collections.abc.Awaitable[Request]]
-AsyncRequestEnricherV2 = collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]]
+DeprecatedAsyncRequestEnricher = collections.abc.Callable[[Request, bool], collections.abc.Awaitable[Request]]
 
 
 def get(

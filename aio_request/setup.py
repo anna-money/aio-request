@@ -11,7 +11,7 @@ from .deprecated import MetricsProvider
 from .endpoint_provider import EndpointProvider, StaticEndpointProvider
 from .pipeline import BypassModule, CircuitBreakerModule, LowTimeoutModule, TransportModule, build_pipeline
 from .priority import Priority
-from .request import AsyncRequestEnricher, AsyncRequestEnricherV2, Request, RequestEnricher
+from .request import AsyncRequestEnricher, DeprecatedAsyncRequestEnricher, Request, RequestEnricher
 from .request_strategy import MethodBasedStrategy, RequestStrategy, sequential_strategy, single_attempt_strategy
 from .response_classifier import DefaultResponseClassifier, ResponseClassifier
 from .transport import Transport
@@ -84,7 +84,7 @@ def setup(
     )
 
 
-def setup_v2(*, request_enricher: AsyncRequestEnricherV2 | None = None, **kwargs: Any) -> Client:
+def setup_v2(*, request_enricher: DeprecatedAsyncRequestEnricher | None = None, **kwargs: Any) -> Client:
     warnings.warn(
         "setup_v2 is deprecated, please use setup",
         DeprecationWarning,

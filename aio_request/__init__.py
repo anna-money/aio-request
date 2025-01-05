@@ -24,7 +24,7 @@ from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestMod
 from .priority import Priority
 from .request import (
     AsyncRequestEnricher,
-    AsyncRequestEnricherV2,
+    DeprecatedAsyncRequestEnricher,
     RequestEnricher,
     delete,
     get,
@@ -113,6 +113,7 @@ __all__: tuple[str, ...] = (
     "put_json",
     "RequestEnricher",
     "AsyncRequestEnricher",
+    "DeprecatedAsyncRequestEnricher",
     # request_strategy.py
     "MethodBasedStrategy",
     "ParallelRequestStrategy",
