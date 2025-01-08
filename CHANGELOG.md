@@ -7,6 +7,7 @@
 * [Do not retry low timeout response](https://github.com/anna-money/aio-request/pull/276)
 * Refactoring around request enrichers and deprecation of setup_v2. Related PRs: [#277](https://github.com/anna-money/aio-request/pull/277), [#282](https://github.com/anna-money/aio-request/pull/282), [#285](https://github.com/anna-money/aio-request/pull/285)
 * [Deadline provider for sequential strategy](https://github.com/anna-money/aio-request/pull/284)
+* [Limit deadline split between attempts by a factor](https://github.com/anna-money/aio-request/pull/286)
 
 
 ## v0.1.34 (2024-11-05)
