@@ -5,7 +5,7 @@ from .deadline import Deadline
 DeadlineProvider = Callable[[Deadline, int, int], Deadline]
 
 
-def split_deadline_between_attempts(*, split_factor: int | None = None) -> DeadlineProvider:
+def split_deadline_between_attempts(*, attempts_count_to_split: int | None = None) -> DeadlineProvider:
     """
     Split deadline between attempts.
 
@@ -18,19 +18,19 @@ def split_deadline_between_attempts(*, split_factor: int | None = None) -> Deadl
     the last one has received the remaining 8 seconds due to redistribution.
     """
 
-    if split_factor is not None and split_factor < 2:
-        raise ValueError("split_factor should be greater or equal to 2")
+    if attempts_count_to_split is not None and attempts_count_to_split < 2:
+        raise ValueError("attempts_count_to_split should be greater or equal to 2")
 
     def __provider(deadline: Deadline, attempt: int, attempts_count: int) -> Deadline:
         if deadline.expired:
             return deadline
-        if split_factor is None:
-            effective_split_factor = attempts_count - attempt
+        if attempts_count_to_split is None:
+            effective_attempts_left = attempts_count - attempt
         else:
-            effective_split_factor = min(split_factor, attempts_count) - attempt
-        if effective_split_factor <= 1:
+            effective_attempts_left = min(attempts_count_to_split, attempts_count) - attempt
+        if effective_attempts_left <= 1:
             return deadline
-        return deadline / effective_split_factor
+        return deadline / effective_attempts_left
 
     return __provider
 

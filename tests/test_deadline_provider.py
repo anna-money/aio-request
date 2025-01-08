@@ -21,7 +21,7 @@ async def test_split_deadline_between_attempt():
 
 
 async def test_split_deadline_between_attempt_with_split_factor():
-    provider = aio_request.split_deadline_between_attempts(split_factor=2)
+    provider = aio_request.split_deadline_between_attempts(attempts_count_to_split=2)
     deadline = aio_request.Deadline.from_timeout(1)
 
     attempt_deadline = provider(deadline, 0, 3)
@@ -56,7 +56,7 @@ async def test_split_deadline_between_attempts_fast_attempt_failure():
 
 
 async def test_split_deadline_between_attempts_fast_attempt_failure_with_split_factor():
-    provider = aio_request.split_deadline_between_attempts(split_factor=2)
+    provider = aio_request.split_deadline_between_attempts(attempts_count_to_split=2)
     deadline = aio_request.Deadline.from_timeout(1)
 
     attempt_deadline = provider(deadline, 0, 3)
