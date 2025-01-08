@@ -16,6 +16,8 @@ def split_deadline_between_attempts(*, attempts_count_to_split: int | None = Non
 
     2. 1 sec -> 1 sec -> 8 sec. Two attempts have spent 1 seconds each,
     the last one has received the remaining 8 seconds due to redistribution.
+
+    If attempts_count_to_split is not None, then the deadline will be split between the first attempts_count_to_split.
     """
 
     if attempts_count_to_split is not None and attempts_count_to_split < 2:
