@@ -1,3 +1,8 @@
+## unreleased
+
+* [Increase metrics buckets precision](https://github.com/anna-money/aio-request/pull/287/)
+
+
 ## v0.2.0 (2025-01-09)
 
 * [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
