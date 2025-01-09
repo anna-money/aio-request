@@ -21,7 +21,7 @@ def get(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_request(
+    return request(
         Method.GET,
         url,
         path_parameters=path_parameters,
@@ -42,7 +42,7 @@ def post(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_request(
+    return request(
         Method.POST,
         url,
         path_parameters=path_parameters,
@@ -64,7 +64,7 @@ def put(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_request(
+    return request(
         Method.PUT,
         url,
         path_parameters=path_parameters,
@@ -86,7 +86,7 @@ def patch(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_request(
+    return request(
         Method.PATCH,
         url,
         path_parameters=path_parameters,
@@ -107,7 +107,7 @@ def delete(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_request(
+    return request(
         Method.DELETE,
         url,
         path_parameters=path_parameters,
@@ -131,7 +131,7 @@ def post_json(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_json_request(
+    return request_json(
         Method.POST,
         url,
         data,
@@ -159,7 +159,7 @@ def put_json(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_json_request(
+    return request_json(
         Method.PUT,
         url,
         data,
@@ -187,7 +187,7 @@ def patch_json(
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
 ) -> Request:
-    return build_json_request(
+    return request_json(
         Method.PATCH,
         url,
         data,
@@ -202,7 +202,7 @@ def patch_json(
     )
 
 
-def build_json_request(
+def request_json(
     method: str,
     url: str | yarl.URL,
     data: Any,
@@ -221,7 +221,7 @@ def build_json_request(
 
     body = dumps(data).encode(encoding)
 
-    return build_request(
+    return request(
         method=method,
         url=url,
         headers=multidict.CIMultiDictProxy[str](enriched_headers),
@@ -233,7 +233,10 @@ def build_json_request(
     )
 
 
-def build_request(
+build_json_request = request_json
+
+
+def request(
     method: str,
     url: str | yarl.URL,
     *,
@@ -254,3 +257,6 @@ def build_request(
         allow_redirects=allow_redirects,
         max_redirects=max_redirects,
     )
+
+
+build_request = request

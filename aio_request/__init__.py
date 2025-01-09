@@ -34,6 +34,8 @@ from .request import (
     post_json,
     put,
     put_json,
+    request,
+    request_json,
 )
 from .request_strategy import (
     MethodBasedStrategy,
@@ -111,6 +113,8 @@ __all__: tuple[str, ...] = (
     "post_json",
     "put",
     "put_json",
+    "request",
+    "request_json",
     "RequestEnricher",
     "AsyncRequestEnricher",
     "DeprecatedAsyncRequestEnricher",
