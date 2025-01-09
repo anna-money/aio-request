@@ -1,6 +1,7 @@
 ## unreleased
 
-* [Increase metrics buckets precision](https://github.com/anna-money/aio-request/pull/287/)
+* [Increase metrics buckets precision](https://github.com/anna-money/aio-request/pull/287)
+* [Expose methods to build requests](https://github.com/anna-money/aio-request/pull/288)
 
 
 ## v0.2.0 (2025-01-09)
