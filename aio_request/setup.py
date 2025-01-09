@@ -36,6 +36,7 @@ def setup(
     request_enricher: RequestEnricher | AsyncRequestEnricher | None = None,
     metrics_provider: MetricsProvider | None = None,
     circuit_breaker: CircuitBreaker[yarl.URL, ClosableResponse] | None = None,
+    disable_metrics: bool = False,
 ) -> Client:
     if endpoint is MISSING and endpoint_provider is MISSING:
         raise ValueError("Either endpoint or endpoint_provider must be provided")
@@ -81,6 +82,7 @@ def setup(
                 ),
             ],
         ),
+        disable_metrics=disable_metrics,
     )
 
 

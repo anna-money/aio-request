@@ -58,6 +58,7 @@ class Client:
         "__priority",
         "__timeout",
         "__send_request",
+        "__disable_metrics",
     )
 
     def __init__(
@@ -71,6 +72,7 @@ class Client:
         send_request: collections.abc.Callable[
             [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
         ],
+        disable_metrics: bool
     ):
         self.__endpoint_provider = endpoint_provider
         self.__response_classifier = response_classifier
@@ -78,6 +80,7 @@ class Client:
         self.__priority = priority
         self.__timeout = timeout
         self.__send_request = send_request
+        self.__disable_metrics = disable_metrics
 
     @contextlib.asynccontextmanager
     async def request(
@@ -95,22 +98,24 @@ class Client:
                 endpoint=endpoint, request=request, deadline=deadline, priority=priority, strategy=strategy
             )
             async with response_ctx as response:
+                if not self.__disable_metrics:
+                    capture_metrics(
+                        endpoint=endpoint,
+                        request=request,
+                        status=response.status,
+                        circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
+                        started_at=started_at,
+                    )
+                yield response
+        except asyncio.CancelledError:
+            if not self.__disable_metrics:
                 capture_metrics(
                     endpoint=endpoint,
                     request=request,
-                    status=response.status,
-                    circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
+                    status=499,
+                    circuit_breaker=False,
                     started_at=started_at,
                 )
-                yield response
-        except asyncio.CancelledError:
-            capture_metrics(
-                endpoint=endpoint,
-                request=request,
-                status=499,
-                circuit_breaker=False,
-                started_at=started_at,
-            )
             raise
 
     @contextlib.asynccontextmanager
