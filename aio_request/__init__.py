@@ -1,4 +1,3 @@
-# flake8: noqa
 import collections
 import re
 import sys
@@ -142,25 +141,30 @@ __all__: tuple[str, ...] = (
     "Transport",
 )
 try:
-    import aiohttp
+    import aiohttp  # noqa
 
     from .aiohttp import AioHttpDnsResolver, AioHttpTransport, aiohttp_middleware_factory, aiohttp_timeout
 
-    __all__ += ("AioHttpDnsResolver", "AioHttpTransport", "aiohttp_middleware_factory", "aiohttp_timeout")  # type: ignore
-except ImportError as e:
+    __all__ += (
+        "AioHttpDnsResolver",
+        "AioHttpTransport",
+        "aiohttp_middleware_factory",
+        "aiohttp_timeout",
+    )  # type: ignore
+except ImportError:
     pass
 
 try:
-    import httpx
+    import httpx  # noqa
 
     from .httpx import HttpxTransport
 
     __all__ += ("HttpxTransport",)  # type: ignore
-except ImportError as e:
+except ImportError:
     pass
 
 try:
-    import prometheus_client
+    import prometheus_client  # noqa
 
     # Deprecated as well as MetricsProvider, NoopMetricsProvider and NOOP_METRICS_PROVIDER.
     # For backward compatibility.
