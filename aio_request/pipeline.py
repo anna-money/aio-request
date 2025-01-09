@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import collections.abc
+import time
 
 import multidict
 import yarl
@@ -12,6 +13,62 @@ from .priority import Priority
 from .request import AsyncRequestEnricher, RequestEnricher
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
+
+
+try:
+    import prometheus_client as prom
+
+    latency_histogram = prom.Histogram(
+        "aio_request_transport_latency",
+        "Duration of transport requests.",
+        labelnames=(
+            "request_endpoint",
+            "request_method",
+            "request_path",
+            "response_status",
+        ),
+        buckets=(
+            0.005,
+            0.01,
+            0.025,
+            0.05,
+            0.075,
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3,
+            0.35,
+            0.4,
+            0.45,
+            0.5,
+            0.75,
+            1.0,
+            5.0,
+            10.0,
+            15.0,
+            20.0,
+        ),
+    )
+
+    def capture_metrics(
+        *, endpoint: yarl.URL, request: Request, status: int, started_at: float
+    ) -> None:
+        label_values = (
+            endpoint.human_repr(),
+            request.method,
+            request.url.path,
+            str(status),
+        )
+        elapsed = max(0.0, time.perf_counter() - started_at)
+        latency_histogram.labels(*label_values).observe(elapsed)
+
+except ImportError:
+
+    def capture_metrics(
+        *, endpoint: yarl.URL, request: Request, status: int, started_at: float
+    ) -> None:
+        pass
 
 NextModuleFunc = collections.abc.Callable[
     [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
@@ -113,7 +170,14 @@ class TransportModule(RequestModule):
                 enriched_request = await enriched_request
             request = enriched_request  # type: ignore
 
-        return await self.__transport.send(endpoint, request, deadline.timeout)
+        started_at = time.perf_counter()
+        try:
+            response = await self.__transport.send(endpoint, request, deadline.timeout)
+            capture_metrics(endpoint=endpoint, request=request, status=response.status, started_at=started_at)
+            return response
+        except asyncio.CancelledError:
+            capture_metrics(endpoint=endpoint, request=request, status=499, started_at=started_at)
+            raise
 
 
 class CircuitBreakerModule(RequestModule):

@@ -18,7 +18,7 @@ try:
 
     latency_histogram = prom.Histogram(
         "aio_request_latency",
-        "Duration of HTTP client requests.",
+        "Duration of client requests.",
         labelnames=(
             "request_endpoint",
             "request_method",
