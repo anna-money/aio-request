@@ -1,4 +1,4 @@
-## unreleased
+## v0.2.0 (2025-01-09)
 
 * [Support httpx transport](https://github.com/anna-money/aio-request/pull/221)
 * Drop python 3.9/3.10 support, support only 3.11/3.12/3.13. Related PRs: [#222](https://github.com/anna-money/aio-request/pull/222), [#266](https://github.com/anna-money/aio-request/pull/266), [#275](https://github.com/anna-money/aio-request/pull/275)
