@@ -14,7 +14,6 @@ from .request import AsyncRequestEnricher, RequestEnricher
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
 
-
 try:
     import prometheus_client as prom
 
@@ -51,9 +50,7 @@ try:
         ),
     )
 
-    def capture_metrics(
-        *, endpoint: yarl.URL, request: Request, status: int, started_at: float
-    ) -> None:
+    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
         label_values = (
             endpoint.human_repr(),
             request.method,
@@ -65,10 +62,9 @@ try:
 
 except ImportError:
 
-    def capture_metrics(
-        *, endpoint: yarl.URL, request: Request, status: int, started_at: float
-    ) -> None:
+    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
         pass
+
 
 NextModuleFunc = collections.abc.Callable[
     [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
