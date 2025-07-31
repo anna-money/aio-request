@@ -81,15 +81,16 @@ async def test_json_empty_response(httpbin, transport):
     )
     try:
         assert response.status == 200
-        assert await response.json(content_type=None) == None
-        assert response.headers == multidict.CIMultiDict[str](
+        assert await response.json(content_type=None) is None
+        headers = response.headers
+        assert headers == multidict.CIMultiDict[str](
             {
                 "Date": unittest.mock.ANY,
                 "Server": "Pytest-HTTPBIN/0.1.0",
                 "Content-Type": "text/html; charset=utf-8",
-                "Content-Length": "0",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Credentials": "true",
+                "Content-Length": "0",
                 "Connection": "Close",
             }
         )
