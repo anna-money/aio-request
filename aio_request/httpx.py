@@ -150,8 +150,14 @@ class _HttpxResponse(ClosableResponse):
             response_content_type = self.__response.headers.get(Header.CONTENT_TYPE, "").lower()
             if not is_expected_content_type(response_content_type, content_type):
                 raise UnexpectedContentTypeError(f"Expected {content_type}, actual {response_content_type}")
+        body = await self.__response.aread()
+        stripped = body.strip()
+        if not stripped:
+            return None
 
-        return loads(await self.text(encoding=encoding))
+        return loads(
+            stripped.decode(encoding or self.__response.charset_encoding or detect_encoding(stripped) or "utf-8")
+        )
 
     async def read(self) -> bytes:
         return await self.__response.aread()

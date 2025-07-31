@@ -73,6 +73,30 @@ async def test_json(httpbin, transport):
         await response.close()
 
 
+async def test_json_empty_response(httpbin, transport):
+    response = await transport.send(
+        yarl.URL(httpbin.url),
+        aio_request.post("status/200"),
+        DEFAULT_TIMEOUT,
+    )
+    try:
+        assert response.status == 200
+        assert await response.json(content_type=None) == None
+        assert response.headers == multidict.CIMultiDict[str](
+            {
+                "Date": unittest.mock.ANY,
+                "Server": "Pytest-HTTPBIN/0.1.0",
+                "Content-Type": "text/html; charset=utf-8",
+                "Content-Length": "0",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": "true",
+                "Connection": "Close",
+            }
+        )
+    finally:
+        await response.close()
+
+
 async def test_utf8_text(httpbin, transport):
     response = await transport.send(
         yarl.URL(httpbin.url),
