@@ -1,6 +1,7 @@
-## unreleased
+## v0.2.2 (2025-07-31)
 
 * [Now json() could parse empty body when using httpx transport](https://github.com/anna-money/aio-request/pull/296)
+
 
 ## v0.2.1 (2025-01-09)
 
