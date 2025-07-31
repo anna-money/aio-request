@@ -1,3 +1,7 @@
+## unreleased
+
+* [Now json() could parse empty body when using httpx transport](https://github.com/anna-money/aio-request/pull/296)
+
 ## v0.2.1 (2025-01-09)
 
 * [Increase metrics buckets precision](https://github.com/anna-money/aio-request/pull/287)
