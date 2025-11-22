@@ -37,50 +37,50 @@ class CircuitBreakerMetrics(abc.ABC):
 
 
 class RollingCircuitBreakerMetrics(CircuitBreakerMetrics):
-    __slots__ = ("_window_duration", "_sampling_duration", "_last_n", "_current")
+    __slots__ = ("__current", "__last_n", "__sampling_duration", "__window_duration")
 
     def __init__(self, sampling_duration: float, windows_count: int) -> None:
-        self._sampling_duration = sampling_duration
-        self._window_duration = sampling_duration / windows_count
-        self._last_n: collections.deque = collections.deque()  # type: ignore
-        self._current: CircuitBreakerMetricsSnapshot | None = None
+        self.__sampling_duration = sampling_duration
+        self.__window_duration = sampling_duration / windows_count
+        self.__last_n: collections.deque = collections.deque()  # type: ignore
+        self.__current: CircuitBreakerMetricsSnapshot | None = None
 
     def increment_successes(self) -> None:
-        self._refresh()
-        self._current.successes += 1  # type: ignore
+        self.__refresh()
+        self.__current.successes += 1  # type: ignore
 
     def increment_failures(self) -> None:
-        self._refresh()
-        self._current.failures += 1  # type: ignore
+        self.__refresh()
+        self.__current.failures += 1  # type: ignore
 
     def reset(self) -> None:
-        self._current = None
-        self._last_n.clear()
+        self.__current = None
+        self.__last_n.clear()
 
     def collect(self) -> CircuitBreakerMetricsSnapshot:
-        self._refresh()
+        self.__refresh()
 
         successes, failures = 0, 0
-        for last in self._last_n:
+        for last in self.__last_n:
             successes += last.successes
             failures += last.failures
 
         return CircuitBreakerMetricsSnapshot(
-            started_at=self._last_n[0].started_at, successes=successes, failures=failures
+            started_at=self.__last_n[0].started_at, successes=successes, failures=failures
         )
 
-    def _refresh(self) -> None:
+    def __refresh(self) -> None:
         now = time.time()
-        if self._current is None or (now - self._current.started_at) >= self._window_duration:
-            self._current = CircuitBreakerMetricsSnapshot(started_at=now)
-            self._last_n.append(self._current)
+        if self.__current is None or (now - self.__current.started_at) >= self.__window_duration:
+            self.__current = CircuitBreakerMetricsSnapshot(started_at=now)
+            self.__last_n.append(self.__current)
 
-        while self._last_n:
-            last_state = self._last_n[0]
-            if (now - last_state.started_at) < self._sampling_duration:
+        while self.__last_n:
+            last_state = self.__last_n[0]
+            if (now - last_state.started_at) < self.__sampling_duration:
                 break
 
-            self._last_n.popleft()
+            self.__last_n.popleft()
 
 
 TScope = TypeVar("TScope")
@@ -108,11 +108,11 @@ class CircuitBreaker(Generic[TScope, TResult], abc.ABC):
 class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
     __slots__ = (
         "__break_duration",
-        "__minimum_throughput",
         "__failure_threshold",
+        "__minimum_throughput",
+        "__per_scope_blocked_till",
         "__per_scope_metrics",
         "__per_scope_state",
-        "__per_scope_blocked_till",
     )
 
     def __init__(
@@ -123,7 +123,7 @@ class DefaultCircuitBreaker(CircuitBreaker[TScope, TResult]):
         minimum_throughput: int,
         sampling_duration: float,
         windows_count: int = 10,
-    ):
+    ) -> None:
         """
         failure_threshold: The failure threshold at which the circuit will break (a number between 0 and 1)
         break_duration: The duration the circuit will stay open before resetting

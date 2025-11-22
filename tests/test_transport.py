@@ -1,10 +1,13 @@
 import unittest.mock
+from collections.abc import AsyncIterator
+from typing import Any
 
 import aiohttp
 import httpx
 import multidict
 import pytest
 import yarl
+from _pytest.fixtures import SubRequest
 
 import aio_request
 
@@ -12,7 +15,7 @@ DEFAULT_TIMEOUT = 20.0
 
 
 @pytest.fixture(params=("aiohttp", "httpx"))
-async def transport(request):
+async def transport(request: SubRequest) -> AsyncIterator[aio_request.Transport]:
     if request.param == "aiohttp":
         async with aiohttp.ClientSession() as client_session:
             yield aio_request.AioHttpTransport(client_session)
@@ -23,7 +26,7 @@ async def transport(request):
         raise ValueError(f"Unknown transport {request.param}")
 
 
-async def test_success_with_path_parameters(httpbin, transport):
+async def test_success_with_path_parameters(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(httpbin.url),
         aio_request.get("status/{status}", path_parameters={"status": "200"}),
@@ -35,7 +38,7 @@ async def test_success_with_path_parameters(httpbin, transport):
         await response.close()
 
 
-async def test_json(httpbin, transport):
+async def test_json(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(httpbin.url),
         aio_request.get("json"),
@@ -73,7 +76,7 @@ async def test_json(httpbin, transport):
         await response.close()
 
 
-async def test_json_empty_response(httpbin, transport):
+async def test_json_empty_response(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(httpbin.url),
         aio_request.post("status/200"),
@@ -98,7 +101,7 @@ async def test_json_empty_response(httpbin, transport):
         await response.close()
 
 
-async def test_utf8_text(httpbin, transport):
+async def test_utf8_text(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(httpbin.url),
         aio_request.get("encoding/utf8"),
@@ -111,7 +114,7 @@ async def test_utf8_text(httpbin, transport):
         await response.close()
 
 
-async def test_success_with_query_parameters(httpbin, transport):
+async def test_success_with_query_parameters(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(httpbin.url),
         aio_request.get("anything", query_parameters={"a": "b"}),
@@ -125,7 +128,7 @@ async def test_success_with_query_parameters(httpbin, transport):
         await response.close()
 
 
-async def test_success_with_query_parameters_multidict(httpbin, transport):
+async def test_success_with_query_parameters_multidict(httpbin: Any, transport: aio_request.Transport) -> None:
     query_parameters = multidict.CIMultiDict[str]()
     query_parameters.add("a", "b")
     query_parameters.add("a", "c")
@@ -142,7 +145,7 @@ async def test_success_with_query_parameters_multidict(httpbin, transport):
         await response.close()
 
 
-async def test_redirects_max_redirects(httpbin, transport):
+async def test_redirects_max_redirects(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(f"{httpbin.url}/absolute-redirect/10"),
         aio_request.get("", allow_redirects=True, max_redirects=2),
@@ -156,7 +159,7 @@ async def test_redirects_max_redirects(httpbin, transport):
     assert not await response.read()
 
 
-async def test_redirects_not_allowed(httpbin, transport):
+async def test_redirects_not_allowed(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(f"{httpbin.url}/absolute-redirect/10"),
         aio_request.get("", allow_redirects=False),
@@ -166,7 +169,7 @@ async def test_redirects_not_allowed(httpbin, transport):
     assert response.headers["Location"] == f"{httpbin.url}/absolute-redirect/9"
 
 
-async def test_redirects_allowed_default(httpbin, transport):
+async def test_redirects_allowed_default(httpbin: Any, transport: aio_request.Transport) -> None:
     response = await transport.send(
         yarl.URL(f"{httpbin.url}/absolute-redirect/5"),
         aio_request.get(""),

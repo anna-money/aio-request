@@ -15,7 +15,7 @@ class EndpointProvider(abc.ABC):
 class StaticEndpointProvider(EndpointProvider):
     __slots__ = ("__endpoint",)
 
-    def __init__(self, endpoint: str | yarl.URL):
+    def __init__(self, endpoint: str | yarl.URL) -> None:
         self.__endpoint = ensure_url(endpoint)
 
     async def get(self) -> yarl.URL:
@@ -29,7 +29,7 @@ AsyncEndpointDelete = collections.abc.Callable[[], collections.abc.Awaitable[str
 class DelegateEndpointProvider(EndpointProvider):
     __slots__ = ("__endpoint_delegate",)
 
-    def __init__(self, endpoint_delegate: EndpointDelegate | AsyncEndpointDelete):
+    def __init__(self, endpoint_delegate: EndpointDelegate | AsyncEndpointDelete) -> None:
         self.__endpoint_delegate = endpoint_delegate
 
     async def get(self) -> yarl.URL:

@@ -1,21 +1,29 @@
 import asyncio
 import logging
+from collections.abc import AsyncIterator
+from typing import Protocol
 
 import aiohttp.web
 import aiohttp.web_request
 import aiohttp.web_response
 import pytest
 import yarl
+from aiohttp.test_utils import TestClient
+from pytest_aiohttp.plugin import AiohttpClient
 
 import aio_request
 
 logging.basicConfig(level="DEBUG")
 
 
+class ClientFactory(Protocol):
+    def __call__(self, emit_system_headers: bool = True) -> aio_request.Client: ...
+
+
 class FakeTransport(aio_request.Transport):
     __slots__ = ("_responses",)
 
-    def __init__(self, *responses: int | tuple[int, float]):
+    def __init__(self, *responses: int | tuple[int, float]) -> None:
         self._responses = list(reversed(responses))
 
     async def send(
@@ -38,7 +46,7 @@ class FakeTransport(aio_request.Transport):
 
 
 @pytest.fixture
-async def server(aiohttp_client):
+async def server(aiohttp_client: AiohttpClient) -> TestClient:
     async def handler(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
         await asyncio.sleep(float(request.query.get("delay", "0")))
         return aiohttp.web_response.Response()
@@ -64,15 +72,14 @@ async def server(aiohttp_client):
 
 
 @pytest.fixture
-async def client(server):
+async def client(server: TestClient) -> AsyncIterator[ClientFactory]:
     async with aiohttp.ClientSession() as client_session:
 
-        def go(emit_system_headers: bool = True):
-            return aio_request.setup_v2(
+        def go(emit_system_headers: bool = True) -> aio_request.Client:
+            return aio_request.setup(
                 transport=aio_request.AioHttpTransport(client_session),
                 endpoint=f"http://{server.server.host}:{server.server.port}/",
                 emit_system_headers=emit_system_headers,
-                circuit_breaker=aio_request.NoopCircuitBreaker[yarl.URL, aio_request.ClosableResponse](),
             )
 
         yield go

@@ -101,7 +101,7 @@ import aiohttp
 import aio_request
 
 async with aiohttp.ClientSession() as client_session:
-    client = aio_request.setup_v2(
+    client = aio_request.setup(
         transport=aio_request.AioHttpTransport(client_session),
         endpoint="http://endpoint:8080/",
         circuit_breaker=aio_request.DefaultCircuitBreaker[str, int](

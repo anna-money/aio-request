@@ -4,14 +4,14 @@ import pytest
 import aio_request
 
 
-async def test_update_headers():
+async def test_update_headers() -> None:
     request = aio_request.get("get", headers={"a": "b", "x": "y"})
     request = request.update_headers({"c": "d", "x": "z"})
 
     assert request.headers == {"a": "b", "c": "d", "x": "z"}
 
 
-async def test_extend_headers():
+async def test_extend_headers() -> None:
     request = aio_request.get("get", headers={"a": "b", "x": "y"})
     request = request.extend_headers({"c": "d", "x": "z"})
 
@@ -29,7 +29,7 @@ async def test_extend_headers():
         (True, "application/problem+json;charset=uft-8", "application/json"),
     ],
 )
-async def test_response_is_json(is_json: bool, response_content_type: str, content_type: str):
+async def test_response_is_json(is_json: bool, response_content_type: str, content_type: str) -> None:
     headers = multidict.CIMultiDict[str]()
     headers.add(aio_request.Header.CONTENT_TYPE, response_content_type)
     response = aio_request.EmptyResponse(

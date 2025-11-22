@@ -1,6 +1,6 @@
-import collections
 import re
 import sys
+from typing import NamedTuple
 
 from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
 from .circuit_breaker import (
@@ -180,11 +180,17 @@ __version__ = "0.2.2"
 
 version = f"{__version__}, Python {sys.version}"
 
-VersionInfo = collections.namedtuple("VersionInfo", "major minor micro release_level serial")
+
+class VersionInfo(NamedTuple):
+    major: int
+    minor: int
+    micro: int
+    release_level: str
+    serial: int
 
 
 def _parse_version(v: str) -> VersionInfo:
-    version_re = r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)" r"((?P<release_level>[a-z]+)(?P<serial>\d+)?)?$"
+    version_re = r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<release_level>[a-z]+)(?P<serial>\d+)?)?$"
     match = re.match(version_re, v)
     if not match:
         raise ImportError(f"Invalid package version {v}")

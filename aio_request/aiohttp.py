@@ -92,7 +92,7 @@ logger = logging.getLogger(__package__)
 
 
 class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
-    __slots__ = ("__resolver", "__results", "__interval", "__task", "__max_failures")
+    __slots__ = ("__interval", "__max_failures", "__resolver", "__results", "__task")
 
     def __init__(
         self,
@@ -100,7 +100,7 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
         *,
         interval: float = 30,
         max_failures: float = 3,
-    ):
+    ) -> None:
         if interval <= 0:
             raise RuntimeError("Interval should be positive")
         if max_failures <= 0:
@@ -160,10 +160,10 @@ class AioHttpDnsResolver(aiohttp.abc.AbstractResolver):
 
 class AioHttpTransport(Transport):
     __slots__ = (
+        "__buffer_payload",
         "__client_session",
         "__network_errors_code",
         "__too_many_redirects_code",
-        "__buffer_payload",
     )
 
     def __init__(
@@ -174,7 +174,7 @@ class AioHttpTransport(Transport):
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
-    ):
+    ) -> None:
         if metrics_provider is not None:
             warnings.warn(
                 "metrics_provider is deprecated, it will not be used, please use builtin prometheus support",
@@ -255,7 +255,7 @@ class AioHttpTransport(Transport):
                 },
             )
             return EmptyResponse(status=self.__network_errors_code)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
                 method,
@@ -273,7 +273,7 @@ class AioHttpTransport(Transport):
 class _AioHttpResponse(ClosableResponse):
     __slots__ = ("__response",)
 
-    def __init__(self, response: aiohttp.ClientResponse):
+    def __init__(self, response: aiohttp.ClientResponse) -> None:
         self.__response = response
 
     async def close(self) -> None:
@@ -349,7 +349,7 @@ def aiohttp_middleware_factory(
                         try:
                             async with asyncio.timeout(deadline.timeout):
                                 response = await handler(request)
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             response = aiohttp.web_response.Response(status=408)
 
             capture_metrics(

@@ -74,11 +74,11 @@ except ImportError:
 class Client:
     __slots__ = (
         "__endpoint_provider",
-        "__response_classifier",
-        "__request_strategy",
         "__priority",
-        "__timeout",
+        "__request_strategy",
+        "__response_classifier",
         "__send_request",
+        "__timeout",
     )
 
     def __init__(
@@ -92,7 +92,7 @@ class Client:
         send_request: collections.abc.Callable[
             [yarl.URL, Request, Deadline, Priority], collections.abc.Awaitable[ClosableResponse]
         ],
-    ):
+    ) -> None:
         self.__endpoint_provider = endpoint_provider
         self.__response_classifier = response_classifier
         self.__request_strategy = request_strategy

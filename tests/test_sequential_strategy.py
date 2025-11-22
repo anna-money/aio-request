@@ -1,12 +1,13 @@
 import asyncio
 import contextlib
+from typing import Never
 
 import aio_request
 
 from .conftest import FakeTransport
 
 
-async def test_timeout_due_to_low_timeout():
+async def test_timeout_due_to_low_timeout() -> None:
     client = aio_request.setup(
         transport=FakeTransport(200),
         endpoint="http://service.com",
@@ -23,7 +24,7 @@ async def test_timeout_due_to_low_timeout():
         assert not deadline.expired
 
 
-async def test_timeout_due_to_expiration():
+async def test_timeout_due_to_expiration() -> None:
     client = aio_request.setup(
         transport=FakeTransport((200, 5)),
         endpoint="http://service.com",
@@ -39,7 +40,7 @@ async def test_timeout_due_to_expiration():
         assert deadline.expired
 
 
-async def test_succeed_if_deadline_split():
+async def test_succeed_if_deadline_split() -> None:
     client = aio_request.setup(
         transport=FakeTransport((200, 5), 200),
         endpoint="http://service.com",
@@ -59,7 +60,7 @@ async def test_succeed_if_deadline_split():
         assert not deadline.expired
 
 
-async def test_succeed_response_received():
+async def test_succeed_response_received() -> None:
     client = aio_request.setup(
         transport=FakeTransport(489, 200),
         endpoint="http://service.com",
@@ -75,7 +76,7 @@ async def test_succeed_response_received():
         assert not deadline.expired
 
 
-async def test_succeed_response_not_received_too_many_failures():
+async def test_succeed_response_not_received_too_many_failures() -> None:
     client = aio_request.setup(
         transport=FakeTransport(499, 499, 499),
         endpoint="http://service.com",
@@ -91,8 +92,8 @@ async def test_succeed_response_not_received_too_many_failures():
         assert not deadline.expired
 
 
-async def test_cancellation():
-    async def send_request():
+async def test_cancellation() -> None:
+    async def send_request() -> Never:
         client = aio_request.setup(
             transport=FakeTransport(489, (200, 100)),
             endpoint="http://service.com",

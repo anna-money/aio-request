@@ -7,7 +7,7 @@ import aiohttp.abc
 import aio_request
 
 
-async def test_multiple_resolve():
+async def test_multiple_resolve() -> None:
     base_resolver = unittest.mock.MagicMock(spec=aiohttp.abc.AbstractResolver)
     base_resolver.resolve.side_effect = [[{"endpoint": {"ip": "1"}}], [{"endpoint": {"ip": "2"}}]]
     resolver = aio_request.AioHttpDnsResolver(base_resolver, interval=0.5)
@@ -24,7 +24,7 @@ async def test_multiple_resolve():
     assert second == [{"endpoint": {"ip": "1"}}]
 
 
-async def test_resolve_in_background():
+async def test_resolve_in_background() -> None:
     base_resolver = unittest.mock.MagicMock(spec=aiohttp.abc.AbstractResolver)
     base_resolver.resolve.side_effect = [[{"endpoint": {"ip": "1"}}], [{"endpoint": {"ip": "2"}}]]
     resolver = aio_request.AioHttpDnsResolver(base_resolver, interval=0.5)
@@ -42,7 +42,7 @@ async def test_resolve_in_background():
     assert second == [{"endpoint": {"ip": "2"}}]
 
 
-async def test_resolve_failures_in_background():
+async def test_resolve_failures_in_background() -> None:
     base_resolver = unittest.mock.MagicMock(spec=aiohttp.abc.AbstractResolver)
     base_resolver.resolve.side_effect = [
         [{"endpoint": {"ip": "1"}}],

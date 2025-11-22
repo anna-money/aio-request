@@ -1,21 +1,22 @@
 all: deps lint test
 
-deps:
-	@python3 -m pip install --upgrade pip && pip3 install -r requirements-dev.txt
+uv:
+	@which uv >/dev/null 2>&1 || { \
+		echo "❌ uv is not installed"; \
+		exit 1;\
+	}
 
-black:
-	@black --line-length 120 aio_request tests example
+deps: uv
+	@uv pip install -e ".[dev]"
 
-isort:
-	@isort --line-length 120 --use-parentheses --multi-line 3 --combine-as --trailing-comma aio_request tests example
+format:
+	@ruff format aio_request tests example
+	@ruff check --fix aio_request tests example
 
 pyright:
-	pyright
+	@pyright
 
-flake8:
-	@flake8 --max-line-length 120 --ignore C901,C812,E203,E704 --extend-ignore W503 aio_request tests example
-
-lint: black isort flake8 pyright
+lint: format pyright
 
 test:
 	@python3 -m pytest -vv --rootdir tests .
