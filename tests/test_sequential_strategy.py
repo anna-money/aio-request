@@ -11,8 +11,9 @@ async def test_timeout_due_to_low_timeout() -> None:
     client = aio_request.setup(
         transport=FakeTransport(200),
         endpoint="http://service.com",
+        low_timeout_threshold=0.02,
     )
-    deadline = aio_request.Deadline.from_timeout(0.004)
+    deadline = aio_request.Deadline.from_timeout(0.015)
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
