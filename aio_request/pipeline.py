@@ -13,6 +13,7 @@ from .priority import Priority
 from .request import AsyncRequestEnricher, RequestEnricher
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
+from .utils import perf_counter_elapsed
 
 try:
     import prometheus_client as prom
@@ -50,19 +51,18 @@ try:
         ),
     )
 
-    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
+    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, elapsed: float) -> None:
         label_values = (
             endpoint.human_repr(),
             request.method,
             request.url.path,
             str(status),
         )
-        elapsed = max(0.0, time.perf_counter() - started_at)
         latency_histogram.labels(*label_values).observe(elapsed)
 
 except ImportError:
 
-    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, started_at: float) -> None:
+    def capture_metrics(*, endpoint: yarl.URL, request: Request, status: int, elapsed: float) -> None:
         pass
 
 
@@ -169,10 +169,12 @@ class TransportModule(RequestModule):
         started_at = time.perf_counter()
         try:
             response = await self.__transport.send(endpoint, request, deadline.timeout)
-            capture_metrics(endpoint=endpoint, request=request, status=response.status, started_at=started_at)
+            capture_metrics(
+                endpoint=endpoint, request=request, status=response.status, elapsed=perf_counter_elapsed(started_at)
+            )
             return response
         except asyncio.CancelledError:
-            capture_metrics(endpoint=endpoint, request=request, status=499, started_at=started_at)
+            capture_metrics(endpoint=endpoint, request=request, status=499, elapsed=perf_counter_elapsed(started_at))
             raise
 
 

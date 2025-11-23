@@ -2,6 +2,7 @@ import abc
 import asyncio
 import collections.abc
 import contextlib
+import time
 from typing import TypeVar
 
 
@@ -56,3 +57,7 @@ def try_parse_float(value: str | None) -> float | None:
         return float(value)
     except ValueError:
         return None
+
+
+def perf_counter_elapsed(started_at: float) -> float:
+    return time.perf_counter() - started_at
