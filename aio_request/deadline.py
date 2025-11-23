@@ -1,6 +1,8 @@
 import time
 from typing import Any
 
+from .utils import perf_counter_elapsed
+
 
 class Deadline:
     @staticmethod
@@ -18,12 +20,12 @@ class Deadline:
 
     @property
     def timeout(self) -> float:
-        remaining = self.__seconds - self.__get_elapsed()
+        remaining = self.__seconds - perf_counter_elapsed(self.__started_at)
         return remaining if remaining > 0 else 0
 
     @property
     def expired(self) -> bool:
-        return self.__seconds - self.__get_elapsed() <= 0
+        return self.__seconds - perf_counter_elapsed(self.__started_at) <= 0
 
     def __truediv__(self, divisor: Any) -> "Deadline":
         if not isinstance(divisor, int | float):
@@ -44,6 +46,3 @@ class Deadline:
         if self.expired:
             return "<Deadline [expired]>"
         return f"<Deadline [timeout={self.timeout}]>"
-
-    def __get_elapsed(self) -> float:
-        return time.perf_counter() - self.__started_at

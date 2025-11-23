@@ -34,7 +34,7 @@ from .deadline import Deadline
 from .deprecated import MetricsProvider
 from .priority import Priority
 from .transport import Transport
-from .utils import try_parse_float
+from .utils import perf_counter_elapsed, try_parse_float
 
 try:
     import prometheus_client as prom
@@ -72,19 +72,18 @@ try:
         ),
     )
 
-    def capture_metrics(*, method: str, path: str, client: str, status: int, started_at: float) -> None:
+    def capture_metrics(*, method: str, path: str, client: str, status: int, elapsed: float) -> None:
         label_values = (
             client,
             method,
             path,
             str(status),
         )
-        elapsed = max(0.0, time.perf_counter() - started_at)
         latency_histogram.labels(*label_values).observe(elapsed)
 
 except ImportError:
 
-    def capture_metrics(*, method: str, path: str, client: str, status: int, started_at: float) -> None:
+    def capture_metrics(*, method: str, path: str, client: str, status: int, elapsed: float) -> None:
         pass
 
 
@@ -357,7 +356,7 @@ def aiohttp_middleware_factory(
                 path=_get_route_path(request),
                 client=request.headers.get(client_header_name, "unknown").lower(),
                 status=response.status,
-                started_at=started_at,
+                elapsed=perf_counter_elapsed(started_at),
             )
 
             return response
@@ -367,7 +366,7 @@ def aiohttp_middleware_factory(
                 path=_get_route_path(request),
                 client=request.headers.get(client_header_name, "unknown").lower(),
                 status=499,
-                started_at=started_at,
+                elapsed=perf_counter_elapsed(started_at),
             )
             raise
         except aiohttp.web_exceptions.HTTPException as e:
@@ -376,7 +375,7 @@ def aiohttp_middleware_factory(
                 path=_get_route_path(request),
                 client=request.headers.get(client_header_name, "unknown").lower(),
                 status=e.status,
-                started_at=started_at,
+                elapsed=perf_counter_elapsed(started_at),
             )
             raise
         except Exception:
@@ -385,7 +384,7 @@ def aiohttp_middleware_factory(
                 path=_get_route_path(request),
                 client=request.headers.get(client_header_name, "unknown").lower(),
                 status=500,
-                started_at=started_at,
+                elapsed=perf_counter_elapsed(started_at),
             )
             raise
 

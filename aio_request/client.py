@@ -12,6 +12,7 @@ from .endpoint_provider import EndpointProvider
 from .priority import Priority
 from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
+from .utils import perf_counter_elapsed
 
 try:
     import prometheus_client as prom
@@ -51,7 +52,7 @@ try:
     )
 
     def capture_metrics(
-        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, elapsed: float
     ) -> None:
         label_values = (
             endpoint.human_repr(),
@@ -60,13 +61,12 @@ try:
             str(status),
             str(circuit_breaker),
         )
-        elapsed = max(0.0, time.perf_counter() - started_at)
         latency_histogram.labels(*label_values).observe(elapsed)
 
 except ImportError:
 
     def capture_metrics(
-        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, started_at: float
+        *, endpoint: yarl.URL, request: Request, status: int, circuit_breaker: bool, elapsed: float
     ) -> None:
         pass
 
@@ -121,7 +121,7 @@ class Client:
                     request=request,
                     status=response.status,
                     circuit_breaker=Header.X_CIRCUIT_BREAKER in response.headers,
-                    started_at=started_at,
+                    elapsed=perf_counter_elapsed(started_at),
                 )
                 yield response
         except asyncio.CancelledError:
@@ -130,7 +130,7 @@ class Client:
                 request=request,
                 status=499,
                 circuit_breaker=False,
-                started_at=started_at,
+                elapsed=perf_counter_elapsed(started_at),
             )
             raise
 
