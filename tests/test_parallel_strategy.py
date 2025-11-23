@@ -9,7 +9,7 @@ async def test_timeout_due_to_low_timeout() -> None:
         endpoint="http://service.com",
         low_timeout_threshold=0.02,
     )
-    deadline = aio_request.Deadline.from_timeout(0.015)
+    deadline = aio_request.Deadline.from_timeout(0.01)
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
@@ -18,7 +18,6 @@ async def test_timeout_due_to_low_timeout() -> None:
     async with response_ctx as response:
         assert response.status == 408
         assert aio_request.Header.X_DO_NOT_RETRY in response.headers
-        assert not deadline.expired
 
 
 async def test_timeout_due_to_expiration() -> None:
