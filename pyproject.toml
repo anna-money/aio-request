@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Environment :: Web Environment",
     "Development Status :: 5 - Production/Stable",
@@ -30,14 +31,14 @@ Homepage = "https://github.com/anna-money/aio-request"
 
 [project.optional-dependencies]
 dev = [
-    "pytest==8.3.5",
+    "pytest==8.4.2",
     "pytest-aiohttp==1.1.0",
     "pytest-httpbin==2.1.0",
-    "ruff==0.8.4",
-    "pyright==1.1.398",
-    "aiohttp==3.11.13",
+    "ruff==0.14.6",
+    "pyright==1.1.407",
+    "aiohttp==3.12.0",
     "httpx==0.28.1",
-    "prometheus-client==0.21.1",
+    "prometheus-client==0.21.0",
     "opentelemetry-api>=1.27",
     "opentelemetry-semantic-conventions",
     "opentelemetry-exporter-prometheus",

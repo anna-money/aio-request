@@ -1,3 +1,8 @@
+## Unreleased
+
+* [Migrate to modern Python tooling](https://github.com/anna-money/aio-request/pull/301)
+
+
 ## v0.2.2 (2025-07-31)
 
 * [Now json() could parse empty body when using httpx transport](https://github.com/anna-money/aio-request/pull/296)
