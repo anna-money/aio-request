@@ -1,6 +1,6 @@
 [project]
 name = "aio-request"
-version = "0.2.2"
+version = "0.2.3"
 description = "Various strategies for sending requests"
 readme = "README.md"
 license = {text = "MIT"}
