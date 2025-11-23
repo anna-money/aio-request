@@ -1,4 +1,4 @@
-## Unreleased
+## v0.2.3 (2025-11-23)
 
 * [Migrate to modern tooling + python 3.14](https://github.com/anna-money/aio-request/pull/301)
 
