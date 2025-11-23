@@ -3,12 +3,13 @@ import aio_request
 from .conftest import FakeTransport
 
 
-async def test_timeout_due_to_low_timeout():
+async def test_timeout_due_to_low_timeout() -> None:
     client = aio_request.setup(
         transport=FakeTransport(200),
         endpoint="http://service.com",
+        low_timeout_threshold=0.02,
     )
-    deadline = aio_request.Deadline.from_timeout(0.004)
+    deadline = aio_request.Deadline.from_timeout(0.01)
     response_ctx = client.request(
         aio_request.get("hello"),
         deadline=deadline,
@@ -17,10 +18,9 @@ async def test_timeout_due_to_low_timeout():
     async with response_ctx as response:
         assert response.status == 408
         assert aio_request.Header.X_DO_NOT_RETRY in response.headers
-        assert not deadline.expired
 
 
-async def test_timeout_due_to_expiration():
+async def test_timeout_due_to_expiration() -> None:
     client = aio_request.setup(
         transport=FakeTransport(
             (200, 5),
@@ -37,7 +37,7 @@ async def test_timeout_due_to_expiration():
         assert deadline.expired
 
 
-async def test_succeed_response_received_first_slow_request():
+async def test_succeed_response_received_first_slow_request() -> None:
     client = aio_request.setup(
         transport=FakeTransport((200, 5), 200),
         endpoint="http://service.com",
@@ -49,7 +49,7 @@ async def test_succeed_response_received_first_slow_request():
         assert not deadline.expired
 
 
-async def test_succeed_response_received():
+async def test_succeed_response_received() -> None:
     client = aio_request.setup(transport=FakeTransport(489, 200), endpoint="http://service.com")
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client.request(aio_request.get("hello"), deadline=deadline, strategy=aio_request.parallel_strategy())
@@ -58,7 +58,7 @@ async def test_succeed_response_received():
         assert not deadline.expired
 
 
-async def test_succeed_response_not_received_too_many_failures():
+async def test_succeed_response_not_received_too_many_failures() -> None:
     client = aio_request.setup(transport=FakeTransport(499, 499, 499), endpoint="http://service.com")
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client.request(

@@ -12,7 +12,7 @@ class Deadline:
 
     __slots__ = ("__seconds", "__started_at")
 
-    def __init__(self, started_at: float, seconds: float):
+    def __init__(self, started_at: float, seconds: float) -> None:
         self.__seconds = seconds
         self.__started_at = started_at
 
@@ -26,7 +26,7 @@ class Deadline:
         return self.__seconds - self.__get_elapsed() <= 0
 
     def __truediv__(self, divisor: Any) -> "Deadline":
-        if not isinstance(divisor, (int, float)):
+        if not isinstance(divisor, int | float):
             raise ValueError(f"unsupported operand type(s) for /: 'Deadline' and {type(divisor)}")
 
         if divisor == 0:

@@ -20,7 +20,7 @@ TResponse = TypeVar("TResponse")
 class ResponseWithVerdict(Generic[TResponse], Closable):
     __slots__ = ("response", "verdict")
 
-    def __init__(self, response: TResponse, verdict: ResponseVerdict):
+    def __init__(self, response: TResponse, verdict: ResponseVerdict) -> None:
         self.response = response
         self.verdict = verdict
 
@@ -51,7 +51,7 @@ class RequestStrategy(abc.ABC):
 class MethodBasedStrategy(RequestStrategy):
     __slots__ = ("__strategy_by_method",)
 
-    def __init__(self, strategy_by_method: dict[str, RequestStrategy]):
+    def __init__(self, strategy_by_method: dict[str, RequestStrategy]) -> None:
         self.__strategy_by_method = strategy_by_method
 
     def request(
@@ -123,8 +123,8 @@ class SingleAttemptRequestStrategy(RequestStrategy):
 class SequentialRequestStrategy(RequestStrategy):
     __slots__ = (
         "__attempts_count",
-        "__delays_provider",
         "__deadline_provider",
+        "__delays_provider",
     )
 
     def __init__(
@@ -133,7 +133,7 @@ class SequentialRequestStrategy(RequestStrategy):
         attempts_count: int,
         delays_provider: DelaysProvider,
         deadline_provider: DeadlineProvider = pass_deadline_through(),
-    ):
+    ) -> None:
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
@@ -184,7 +184,7 @@ class ParallelRequestStrategy(RequestStrategy):
         *,
         attempts_count: int,
         delays_provider: DelaysProvider,
-    ):
+    ) -> None:
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
@@ -257,7 +257,7 @@ class ParallelRequestStrategy(RequestStrategy):
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     __slots__ = ("__base_strategy", "__delays_provider")
 
-    def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider):
+    def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider) -> None:
         self.__delays_provider = delays_provider
         self.__base_strategy = base_strategy
 

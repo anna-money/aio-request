@@ -21,7 +21,8 @@ set_meter_provider(MeterProvider(metric_readers=[prometheus_metrics_reader], res
 
 set_tracer_provider(
     TracerProvider(
-        active_span_processor=BatchSpanProcessor(ConsoleSpanExporter("example")), resource=resource  # type: ignore
+        active_span_processor=BatchSpanProcessor(ConsoleSpanExporter("example")),
+        resource=resource,  # type: ignore
     )
 )
 
@@ -31,26 +32,26 @@ routes = aiohttp.web.RouteTableDef()
 
 
 @routes.get("/")
-async def hello(request):
+async def hello(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
     client = request.app["client"]
     async with client.request(aio_request.get("get")) as response:
         return aiohttp.web.Response(text=str(response.status))
 
 
 @routes.get("/metrics")
-async def metrics(request):
+async def metrics(request: aiohttp.web_request.Request) -> aiohttp.web_response.Response:
     return aiohttp.web_response.Response(
         body=await asyncio.get_running_loop().run_in_executor(None, prom.generate_latest), content_type="text/plain"
     )
 
 
-async def create_app():
-    async def set_up_aio_request(a):
+async def create_app() -> aiohttp.web.Application:
+    async def set_up_aio_request(app: aiohttp.web.Application) -> None:
         client_session = aiohttp.ClientSession()
         client = aio_request.setup(
             transport=aio_request.AioHttpTransport(client_session), endpoint="https://httpbin.org"
         )
-        a["client"] = client
+        app["client"] = client
         yield
         await client_session.close()
 

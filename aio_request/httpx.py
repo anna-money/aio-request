@@ -42,10 +42,10 @@ logger = logging.getLogger(__package__)
 
 class HttpxTransport(Transport):
     __slots__ = (
-        "__client",
         "__buffer_payload",
-        "__too_many_redirects_code",
+        "__client",
         "__network_errors_code",
+        "__too_many_redirects_code",
     )
 
     def __init__(
@@ -54,7 +54,7 @@ class HttpxTransport(Transport):
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
-    ):
+    ) -> None:
         self.__client = client
         self.__buffer_payload = buffer_payload
         self.__too_many_redirects_code = too_many_redirects_code
@@ -125,7 +125,7 @@ class HttpxTransport(Transport):
 class _HttpxResponse(ClosableResponse):
     __slots__ = ("__response",)
 
-    def __init__(self, response: httpx.Response):
+    def __init__(self, response: httpx.Response) -> None:
         self.__response = response
 
     async def close(self) -> None:

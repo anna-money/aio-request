@@ -28,7 +28,7 @@ class DefaultResponseClassifier(ResponseClassifier):
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         verdict_for_status: dict[int, ResponseVerdict] | None = None,
-    ):
+    ) -> None:
         self.__network_errors_code = network_errors_code
         self.__too_many_redirects_code = too_many_redirects_code
         self.__verdict_for_status = verdict_for_status or {}

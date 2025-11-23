@@ -55,14 +55,14 @@ class UnexpectedContentTypeError(Exception):
 
 class Request:
     __slots__ = (
+        "allow_redirects",
+        "body",
+        "headers",
+        "max_redirects",
         "method",
-        "url",
         "path_parameters",
         "query_parameters",
-        "headers",
-        "body",
-        "allow_redirects",
-        "max_redirects",
+        "url",
     )
 
     def __init__(
@@ -76,7 +76,7 @@ class Request:
         body: bytes | None = None,
         allow_redirects: bool = True,
         max_redirects: int = MAX_REDIRECTS,
-    ):
+    ) -> None:
         if url.is_absolute():
             raise RuntimeError("Request url should be relative")
 
@@ -186,9 +186,9 @@ class ClosableResponse(Response, Closable):
 
 
 class EmptyResponse(ClosableResponse):
-    __slots__ = ("__status", "__headers")
+    __slots__ = ("__headers", "__status")
 
-    def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS):
+    def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS) -> None:
         self.__status = status
         self.__headers = headers
 
@@ -215,7 +215,7 @@ class EmptyResponse(ClosableResponse):
         return None
 
     async def read(self) -> bytes:
-        return bytes()
+        return b""
 
     async def text(self, encoding: str | None = None) -> str:
         return ""
@@ -264,15 +264,15 @@ def substitute_path_parameters(url: yarl.URL, parameters: PathParameters | None 
     for name, value in parameters.items():
         path = path.replace(f"%7B{name}%7D", str(value))
 
-    build_parameters: dict[str, Any] = dict(
-        scheme=url.scheme,
-        user=url.raw_user,
-        password=url.raw_password,
-        host=url.raw_host,
-        port=url.port,
-        path=path,
-        query_string=url.raw_query_string,
-        fragment=url.raw_fragment,
-    )
+    build_parameters: dict[str, Any] = {
+        "scheme": url.scheme,
+        "user": url.raw_user,
+        "password": url.raw_password,
+        "host": url.raw_host,
+        "port": url.port,
+        "path": path,
+        "query_string": url.raw_query_string,
+        "fragment": url.raw_fragment,
+    }
 
     return yarl.URL.build(**{k: v for k, v in build_parameters.items() if v is not None}, encoded=True)

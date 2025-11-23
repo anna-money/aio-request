@@ -104,7 +104,7 @@ class BypassModule(RequestModule):
 class LowTimeoutModule(RequestModule):
     __slots__ = ("__low_timeout_threshold", "__timeout_response")
 
-    def __init__(self, low_timeout_threshold: float):
+    def __init__(self, low_timeout_threshold: float) -> None:
         self.__low_timeout_threshold = low_timeout_threshold
 
         headers = multidict.CIMultiDict[str]()
@@ -130,7 +130,7 @@ class LowTimeoutModule(RequestModule):
 
 
 class TransportModule(RequestModule):
-    __slots__ = ("__transport", "__emit_system_headers", "__request_enricher")
+    __slots__ = ("__emit_system_headers", "__request_enricher", "__transport")
 
     def __init__(
         self,
@@ -138,7 +138,7 @@ class TransportModule(RequestModule):
         *,
         emit_system_headers: bool,
         request_enricher: AsyncRequestEnricher | RequestEnricher | None,
-    ):
+    ) -> None:
         self.__transport = transport
         self.__emit_system_headers = emit_system_headers
         self.__request_enricher = request_enricher
@@ -185,7 +185,7 @@ class CircuitBreakerModule(RequestModule):
         *,
         status_code: int = 502,
         response_classifier: ResponseClassifier,
-    ):
+    ) -> None:
         self.__circuit_breaker = circuit_breaker
         self.__response_classifier = response_classifier
 
@@ -229,7 +229,7 @@ def build_pipeline(modules: list[RequestModule]) -> NextModuleFunc:
         ___: Deadline,
         ____: Priority,
     ) -> ClosableResponse:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _execute_module(m: RequestModule, n: NextModuleFunc) -> NextModuleFunc:
         return lambda e, r, d, p: m.execute(n, endpoint=e, request=r, deadline=d, priority=p)

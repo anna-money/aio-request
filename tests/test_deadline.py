@@ -3,7 +3,7 @@ import asyncio
 import aio_request
 
 
-async def test_deadline_expired():
+async def test_deadline_expired() -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     assert not deadline.expired
     assert 0.5 < deadline.timeout < 1
@@ -11,7 +11,7 @@ async def test_deadline_expired():
     assert deadline.expired
 
 
-async def test_deadline_division():
+async def test_deadline_division() -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     assert not deadline.expired
     assert 0.75 < deadline.timeout < 1

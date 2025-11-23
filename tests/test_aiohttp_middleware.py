@@ -1,7 +1,8 @@
 import aio_request
+from tests.conftest import ClientFactory
 
 
-async def test_success(client) -> None:
+async def test_success(client: ClientFactory) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(1.5),
@@ -11,7 +12,7 @@ async def test_success(client) -> None:
         assert response.status == 200
 
 
-async def test_not_enough_timeout(client) -> None:
+async def test_not_enough_timeout(client: ClientFactory) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(0.5),
@@ -21,7 +22,7 @@ async def test_not_enough_timeout(client) -> None:
         assert response.status == 408
 
 
-async def test_expired_budget(client) -> None:
+async def test_expired_budget(client: ClientFactory) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(0),
@@ -31,7 +32,7 @@ async def test_expired_budget(client) -> None:
         assert response.status == 408
 
 
-async def test_low_timeout_threshold(client):
+async def test_low_timeout_threshold(client: ClientFactory) -> None:
     response_ctx = client().request(
         aio_request.get("?delay=1"),
         deadline=aio_request.Deadline.from_timeout(0.005),
@@ -41,7 +42,7 @@ async def test_low_timeout_threshold(client):
         assert response.status == 408
 
 
-async def test_func_handler_timeout(client):
+async def test_func_handler_timeout(client: ClientFactory) -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client(emit_system_headers=False).request(
         aio_request.get("with_timeout?delay=1"),
@@ -53,7 +54,7 @@ async def test_func_handler_timeout(client):
         assert not deadline.expired
 
 
-async def test_view_handler_timeout(client):
+async def test_view_handler_timeout(client: ClientFactory) -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client(emit_system_headers=False).request(
         aio_request.get("view_with_timeout?delay=1"),
@@ -65,7 +66,7 @@ async def test_view_handler_timeout(client):
         assert not deadline.expired
 
 
-async def test_func_handler_timeout_priority(client):
+async def test_func_handler_timeout_priority(client: ClientFactory) -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client().request(
         aio_request.get("with_timeout?delay=0.5"),
@@ -77,7 +78,7 @@ async def test_func_handler_timeout_priority(client):
         assert not deadline.expired
 
 
-async def test_view_handler_timeout_priority(client):
+async def test_view_handler_timeout_priority(client: ClientFactory) -> None:
     deadline = aio_request.Deadline.from_timeout(1)
     response_ctx = client().request(
         aio_request.get("view_with_timeout?delay=0.5"),
