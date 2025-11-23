@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from aio_request.utils import perf_counter_elapsed
+from .utils import perf_counter_elapsed
 
 
 class Deadline:
