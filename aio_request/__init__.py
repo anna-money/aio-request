@@ -36,6 +36,7 @@ from .request import (
     request,
     request_json,
 )
+from .request_attempt_delays_provider import RequestAttemptDelaysProvider
 from .request_strategy import (
     MethodBasedStrategy,
     ParallelRequestStrategy,
@@ -55,57 +56,60 @@ from .setup import setup, setup_v2
 from .transport import Transport
 
 __all__: tuple[str, ...] = (
-    # base.py
-    "ClosableResponse",
-    "EmptyResponse",
-    "Header",
-    "Method",
-    "Request",
-    "Response",
-    "UnexpectedContentTypeError",
-    # circuit_breaker.py
+    "AsyncRequestEnricher",
+    "BypassModule",
     "CircuitBreaker",
     "CircuitBreakerMetrics",
     "CircuitBreakerMetricsSnapshot",
     "CircuitState",
-    "DefaultCircuitBreaker",
-    "NoopCircuitBreaker",
-    "RollingCircuitBreakerMetrics",
-    # client.py
     "Client",
-    # context.py
-    "get_context",
-    "set_context",
-    # deadline.py
+    "ClosableResponse",
     "Deadline",
-    # deadline_provider.py
     "DeadlineProvider",
-    "pass_deadline_through",
-    "split_deadline_between_attempts",
-    # delays_provider.py
-    "constant_delays",
-    "linear_backoff_delays",
-    "linear_delays",
-    # deprecated.py
+    "DefaultCircuitBreaker",
+    "DefaultResponseClassifier",
+    "DelegateEndpointProvider",
+    "DeprecatedAsyncRequestEnricher",
+    "EmptyResponse",
+    "EndpointProvider",
+    "Header",
+    "LowTimeoutModule",
+    "Method",
+    "MethodBasedStrategy",
     "MetricsProvider",
     "NOOP_METRICS_PROVIDER",
-    "NoopMetricsProvider",
-    # endpoint_provider.py
-    "EndpointProvider",
-    "DelegateEndpointProvider",
-    "StaticEndpointProvider",
-    # pipeline.py
-    "BypassModule",
-    "LowTimeoutModule",
     "NextModuleFunc",
-    "RequestModule",
-    "TransportModule",
-    "build_pipeline",
-    # priority.py
+    "NoopCircuitBreaker",
+    "NoopMetricsProvider",
+    "ParallelRequestStrategy",
     "Priority",
-    # request.py
+    "Request",
+    "RequestAttemptDelaysProvider",
+    "RequestEnricher",
+    "RequestModule",
+    "RequestStrategy",
+    "Response",
+    "ResponseClassifier",
+    "ResponseVerdict",
+    "ResponseWithVerdict",
+    "RetryUntilDeadlineExpiredStrategy",
+    "RollingCircuitBreakerMetrics",
+    "SendRequestFunc",
+    "SequentialRequestStrategy",
+    "SingleAttemptRequestStrategy",
+    "StaticEndpointProvider",
+    "Transport",
+    "TransportModule",
+    "UnexpectedContentTypeError",
+    "build_pipeline",
+    "constant_delays",
     "delete",
     "get",
+    "get_context",
+    "linear_backoff_delays",
+    "linear_delays",
+    "parallel_strategy",
+    "pass_deadline_through",
     "patch",
     "patch_json",
     "post",
@@ -114,31 +118,13 @@ __all__: tuple[str, ...] = (
     "put_json",
     "request",
     "request_json",
-    "RequestEnricher",
-    "AsyncRequestEnricher",
-    "DeprecatedAsyncRequestEnricher",
-    # request_strategy.py
-    "MethodBasedStrategy",
-    "ParallelRequestStrategy",
-    "RequestStrategy",
-    "ResponseWithVerdict",
-    "RetryUntilDeadlineExpiredStrategy",
-    "SendRequestFunc",
-    "SequentialRequestStrategy",
-    "SingleAttemptRequestStrategy",
-    "parallel_strategy",
     "retry_until_deadline_expired",
     "sequential_strategy",
-    "single_attempt_strategy",
-    # response_classifier.py
-    "DefaultResponseClassifier",
-    "ResponseClassifier",
-    "ResponseVerdict",
-    # setup.py
+    "set_context",
     "setup",
     "setup_v2",
-    # transport.py
-    "Transport",
+    "single_attempt_strategy",
+    "split_deadline_between_attempts",
 )
 try:
     import aiohttp  # noqa
