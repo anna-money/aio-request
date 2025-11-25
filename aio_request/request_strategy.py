@@ -11,10 +11,21 @@ from .deadline import Deadline
 from .deadline_provider import DeadlineProvider, pass_deadline_through
 from .delays_provider import DelaysProvider, linear_backoff_delays
 from .priority import Priority
+from .request_attempt_delays_provider import RequestAttemptDelaysProvider
 from .response_classifier import ResponseVerdict
 from .utils import Closable, cancel_futures, close, close_futures, close_single
 
 TResponse = TypeVar("TResponse")
+
+
+class RequestUnawareAttemptDelaysProvider(RequestAttemptDelaysProvider):
+    __slots__ = ("__delays_provider",)
+
+    def __init__(self, delays_provider: DelaysProvider) -> None:
+        self.__delays_provider = delays_provider
+
+    def __call__(self, request: Request, attempt: int) -> float:
+        return self.__delays_provider(attempt)
 
 
 class ResponseWithVerdict(Generic[TResponse], Closable):
@@ -72,7 +83,7 @@ def single_attempt_strategy() -> RequestStrategy:
 def sequential_strategy(
     *,
     attempts_count: int = 3,
-    delays_provider: DelaysProvider = linear_backoff_delays(),
+    delays_provider: DelaysProvider | RequestAttemptDelaysProvider = linear_backoff_delays(),
     deadline_provider: DeadlineProvider = pass_deadline_through(),
 ) -> RequestStrategy:
     return SequentialRequestStrategy(
@@ -85,13 +96,18 @@ def sequential_strategy(
 def parallel_strategy(
     *,
     attempts_count: int = 3,
-    delays_provider: DelaysProvider = linear_backoff_delays(),
+    delays_provider: DelaysProvider | RequestAttemptDelaysProvider = linear_backoff_delays(),
 ) -> RequestStrategy:
-    return ParallelRequestStrategy(attempts_count=attempts_count, delays_provider=delays_provider)
+    return ParallelRequestStrategy(
+        attempts_count=attempts_count,
+        delays_provider=delays_provider,
+    )
 
 
 def retry_until_deadline_expired(
-    strategy: RequestStrategy, *, delays_provider: DelaysProvider = linear_backoff_delays()
+    strategy: RequestStrategy,
+    *,
+    delays_provider: DelaysProvider | RequestAttemptDelaysProvider = linear_backoff_delays(),
 ) -> RequestStrategy:
     return RetryUntilDeadlineExpiredStrategy(strategy, delays_provider)
 
@@ -131,14 +147,18 @@ class SequentialRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: DelaysProvider,
+        delays_provider: DelaysProvider | RequestAttemptDelaysProvider,
         deadline_provider: DeadlineProvider = pass_deadline_through(),
     ) -> None:
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
         self.__attempts_count = attempts_count
-        self.__delays_provider = delays_provider
+        self.__delays_provider = (
+            delays_provider
+            if isinstance(delays_provider, RequestAttemptDelaysProvider)
+            else RequestUnawareAttemptDelaysProvider(delays_provider)
+        )
         self.__deadline_provider = deadline_provider
 
     @contextlib.asynccontextmanager
@@ -160,7 +180,7 @@ class SequentialRequestStrategy(RequestStrategy):
                     break
                 if attempt + 1 == self.__attempts_count:
                     break
-                retry_delay = self.__delays_provider(attempt + 1)
+                retry_delay = self.__delays_provider(request, attempt + 1)
                 if deadline.timeout < retry_delay:
                     break
                 await asyncio.sleep(retry_delay)
@@ -183,12 +203,16 @@ class ParallelRequestStrategy(RequestStrategy):
         self,
         *,
         attempts_count: int,
-        delays_provider: DelaysProvider,
+        delays_provider: DelaysProvider | RequestAttemptDelaysProvider,
     ) -> None:
         if attempts_count < 1:
             raise RuntimeError("Attempts count should be >= 1")
 
-        self.__delays_provider = delays_provider
+        self.__delays_provider = (
+            delays_provider
+            if isinstance(delays_provider, RequestAttemptDelaysProvider)
+            else RequestUnawareAttemptDelaysProvider(delays_provider)
+        )
         self.__attempts_count = attempts_count
 
     @contextlib.asynccontextmanager
@@ -247,7 +271,7 @@ class ParallelRequestStrategy(RequestStrategy):
         priority: Priority,
     ) -> ResponseWithVerdict[ClosableResponse]:
         if attempt > 0:
-            await asyncio.sleep(min(self.__delays_provider(attempt), deadline.timeout))
+            await asyncio.sleep(min(self.__delays_provider(request, attempt), deadline.timeout))
         return await send_request(endpoint, request, deadline, priority)
 
     def __repr__(self) -> str:
@@ -257,9 +281,15 @@ class ParallelRequestStrategy(RequestStrategy):
 class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
     __slots__ = ("__base_strategy", "__delays_provider")
 
-    def __init__(self, base_strategy: RequestStrategy, delays_provider: DelaysProvider) -> None:
-        self.__delays_provider = delays_provider
+    def __init__(
+        self, base_strategy: RequestStrategy, delays_provider: DelaysProvider | RequestAttemptDelaysProvider
+    ) -> None:
         self.__base_strategy = base_strategy
+        self.__delays_provider = (
+            delays_provider
+            if isinstance(delays_provider, RequestAttemptDelaysProvider)
+            else RequestUnawareAttemptDelaysProvider(delays_provider)
+        )
 
     @contextlib.asynccontextmanager
     async def request(
@@ -279,7 +309,7 @@ class RetryUntilDeadlineExpiredStrategy(RequestStrategy):
                     return
 
             attempt += 1
-            await asyncio.sleep(min(self.__delays_provider(attempt), deadline.timeout))
+            await asyncio.sleep(min(self.__delays_provider(request, attempt), deadline.timeout))
 
     def __repr__(self) -> str:
         return "<RetryUntilDeadlineExpiredStrategy>"
