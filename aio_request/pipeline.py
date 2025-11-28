@@ -1,7 +1,7 @@
 import abc
 import asyncio
 import collections.abc
-import time
+import logging
 
 import multidict
 import yarl
@@ -13,7 +13,8 @@ from .priority import Priority
 from .request import AsyncRequestEnricher, RequestEnricher
 from .response_classifier import ResponseClassifier, ResponseVerdict
 from .transport import Transport
-from .utils import perf_counter_elapsed
+
+logger = logging.getLogger(__name__)
 
 try:
     import prometheus_client as prom
@@ -166,16 +167,12 @@ class TransportModule(RequestModule):
                 enriched_request = await enriched_request
             request = enriched_request  # type: ignore
 
-        started_at = time.perf_counter()
-        try:
-            response = await self.__transport.send(endpoint, request, deadline.timeout)
-            capture_metrics(
-                endpoint=endpoint, request=request, status=response.status, elapsed=perf_counter_elapsed(started_at)
-            )
-            return response
-        except asyncio.CancelledError:
-            capture_metrics(endpoint=endpoint, request=request, status=499, elapsed=perf_counter_elapsed(started_at))
-            raise
+        response = await self.__transport.send(endpoint, request, deadline.timeout)
+        if response.elapsed >= 0:
+            capture_metrics(endpoint=endpoint, request=request, status=response.status, elapsed=response.elapsed)
+        else:
+            logger.warning("Response elapsed time is not calculated, please implement it, metrics will not be captured")
+        return response
 
 
 class CircuitBreakerModule(RequestModule):

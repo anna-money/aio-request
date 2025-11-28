@@ -36,7 +36,9 @@ from .request import (
     request,
     request_json,
 )
+from .percentile_based_request_attempt_delays_provider import PercentileBasedRequestAttemptDelaysProvider
 from .request_attempt_delays_provider import RequestAttemptDelaysProvider
+from .request_response_observer import RequestResponseObserver
 from .request_strategy import (
     MethodBasedStrategy,
     ParallelRequestStrategy,
@@ -84,7 +86,9 @@ __all__: tuple[str, ...] = (
     "ParallelRequestStrategy",
     "Priority",
     "Request",
+    "PercentileBasedRequestAttemptDelaysProvider",
     "RequestAttemptDelaysProvider",
+    "RequestResponseObserver",
     "RequestEnricher",
     "RequestModule",
     "RequestStrategy",

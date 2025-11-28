@@ -19,6 +19,7 @@ import aiohttp.web_response
 import multidict
 import yarl
 
+from . import utils
 from .base import (
     ClosableResponse,
     EmptyResponse,
@@ -198,6 +199,7 @@ class AioHttpTransport(Transport):
         allow_redirects = request.allow_redirects
         max_redirects = request.max_redirects
 
+        started_at = time.perf_counter()
         try:
             logger.debug(
                 "Sending request %s %s with timeout %s",
@@ -221,7 +223,7 @@ class AioHttpTransport(Transport):
             )
             if self.__buffer_payload:
                 await response.read()  # force response to buffer its body
-            return _AioHttpResponse(response)
+            return _AioHttpResponse(elapsed=utils.perf_counter_elapsed(started_at), response=response)
         except aiohttp.TooManyRedirects as e:
             logger.warning(
                 "Request %s %s has failed: too many redirects",
@@ -239,6 +241,7 @@ class AioHttpTransport(Transport):
                 for location_header in redirect_response.headers.getall(Header.LOCATION):
                     headers.add(Header.LOCATION, location_header)
             return EmptyResponse(
+                elapsed=utils.perf_counter_elapsed(started_at),
                 status=self.__too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
             )
@@ -253,7 +256,7 @@ class AioHttpTransport(Transport):
                     "request_url": url,
                 },
             )
-            return EmptyResponse(status=self.__network_errors_code)
+            return EmptyResponse(elapsed=utils.perf_counter_elapsed(started_at), status=self.__network_errors_code)
         except TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
@@ -266,17 +269,22 @@ class AioHttpTransport(Transport):
                     "request_timeout": timeout,
                 },
             )
-            return EmptyResponse(status=408)
+            return EmptyResponse(elapsed=utils.perf_counter_elapsed(started_at), status=408)
 
 
 class _AioHttpResponse(ClosableResponse):
-    __slots__ = ("__response",)
+    __slots__ = (
+        "__elapsed",
+        "__response",
+    )
 
-    def __init__(self, response: aiohttp.ClientResponse) -> None:
+    def __init__(self, *, elapsed: float, response: aiohttp.ClientResponse) -> None:
+        self.__elapsed = elapsed
         self.__response = response
 
-    async def close(self) -> None:
-        await self.__response.release()
+    @property
+    def elapsed(self) -> float:
+        return self.__elapsed
 
     @property
     def status(self) -> int:
@@ -305,6 +313,9 @@ class _AioHttpResponse(ClosableResponse):
 
     async def text(self, encoding: str | None = None) -> str:
         return await self.__response.text(encoding=encoding)
+
+    async def close(self) -> None:
+        await self.__response.release()
 
 
 def aiohttp_timeout(*, seconds: float) -> collections.abc.Callable[..., Any]:

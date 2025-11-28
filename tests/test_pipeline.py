@@ -31,7 +31,7 @@ class RejectingModule(aio_request.RequestModule):
         deadline: aio_request.Deadline,
         priority: aio_request.Priority,
     ) -> aio_request.ClosableResponse:
-        return aio_request.EmptyResponse(status=500)
+        return aio_request.EmptyResponse(elapsed=0, status=500)
 
 
 class ResponseModule(aio_request.RequestModule):
@@ -46,7 +46,7 @@ class ResponseModule(aio_request.RequestModule):
         deadline: aio_request.Deadline,
         priority: aio_request.Priority,
     ) -> aio_request.ClosableResponse:
-        return aio_request.EmptyResponse(status=200)
+        return aio_request.EmptyResponse(elapsed=0, status=200)
 
 
 async def test_build_pipeline_exception() -> None:

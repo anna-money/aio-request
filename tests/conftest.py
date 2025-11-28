@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Protocol
 
@@ -32,6 +33,8 @@ class FakeTransport(aio_request.Transport):
         if not self._responses:
             raise RuntimeError("No response left")
 
+        started_at = time.perf_counter()
+
         response = self._responses.pop()
         if isinstance(response, tuple):
             status, delay_seconds = response
@@ -42,7 +45,7 @@ class FakeTransport(aio_request.Transport):
         else:
             status = response
 
-        return aio_request.EmptyResponse(status=status)
+        return aio_request.EmptyResponse(elapsed=time.perf_counter() - started_at, status=status)
 
 
 @pytest.fixture
