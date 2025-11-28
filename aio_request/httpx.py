@@ -1,14 +1,13 @@
 import collections.abc
 import json
 import logging
-import time
 from typing import Any
 
 import httpx
 import multidict
 import yarl
 
-from . import utils
+from .utils import perf_counter, perf_counter_elapsed
 
 try:
     import cchardet  # type: ignore
@@ -83,7 +82,7 @@ class HttpxTransport(Transport):
             timeout=timeout,
         )
 
-        started_at = time.perf_counter()
+        started_at = perf_counter()
 
         try:
             locations = []
@@ -103,13 +102,13 @@ class HttpxTransport(Transport):
 
                 if self.__buffer_payload:
                     await client_response.aread()
-                return _HttpxResponse(elapsed=utils.perf_counter_elapsed(started_at), response=client_response)
+                return _HttpxResponse(elapsed=perf_counter_elapsed(started_at), response=client_response)
 
             headers = multidict.CIMultiDict[str]()
             for location in locations:
                 headers.add(Header.LOCATION, location)
             return EmptyResponse(
-                elapsed=utils.perf_counter_elapsed(started_at),
+                elapsed=perf_counter_elapsed(started_at),
                 status=self.__too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
             )
@@ -125,7 +124,7 @@ class HttpxTransport(Transport):
                     "request_url": url,
                 },
             )
-            return EmptyResponse(elapsed=utils.perf_counter_elapsed(started_at), status=self.__network_errors_code)
+            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
 
 
 class _HttpxResponse(ClosableResponse):

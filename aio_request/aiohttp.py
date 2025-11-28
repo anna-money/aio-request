@@ -19,7 +19,6 @@ import aiohttp.web_response
 import multidict
 import yarl
 
-from . import utils
 from .base import (
     ClosableResponse,
     EmptyResponse,
@@ -35,7 +34,7 @@ from .deadline import Deadline
 from .deprecated import MetricsProvider
 from .priority import Priority
 from .transport import Transport
-from .utils import perf_counter_elapsed, try_parse_float
+from .utils import perf_counter, perf_counter_elapsed, try_parse_float
 
 try:
     import prometheus_client as prom
@@ -199,7 +198,7 @@ class AioHttpTransport(Transport):
         allow_redirects = request.allow_redirects
         max_redirects = request.max_redirects
 
-        started_at = time.perf_counter()
+        started_at = perf_counter()
         try:
             logger.debug(
                 "Sending request %s %s with timeout %s",
@@ -223,7 +222,7 @@ class AioHttpTransport(Transport):
             )
             if self.__buffer_payload:
                 await response.read()  # force response to buffer its body
-            return _AioHttpResponse(elapsed=utils.perf_counter_elapsed(started_at), response=response)
+            return _AioHttpResponse(elapsed=perf_counter_elapsed(started_at), response=response)
         except aiohttp.TooManyRedirects as e:
             logger.warning(
                 "Request %s %s has failed: too many redirects",
@@ -241,7 +240,7 @@ class AioHttpTransport(Transport):
                 for location_header in redirect_response.headers.getall(Header.LOCATION):
                     headers.add(Header.LOCATION, location_header)
             return EmptyResponse(
-                elapsed=utils.perf_counter_elapsed(started_at),
+                elapsed=perf_counter_elapsed(started_at),
                 status=self.__too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
             )
@@ -256,7 +255,7 @@ class AioHttpTransport(Transport):
                     "request_url": url,
                 },
             )
-            return EmptyResponse(elapsed=utils.perf_counter_elapsed(started_at), status=self.__network_errors_code)
+            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
         except TimeoutError:
             logger.warning(
                 "Request %s %s has timed out after %s",
@@ -269,7 +268,7 @@ class AioHttpTransport(Transport):
                     "request_timeout": timeout,
                 },
             )
-            return EmptyResponse(elapsed=utils.perf_counter_elapsed(started_at), status=408)
+            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=408)
 
 
 class _AioHttpResponse(ClosableResponse):

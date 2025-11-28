@@ -1,13 +1,8 @@
-from unittest import mock
-
 import pytest
 
 import aio_request
-from aio_request.percentile_based_request_attempt_delays_provider import (
-    PercentileBasedRequestAttemptDelaysProvider,
-)
 
-MODULE = "aio_request.percentile_based_request_attempt_delays_provider"
+from .conftest import MockPerfCounter
 
 
 @pytest.mark.parametrize(
@@ -24,23 +19,23 @@ MODULE = "aio_request.percentile_based_request_attempt_delays_provider"
 )
 def test_validation(kwargs: dict, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        PercentileBasedRequestAttemptDelaysProvider(**kwargs)
+        aio_request.PercentileBasedRequestAttemptDelaysProvider(**kwargs)
 
 
 def test_returns_min_delay_when_no_data() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(min_delay_seconds=0.1)
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(min_delay_seconds=0.1)
     assert provider(aio_request.get("test"), attempt=1) == 0.1
 
 
 @pytest.mark.parametrize(
     "status,elapsed",
     [
-        (500, 0.5),  # unsuccessful
-        (200, -1),  # no elapsed
+        (500, 0.5),
+        (200, -1),
     ],
 )
 def test_skips_unusable_responses(status: int, elapsed: float) -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(min_delay_seconds=0.1)
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(min_delay_seconds=0.1)
     request = aio_request.get("test")
 
     provider.observe(request, aio_request.EmptyResponse(status=status, elapsed=elapsed))
@@ -49,7 +44,7 @@ def test_skips_unusable_responses(status: int, elapsed: float) -> None:
 
 
 def test_uses_observed_latency() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
         percentile=0.5,
         min_delay_seconds=0.01,
         max_delay_seconds=100,
@@ -64,7 +59,7 @@ def test_uses_observed_latency() -> None:
 
 
 def test_clamps_to_min_delay() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
         percentile=0.5,
         min_delay_seconds=0.5,
         max_delay_seconds=10,
@@ -77,7 +72,7 @@ def test_clamps_to_min_delay() -> None:
 
 
 def test_clamps_to_max_delay() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
         percentile=0.5,
         min_delay_seconds=0.01,
         max_delay_seconds=0.5,
@@ -91,7 +86,7 @@ def test_clamps_to_max_delay() -> None:
 
 
 def test_tracks_by_method_and_url() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
         percentile=0.5,
         min_delay_seconds=0.01,
         max_delay_seconds=100,
@@ -110,8 +105,8 @@ def test_tracks_by_method_and_url() -> None:
     assert provider(other_request, attempt=1) == 3.0
 
 
-def test_buckets_expire() -> None:
-    provider = PercentileBasedRequestAttemptDelaysProvider(
+def test_buckets_expire(mock_perf_counter: MockPerfCounter) -> None:
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
         percentile=0.5,
         min_delay_seconds=0.05,
         max_delay_seconds=100,
@@ -120,14 +115,14 @@ def test_buckets_expire() -> None:
     )
     request = aio_request.get("test")
 
-    with mock.patch(f"{MODULE}.time.perf_counter", return_value=1000.0):
-        provider.observe(request, aio_request.EmptyResponse(status=200, elapsed=1.0))
+    mock_perf_counter.value = 1000.0
+    provider.observe(request, aio_request.EmptyResponse(status=200, elapsed=1.0))
 
-    with mock.patch(f"{MODULE}.time.perf_counter", return_value=1000.5):
-        assert provider(request, attempt=1) == 1.0
+    mock_perf_counter.value = 1000.5
+    assert provider(request, attempt=1) == 1.0
 
-    with mock.patch(f"{MODULE}.time.perf_counter", return_value=1002.0):
-        assert provider(request, attempt=1) == 0.05
+    mock_perf_counter.value = 1002.0
+    assert provider(request, attempt=1) == 0.05
 
 
 def test_empty_response_elapsed() -> None:

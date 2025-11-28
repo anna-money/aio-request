@@ -59,5 +59,9 @@ def try_parse_float(value: str | None) -> float | None:
         return None
 
 
+def perf_counter() -> float:
+    return time.perf_counter()
+
+
 def perf_counter_elapsed(started_at: float) -> float:
-    return time.perf_counter() - started_at
+    return perf_counter() - started_at

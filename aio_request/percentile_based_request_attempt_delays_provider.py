@@ -1,12 +1,12 @@
 import collections
 import dataclasses
-import time
 
 import tdigest
 
 from .base import Request, Response
 from .request_attempt_delays_provider import RequestAttemptDelaysProvider
 from .request_response_observer import RequestResponseObserver
+from .utils import perf_counter
 
 
 class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, RequestResponseObserver):
@@ -49,7 +49,7 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
     def __call__(self, request: Request, attempt: int) -> float:
         key = (request.method, request.url)
         buckets = self.__metrics_by_endpoint[key]
-        now = time.perf_counter()
+        now = perf_counter()
         while buckets and (now - buckets[0].started_at) > self.__bucket_ttl:
             buckets.popleft()
 
@@ -70,7 +70,7 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
 
         key = (request.method, request.url)
         buckets = self.__metrics_by_endpoint[key]
-        now = time.perf_counter()
+        now = perf_counter()
 
         while buckets and (now - buckets[0].started_at) > self.__bucket_ttl:
             buckets.popleft()

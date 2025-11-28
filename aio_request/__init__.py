@@ -19,6 +19,7 @@ from .deadline_provider import DeadlineProvider, pass_deadline_through, split_de
 from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
+from .percentile_based_request_attempt_delays_provider import PercentileBasedRequestAttemptDelaysProvider
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import (
@@ -36,7 +37,6 @@ from .request import (
     request,
     request_json,
 )
-from .percentile_based_request_attempt_delays_provider import PercentileBasedRequestAttemptDelaysProvider
 from .request_attempt_delays_provider import RequestAttemptDelaysProvider
 from .request_response_observer import RequestResponseObserver
 from .request_strategy import (
@@ -165,6 +165,16 @@ try:
 except ImportError:
     pass
 
+
+try:
+    import tdigest  # noqa
+
+    from .percentile_based_request_attempt_delays_provider import PercentileBasedRequestAttemptDelaysProvider
+
+    __all__ += ("PercentileBasedRequestAttemptDelaysProvider",)  # type: ignore
+
+except ImportError:
+    pass
 
 __version__ = "0.2.3"
 
