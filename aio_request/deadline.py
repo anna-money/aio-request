@@ -1,7 +1,6 @@
-import time
 from typing import Any
 
-from .utils import perf_counter_elapsed
+from .utils import perf_counter, perf_counter_elapsed
 
 
 class Deadline:
@@ -10,7 +9,7 @@ class Deadline:
         if seconds < 0:
             raise ValueError("seconds cannot be negative")
 
-        return Deadline(started_at=time.perf_counter(), seconds=seconds)
+        return Deadline(started_at=perf_counter(), seconds=seconds)
 
     __slots__ = ("__seconds", "__started_at")
 

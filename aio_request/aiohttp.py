@@ -4,7 +4,6 @@ import contextlib
 import json
 import logging
 import socket
-import time
 import warnings
 from typing import Any
 
@@ -345,7 +344,7 @@ def aiohttp_middleware_factory(
         request: aiohttp.web_request.Request, handler: aiohttp.typedefs.Handler
     ) -> aiohttp.web_response.StreamResponse:
         deadline = _get_deadline(request) or _get_deadline_from_handler(request) or Deadline.from_timeout(timeout)
-        started_at = time.perf_counter()
+        started_at = perf_counter()
         try:
             response: aiohttp.web_response.StreamResponse | None
             if deadline.expired or deadline.timeout <= low_timeout_threshold:

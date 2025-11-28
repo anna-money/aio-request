@@ -29,7 +29,9 @@ class MockPerfCounter:
 @pytest.fixture
 def mock_perf_counter() -> Generator[MockPerfCounter, None, None]:
     counter = MockPerfCounter()
-    with unittest.mock.patch("aio_request.percentile_based_request_attempt_delays_provider.perf_counter", counter):
+    with unittest.mock.patch(
+        "aio_request.percentile_based_request_attempt_delays_provider.perf_counter", counter
+    ):
         yield counter
 
 
