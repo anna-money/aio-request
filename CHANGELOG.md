@@ -1,4 +1,4 @@
-## unreleased
+## v0.2.4-a1 (2025-11-29)
 
 * [Percentile based delays](https://github.com/anna-money/aio-request/pull/304)
 
