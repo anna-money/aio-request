@@ -1,7 +1,6 @@
 import asyncio
 import collections.abc
 import contextlib
-import time
 
 import yarl
 
@@ -12,7 +11,7 @@ from .endpoint_provider import EndpointProvider
 from .priority import Priority
 from .request_strategy import RequestStrategy, ResponseWithVerdict
 from .response_classifier import ResponseClassifier
-from .utils import perf_counter_elapsed
+from .utils import perf_counter, perf_counter_elapsed
 
 try:
     import prometheus_client as prom
@@ -109,7 +108,7 @@ class Client:
         priority: Priority | None = None,
         strategy: RequestStrategy | None = None,
     ) -> collections.abc.AsyncIterator[Response]:
-        started_at = time.perf_counter()
+        started_at = perf_counter()
         endpoint = await self.__endpoint_provider.get()
         try:
             response_ctx = self._request(

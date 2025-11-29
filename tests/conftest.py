@@ -1,6 +1,8 @@
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+import time
+import unittest.mock
+from collections.abc import AsyncIterator, Generator
 from typing import Protocol
 
 import aiohttp.web
@@ -14,6 +16,23 @@ from pytest_aiohttp.plugin import AiohttpClient
 import aio_request
 
 logging.basicConfig(level="DEBUG")
+
+
+class MockPerfCounter:
+    def __init__(self) -> None:
+        self.value = 0.0
+
+    def __call__(self) -> float:
+        return self.value
+
+
+@pytest.fixture
+def mock_perf_counter() -> Generator[MockPerfCounter, None, None]:
+    counter = MockPerfCounter()
+    with unittest.mock.patch(
+        "aio_request.percentile_based_request_attempt_delays_provider.perf_counter", counter
+    ):
+        yield counter
 
 
 class ClientFactory(Protocol):
@@ -32,6 +51,8 @@ class FakeTransport(aio_request.Transport):
         if not self._responses:
             raise RuntimeError("No response left")
 
+        started_at = time.perf_counter()
+
         response = self._responses.pop()
         if isinstance(response, tuple):
             status, delay_seconds = response
@@ -42,7 +63,7 @@ class FakeTransport(aio_request.Transport):
         else:
             status = response
 
-        return aio_request.EmptyResponse(status=status)
+        return aio_request.EmptyResponse(elapsed=time.perf_counter() - started_at, status=status)
 
 
 @pytest.fixture

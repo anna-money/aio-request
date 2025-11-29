@@ -12,6 +12,7 @@ from .deadline_provider import DeadlineProvider, pass_deadline_through
 from .delays_provider import DelaysProvider, linear_backoff_delays
 from .priority import Priority
 from .request_attempt_delays_provider import RequestAttemptDelaysProvider
+from .request_response_observer import RequestResponseObserver
 from .response_classifier import ResponseVerdict
 from .utils import Closable, cancel_futures, close, close_futures, close_single
 
@@ -187,6 +188,9 @@ class SequentialRequestStrategy(RequestStrategy):
             final_response = responses[-1]
             yield ResponseWithVerdict[Response](final_response.response, final_response.verdict)
         finally:
+            if isinstance(self.__delays_provider, RequestResponseObserver):
+                for response in responses:
+                    self.__delays_provider.observe(request, response.response)
             await asyncio.shield(close(responses))
 
     def __repr__(self) -> str:
@@ -253,10 +257,14 @@ class ParallelRequestStrategy(RequestStrategy):
             final_response = accepted_responses[0] if accepted_responses else not_accepted_responses[0]
             yield ResponseWithVerdict[Response](final_response.response, final_response.verdict)
         finally:
+            all_responses = accepted_responses + not_accepted_responses
+            if isinstance(self.__delays_provider, RequestResponseObserver):
+                for response in all_responses:
+                    self.__delays_provider.observe(request, response.response)
             await asyncio.shield(
                 asyncio.gather(
                     close_futures(pending_tasks | completed_tasks, lambda x: x.response),
-                    close(accepted_responses + not_accepted_responses),
+                    close(all_responses),
                     return_exceptions=True,
                 )
             )

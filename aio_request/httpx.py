@@ -7,6 +7,8 @@ import httpx
 import multidict
 import yarl
 
+from .utils import perf_counter, perf_counter_elapsed
+
 try:
     import cchardet  # type: ignore
 
@@ -80,6 +82,8 @@ class HttpxTransport(Transport):
             timeout=timeout,
         )
 
+        started_at = perf_counter()
+
         try:
             locations = []
             redirects = 0
@@ -98,12 +102,13 @@ class HttpxTransport(Transport):
 
                 if self.__buffer_payload:
                     await client_response.aread()
-                return _HttpxResponse(client_response)
+                return _HttpxResponse(elapsed=perf_counter_elapsed(started_at), response=client_response)
 
             headers = multidict.CIMultiDict[str]()
             for location in locations:
                 headers.add(Header.LOCATION, location)
             return EmptyResponse(
+                elapsed=perf_counter_elapsed(started_at),
                 status=self.__too_many_redirects_code,
                 headers=multidict.CIMultiDictProxy[str](headers),
             )
@@ -119,17 +124,22 @@ class HttpxTransport(Transport):
                     "request_url": url,
                 },
             )
-            return EmptyResponse(status=self.__network_errors_code)
+            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
 
 
 class _HttpxResponse(ClosableResponse):
-    __slots__ = ("__response",)
+    __slots__ = (
+        "__elapsed",
+        "__response",
+    )
 
-    def __init__(self, response: httpx.Response) -> None:
+    def __init__(self, *, elapsed: float, response: httpx.Response) -> None:
+        self.__elapsed = elapsed
         self.__response = response
 
-    async def close(self) -> None:
-        await self.__response.aclose()
+    @property
+    def elapsed(self) -> float:
+        return self.__elapsed
 
     @property
     def status(self) -> int:
@@ -165,3 +175,6 @@ class _HttpxResponse(ClosableResponse):
     async def text(self, encoding: str | None = None) -> str:
         content = await self.__response.aread()
         return content.decode(encoding or self.__response.charset_encoding or detect_encoding(content) or "utf-8")
+
+    async def close(self) -> None:
+        await self.__response.aclose()

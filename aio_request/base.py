@@ -129,6 +129,10 @@ class Response(abc.ABC):
     __slots__ = ()
 
     @property
+    def elapsed(self) -> float:
+        return -1
+
+    @property
     @abc.abstractmethod
     def status(self) -> int: ...
 
@@ -186,11 +190,22 @@ class ClosableResponse(Response, Closable):
 
 
 class EmptyResponse(ClosableResponse):
-    __slots__ = ("__headers", "__status")
+    __slots__ = ("__elapsed", "__headers", "__status")
 
-    def __init__(self, *, status: int, headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS) -> None:
+    def __init__(
+        self,
+        *,
+        status: int,
+        headers: multidict.CIMultiDictProxy[str] = EMPTY_HEADERS,
+        elapsed: float = 0,
+    ) -> None:
+        self.__elapsed = elapsed
         self.__status = status
         self.__headers = headers
+
+    @property
+    def elapsed(self) -> float:
+        return self.__elapsed
 
     @property
     def status(self) -> int:
