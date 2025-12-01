@@ -19,7 +19,6 @@ from .deadline_provider import DeadlineProvider, pass_deadline_through, split_de
 from .delays_provider import constant_delays, linear_backoff_delays, linear_delays
 from .deprecated import NOOP_METRICS_PROVIDER, MetricsProvider, NoopMetricsProvider
 from .endpoint_provider import DelegateEndpointProvider, EndpointProvider, StaticEndpointProvider
-from .percentile_based_request_attempt_delays_provider import PercentileBasedRequestAttemptDelaysProvider
 from .pipeline import BypassModule, LowTimeoutModule, NextModuleFunc, RequestModule, TransportModule, build_pipeline
 from .priority import Priority
 from .request import (
