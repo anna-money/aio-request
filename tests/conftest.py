@@ -1,15 +1,21 @@
 import asyncio
+import contextlib
 import logging
+import socket
+import struct
 import time
 import unittest.mock
-from collections.abc import AsyncIterator, Generator
+from collections.abc import AsyncIterator, Callable, Generator
 from typing import Protocol
 
+import aiohttp
 import aiohttp.web
 import aiohttp.web_request
 import aiohttp.web_response
+import httpx
 import pytest
 import yarl
+from _pytest.fixtures import SubRequest
 from aiohttp.test_utils import TestClient
 from pytest_aiohttp.plugin import AiohttpClient
 
@@ -29,9 +35,7 @@ class MockPerfCounter:
 @pytest.fixture
 def mock_perf_counter() -> Generator[MockPerfCounter, None, None]:
     counter = MockPerfCounter()
-    with unittest.mock.patch(
-        "aio_request.percentile_based_request_attempt_delays_provider.perf_counter", counter
-    ):
+    with unittest.mock.patch("aio_request.percentile_based_request_attempt_delays_provider.perf_counter", counter):
         yield counter
 
 
@@ -104,3 +108,48 @@ async def client(server: TestClient) -> AsyncIterator[ClientFactory]:
             )
 
         yield go
+
+
+@pytest.fixture(scope="session")
+def unused_port() -> Callable[[], int]:
+    def f() -> int:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
+
+    return f
+
+
+@pytest.fixture(params=("aiohttp", "httpx"))
+async def transport(request: SubRequest) -> AsyncIterator[aio_request.Transport]:
+    if request.param == "aiohttp":
+        async with aiohttp.ClientSession() as client_session:
+            yield aio_request.AioHttpTransport(client_session)
+    elif request.param == "httpx":
+        async with httpx.AsyncClient() as async_client:
+            yield aio_request.HttpxTransport(async_client)
+    else:
+        raise ValueError(f"Unknown transport {request.param}")
+
+
+@pytest.fixture
+async def resetting_server_factory() -> AsyncIterator[Callable[[int], contextlib.AbstractAsyncContextManager[None]]]:
+    @contextlib.asynccontextmanager
+    async def run_server(port: int) -> AsyncIterator[None]:
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                await reader.read(1)
+                sock = writer.get_extra_info("socket")
+                assert sock
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            finally:
+                writer.close()
+
+        server_handle = await asyncio.start_server(handle, "127.0.0.1", port)
+
+        yield
+
+        server_handle.close()
+        await server_handle.wait_closed()
+
+    yield run_server

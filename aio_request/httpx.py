@@ -46,6 +46,7 @@ class HttpxTransport(Transport):
     __slots__ = (
         "__buffer_payload",
         "__client",
+        "__connection_attempts",
         "__network_errors_code",
         "__too_many_redirects_code",
     )
@@ -56,11 +57,16 @@ class HttpxTransport(Transport):
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
+        connection_attempts: int = 3,
     ) -> None:
+        if connection_attempts < 1:
+            raise ValueError("connection_attempts must be at least 1")
+
         self.__client = client
         self.__buffer_payload = buffer_payload
         self.__too_many_redirects_code = too_many_redirects_code
         self.__network_errors_code = network_errors_code
+        self.__connection_attempts = connection_attempts
 
     async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if not endpoint.is_absolute():
@@ -74,57 +80,98 @@ class HttpxTransport(Transport):
         body = request.body
         allow_redirects = request.allow_redirects
 
-        client_request = self.__client.build_request(
-            method=method,
-            url=httpx.URL(str(url)),
-            content=body,
-            headers=headers,
-            timeout=timeout,
-        )
-
         started_at = perf_counter()
+        attempts_left = self.__connection_attempts
 
-        try:
-            locations = []
-            redirects = 0
-            while True:
-                client_response = await self.__client.send(client_request, follow_redirects=False)
-                if client_response.next_request is not None and allow_redirects:
-                    locations.extend(client_response.headers.get_list("Location"))
-                    client_request = client_response.next_request
-                    await client_response.aclose()
+        while True:
+            attempts_left -= 1
 
-                    if redirects >= request.max_redirects - 1:
-                        break
-
-                    redirects += 1
-                    continue
-
-                if self.__buffer_payload:
-                    await client_response.aread()
-                return _HttpxResponse(elapsed=perf_counter_elapsed(started_at), response=client_response)
-
-            headers = multidict.CIMultiDict[str]()
-            for location in locations:
-                headers.add(Header.LOCATION, location)
-            return EmptyResponse(
-                elapsed=perf_counter_elapsed(started_at),
-                status=self.__too_many_redirects_code,
-                headers=multidict.CIMultiDictProxy[str](headers),
-            )
-
-        except httpx.NetworkError:
-            logger.warning(
-                "Request %s %s has failed: network error",
+            logger.debug(
+                "Sending request %s %s with timeout %s",
                 method,
                 url,
-                exc_info=True,
+                timeout,
                 extra={
                     "request_method": method,
                     "request_url": url,
+                    "request_timeout": timeout,
                 },
             )
-            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
+
+            client_request = self.__client.build_request(
+                method=method,
+                url=httpx.URL(str(url)),
+                content=body,
+                headers=headers,
+                timeout=timeout,
+            )
+
+            try:
+                locations = []
+                redirects = 0
+                while True:
+                    client_response = await self.__client.send(client_request, follow_redirects=False)
+                    if client_response.next_request is not None and allow_redirects:
+                        locations.extend(client_response.headers.get_list("Location"))
+                        client_request = client_response.next_request
+                        await client_response.aclose()
+
+                        if redirects >= request.max_redirects - 1:
+                            break
+
+                        redirects += 1
+                        continue
+
+                    if self.__buffer_payload:
+                        await client_response.aread()
+                    return _HttpxResponse(elapsed=perf_counter_elapsed(started_at), response=client_response)
+
+                response_headers = multidict.CIMultiDict[str]()
+                for location in locations:
+                    response_headers.add(Header.LOCATION, location)
+                return EmptyResponse(
+                    elapsed=perf_counter_elapsed(started_at),
+                    status=self.__too_many_redirects_code,
+                    headers=multidict.CIMultiDictProxy[str](response_headers),
+                )
+            except (httpx.ConnectError, httpx.ConnectTimeout):
+                if attempts_left > 0:
+                    continue
+                logger.warning(
+                    "Request %s %s has failed: connection error",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
+            except httpx.TimeoutException:
+                logger.warning(
+                    "Request %s %s has timed out",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=408)
+            except httpx.TransportError:
+                logger.warning(
+                    "Request %s %s has failed: network error",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
 
 
 class _HttpxResponse(ClosableResponse):

@@ -160,6 +160,7 @@ class AioHttpTransport(Transport):
     __slots__ = (
         "__buffer_payload",
         "__client_session",
+        "__connection_attempts",
         "__network_errors_code",
         "__too_many_redirects_code",
     )
@@ -172,6 +173,7 @@ class AioHttpTransport(Transport):
         network_errors_code: int = 489,
         too_many_redirects_code: int = 488,
         buffer_payload: bool = True,
+        connection_attempts: int = 3,
     ) -> None:
         if metrics_provider is not None:
             warnings.warn(
@@ -179,10 +181,14 @@ class AioHttpTransport(Transport):
                 DeprecationWarning,
             )
 
+        if connection_attempts < 1:
+            raise ValueError("connection_attempts must be at least 1")
+
         self.__client_session = client_session
         self.__network_errors_code = network_errors_code
         self.__buffer_payload = buffer_payload
         self.__too_many_redirects_code = too_many_redirects_code
+        self.__connection_attempts = connection_attempts
 
     async def send(self, endpoint: yarl.URL, request: Request, timeout: float) -> ClosableResponse:
         if not endpoint.is_absolute():
@@ -198,76 +204,95 @@ class AioHttpTransport(Transport):
         max_redirects = request.max_redirects
 
         started_at = perf_counter()
-        try:
-            logger.debug(
-                "Sending request %s %s with timeout %s",
-                method,
-                url,
-                timeout,
-                extra={
-                    "request_method": method,
-                    "request_url": url,
-                    "request_timeout": timeout,
-                },
-            )
-            response = await self.__client_session.request(
-                method,
-                url,
-                headers=headers,
-                data=body,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-                allow_redirects=allow_redirects,
-                max_redirects=max_redirects,
-            )
-            if self.__buffer_payload:
-                await response.read()  # force response to buffer its body
-            return _AioHttpResponse(elapsed=perf_counter_elapsed(started_at), response=response)
-        except aiohttp.TooManyRedirects as e:
-            logger.warning(
-                "Request %s %s has failed: too many redirects",
-                method,
-                url,
-                exc_info=True,
-                extra={
-                    "request_method": method,
-                    "request_url": url,
-                },
-            )
+        attempts_left = self.__connection_attempts
 
-            headers = multidict.CIMultiDict[str]()
-            for redirect_response in e.history:
-                for location_header in redirect_response.headers.getall(Header.LOCATION):
-                    headers.add(Header.LOCATION, location_header)
-            return EmptyResponse(
-                elapsed=perf_counter_elapsed(started_at),
-                status=self.__too_many_redirects_code,
-                headers=multidict.CIMultiDictProxy[str](headers),
-            )
-        except aiohttp.ClientError:
-            logger.warning(
-                "Request %s %s has failed: network error",
-                method,
-                url,
-                exc_info=True,
-                extra={
-                    "request_method": method,
-                    "request_url": url,
-                },
-            )
-            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
-        except TimeoutError:
-            logger.warning(
-                "Request %s %s has timed out after %s",
-                method,
-                url,
-                timeout,
-                extra={
-                    "request_method": method,
-                    "request_url": url,
-                    "request_timeout": timeout,
-                },
-            )
-            return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=408)
+        while True:
+            attempts_left -= 1
+
+            try:
+                logger.debug(
+                    "Sending request %s %s with timeout %s",
+                    method,
+                    url,
+                    timeout,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                        "request_timeout": timeout,
+                    },
+                )
+                response = await self.__client_session.request(
+                    method,
+                    url,
+                    headers=headers,
+                    data=body,
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                    allow_redirects=allow_redirects,
+                    max_redirects=max_redirects,
+                )
+                if self.__buffer_payload:
+                    await response.read()  # force response to buffer its body
+                return _AioHttpResponse(elapsed=perf_counter_elapsed(started_at), response=response)
+            except aiohttp.ClientConnectorError:
+                if attempts_left > 0:
+                    continue
+                logger.warning(
+                    "Request %s %s has failed: connection error",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
+            except aiohttp.TooManyRedirects as e:
+                logger.warning(
+                    "Request %s %s has failed: too many redirects",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+
+                headers = multidict.CIMultiDict[str]()
+                for redirect_response in e.history:
+                    for location_header in redirect_response.headers.getall(Header.LOCATION):
+                        headers.add(Header.LOCATION, location_header)
+                return EmptyResponse(
+                    elapsed=perf_counter_elapsed(started_at),
+                    status=self.__too_many_redirects_code,
+                    headers=multidict.CIMultiDictProxy[str](headers),
+                )
+            except aiohttp.ClientError:
+                logger.warning(
+                    "Request %s %s has failed: network error",
+                    method,
+                    url,
+                    exc_info=True,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=self.__network_errors_code)
+            except TimeoutError:
+                logger.warning(
+                    "Request %s %s has timed out after %s",
+                    method,
+                    url,
+                    timeout,
+                    extra={
+                        "request_method": method,
+                        "request_url": url,
+                        "request_timeout": timeout,
+                    },
+                )
+                return EmptyResponse(elapsed=perf_counter_elapsed(started_at), status=408)
 
 
 class _AioHttpResponse(ClosableResponse):
