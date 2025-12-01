@@ -1,29 +1,16 @@
+import contextlib
+import logging
 import unittest.mock
-from collections.abc import AsyncIterator
+from collections.abc import Callable
 from typing import Any
 
-import aiohttp
-import httpx
 import multidict
 import pytest
 import yarl
-from _pytest.fixtures import SubRequest
 
 import aio_request
 
 DEFAULT_TIMEOUT = 20.0
-
-
-@pytest.fixture(params=("aiohttp", "httpx"))
-async def transport(request: SubRequest) -> AsyncIterator[aio_request.Transport]:
-    if request.param == "aiohttp":
-        async with aiohttp.ClientSession() as client_session:
-            yield aio_request.AioHttpTransport(client_session)
-    elif request.param == "httpx":
-        async with httpx.AsyncClient() as async_client:
-            yield aio_request.HttpxTransport(async_client)
-    else:
-        raise ValueError(f"Unknown transport {request.param}")
 
 
 async def test_success_with_path_parameters(httpbin: Any, transport: aio_request.Transport) -> None:
@@ -176,3 +163,61 @@ async def test_redirects_allowed_default(httpbin: Any, transport: aio_request.Tr
         DEFAULT_TIMEOUT,
     )
     assert response.status == 200
+
+
+async def test_connection_refused_retries_then_fails(
+    transport: aio_request.Transport,
+    unused_port: Callable[[], int],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    port = unused_port()
+
+    with caplog.at_level(logging.DEBUG, logger="aio_request"):
+        response = await transport.send(
+            yarl.URL(f"http://127.0.0.1:{port}"),
+            aio_request.get("test"),
+            DEFAULT_TIMEOUT,
+        )
+
+    assert response.status == 489
+    send_logs = [r for r in caplog.records if "Sending request" in r.message]
+    assert len(send_logs) == 3
+
+
+async def test_successful_request_no_retry(
+    httpbin: Any,
+    transport: aio_request.Transport,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.DEBUG, logger="aio_request"):
+        response = await transport.send(
+            yarl.URL(httpbin.url),
+            aio_request.get("get"),
+            DEFAULT_TIMEOUT,
+        )
+    try:
+        assert response.status == 200
+        send_logs = [r for r in caplog.records if "Sending request" in r.message]
+        assert len(send_logs) == 1
+    finally:
+        await response.close()
+
+
+async def test_connection_reset_no_retry(
+    transport: aio_request.Transport,
+    caplog: pytest.LogCaptureFixture,
+    unused_port: Callable[[], int],
+    resetting_server_factory: Callable[[int], contextlib.AbstractAsyncContextManager],
+) -> None:
+    port = unused_port()
+    async with resetting_server_factory(port):
+        with caplog.at_level(logging.DEBUG, logger="aio_request"):
+            response = await transport.send(
+                yarl.URL(f"http://127.0.0.1:{port}"),
+                aio_request.get("test"),
+                DEFAULT_TIMEOUT,
+            )
+
+        assert response.status == 489
+        send_logs = [r for r in caplog.records if "Sending request" in r.message]
+        assert len(send_logs) == 1
