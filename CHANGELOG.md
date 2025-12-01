@@ -1,3 +1,8 @@
+## v0.2.5 (2025-12-01)
+
+* [Import PercentileBasedRequestAttemptDelaysProvider only conditionally](https://github.com/anna-money/aio-request/pull/309)
+
+
 ## v0.2.4 (2025-12-01)
 
 * [Retry tcp level connect errors](https://github.com/anna-money/aio-request/pull/308)
