@@ -1,3 +1,8 @@
+## v0.2.4a2 (2025-12-01)
+
+* [Retry tcp level connect errors](https://github.com/anna-money/aio-request/pull/308)
+
+
 ## v0.2.4a1 (2025-11-29)
 
 * [Percentile based delays](https://github.com/anna-money/aio-request/pull/304)
