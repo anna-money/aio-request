@@ -1,6 +1,6 @@
 import collections.abc
 import json
-from typing import Any
+from typing import Any, LiteralString
 
 import multidict
 import yarl
@@ -13,7 +13,7 @@ DeprecatedAsyncRequestEnricher = collections.abc.Callable[[Request, bool], colle
 
 
 def get(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     *,
     headers: Headers | None = None,
     path_parameters: PathParameters | None = None,
@@ -33,7 +33,7 @@ def get(
 
 
 def post(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     body: bytes | None = None,
     *,
     headers: Headers | None = None,
@@ -55,7 +55,7 @@ def post(
 
 
 def put(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     body: bytes | None = None,
     *,
     headers: Headers | None = None,
@@ -77,7 +77,7 @@ def put(
 
 
 def patch(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     body: bytes | None = None,
     *,
     headers: Headers | None = None,
@@ -99,7 +99,7 @@ def patch(
 
 
 def delete(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     *,
     headers: Headers | None = None,
     path_parameters: PathParameters | None = None,
@@ -119,7 +119,7 @@ def delete(
 
 
 def post_json(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     data: Any,
     *,
     path_parameters: PathParameters | None = None,
@@ -147,7 +147,7 @@ def post_json(
 
 
 def put_json(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     data: Any,
     *,
     path_parameters: PathParameters | None = None,
@@ -175,7 +175,7 @@ def put_json(
 
 
 def patch_json(
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     data: Any,
     *,
     path_parameters: PathParameters | None = None,
@@ -204,7 +204,7 @@ def patch_json(
 
 def request_json(
     method: str,
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     data: Any,
     *,
     path_parameters: PathParameters | None = None,
@@ -238,7 +238,7 @@ build_json_request = request_json
 
 def request(
     method: str,
-    url: str | yarl.URL,
+    url: LiteralString | yarl.URL,
     *,
     path_parameters: PathParameters | None = None,
     query_parameters: QueryParameters | None = None,
