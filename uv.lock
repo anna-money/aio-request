@@ -15,7 +15,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/ac/dc/4ffda8a22b6af3f41
 
 [[package]]
 name = "aio-request"
-version = "0.2.6a1"
+version = "0.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "multidict" },

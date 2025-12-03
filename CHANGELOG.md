@@ -1,3 +1,8 @@
+## v0.2.6 (2025-12-03)
+
+* [Use LiteralString for url parameter in request functions](https://github.com/anna-money/aio-request/pull/310)
+
+
 ## v0.2.6a1 (2025-12-03)
 
 * [Use LiteralString for url parameter in request functions](https://github.com/anna-money/aio-request/pull/310)
