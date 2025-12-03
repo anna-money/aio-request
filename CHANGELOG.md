@@ -1,3 +1,8 @@
+## Unreleased
+
+* [Use LiteralString for url parameter in request functions](https://github.com/anna-money/aio-request/pull/310)
+
+
 ## v0.2.5 (2025-12-01)
 
 * [Import PercentileBasedRequestAttemptDelaysProvider only conditionally](https://github.com/anna-money/aio-request/pull/309)
