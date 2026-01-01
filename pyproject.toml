@@ -31,10 +31,10 @@ Homepage = "https://github.com/anna-money/aio-request"
 
 [project.optional-dependencies]
 dev = [
-    "pytest==9.0.1",
+    "pytest==9.0.2",
     "pytest-aiohttp==1.1.0",
     "pytest-httpbin==2.1.0",
-    "ruff==0.14.7",
+    "ruff==0.14.10",
     "pyright==1.1.407",
     "aiohttp==3.13.2",
     "tdigest==0.5.2.2",
