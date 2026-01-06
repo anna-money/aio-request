@@ -1,6 +1,6 @@
 ## v0.2.7 (2026-01-06)
 
-* [Add Headers, PathParameters and QueryParameters to root init file](https://github.com/anna-money/aio-request/pull/312)
+* [Expose Headers, PathParameters and QueryParameters](https://github.com/anna-money/aio-request/pull/312)
 
 
 ## v0.2.6 (2025-12-03)
