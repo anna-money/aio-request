@@ -1,3 +1,8 @@
+## v0.2.8 (2026-01-06)
+
+Test build to ensure fetching a version from a tag works
+
+
 ## v0.2.7 (2026-01-06)
 
 * [Expose Headers, PathParameters and QueryParameters](https://github.com/anna-money/aio-request/pull/312)
