@@ -1,6 +1,5 @@
-import re
 import sys
-from typing import NamedTuple
+from importlib.metadata import version as _get_version
 
 from .base import (
     ClosableResponse,
@@ -189,34 +188,6 @@ try:
 except ImportError:
     pass
 
-__version__ = "0.2.7"
+__version__ = _get_version("aio-request")
 
 version = f"{__version__}, Python {sys.version}"
-
-
-class VersionInfo(NamedTuple):
-    major: int
-    minor: int
-    micro: int
-    release_level: str
-    serial: int
-
-
-def _parse_version(v: str) -> VersionInfo:
-    version_re = r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<micro>\d+)((?P<release_level>[a-z]+)(?P<serial>\d+)?)?$"
-    match = re.match(version_re, v)
-    if not match:
-        raise ImportError(f"Invalid package version {v}")
-    try:
-        major = int(match.group("major"))
-        minor = int(match.group("minor"))
-        micro = int(match.group("micro"))
-        levels = {"rc": "candidate", "a": "alpha", "b": "beta", None: "final"}
-        release_level = levels[match.group("release_level")]
-        serial = int(match.group("serial")) if match.group("serial") else 0
-        return VersionInfo(major, minor, micro, release_level, serial)
-    except Exception as e:
-        raise ImportError(f"Invalid package version {v}") from e
-
-
-version_info = _parse_version(__version__)
