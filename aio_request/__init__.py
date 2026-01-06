@@ -2,7 +2,18 @@ import re
 import sys
 from typing import NamedTuple
 
-from .base import ClosableResponse, EmptyResponse, Header, Method, Request, Response, UnexpectedContentTypeError
+from .base import (
+    ClosableResponse,
+    EmptyResponse,
+    Header,
+    Headers,
+    Method,
+    PathParameters,
+    QueryParameters,
+    Request,
+    Response,
+    UnexpectedContentTypeError,
+)
 from .circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerMetrics,
@@ -74,6 +85,7 @@ __all__: tuple[str, ...] = (
     "EmptyResponse",
     "EndpointProvider",
     "Header",
+    "Headers",
     "LowTimeoutModule",
     "Method",
     "MethodBasedStrategy",
@@ -83,7 +95,9 @@ __all__: tuple[str, ...] = (
     "NoopCircuitBreaker",
     "NoopMetricsProvider",
     "ParallelRequestStrategy",
+    "PathParameters",
     "Priority",
+    "QueryParameters",
     "Request",
     "PercentileBasedRequestAttemptDelaysProvider",
     "RequestAttemptDelaysProvider",
