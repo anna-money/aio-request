@@ -1,3 +1,8 @@
+## v0.2.7 (2026-01-06)
+
+* [Add Headers, PathParameters and QueryParameters to root init file](https://github.com/anna-money/aio-request/pull/312)
+
+
 ## v0.2.6 (2025-12-03)
 
 * [Use LiteralString for url parameter in request functions](https://github.com/anna-money/aio-request/pull/310)
