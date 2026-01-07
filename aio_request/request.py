@@ -126,7 +126,7 @@ def post_json(
     query_parameters: QueryParameters | None = None,
     headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: collections.abc.Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -154,7 +154,7 @@ def put_json(
     query_parameters: QueryParameters | None = None,
     headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: collections.abc.Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -182,7 +182,7 @@ def patch_json(
     query_parameters: QueryParameters | None = None,
     headers: Headers | None = None,
     encoding: str = "utf-8",
-    dumps: collections.abc.Callable[[str], Any] = json.dumps,
+    dumps: collections.abc.Callable[[Any], str] = json.dumps,
     content_type: str = "application/json",
     allow_redirects: bool = True,
     max_redirects: int = MAX_REDIRECTS,
@@ -218,9 +218,7 @@ def request_json(
 ) -> Request:
     enriched_headers = multidict.CIMultiDict[str](headers) if headers is not None else multidict.CIMultiDict[str]()
     enriched_headers.add(Header.CONTENT_TYPE, content_type)
-
-    body = dumps(data).encode(encoding)
-
+    body = data if isinstance(data, bytes) else dumps(data).encode(encoding)
     return request(
         method=method,
         url=url,
