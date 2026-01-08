@@ -1,4 +1,4 @@
-## v0.2.9 (2026-01-07)
+## v0.2.9 (2026-01-08)
 
 * [Fix dumps callable signature and add bytes support in request_json](https://github.com/anna-money/aio-request/pull/314)
 
