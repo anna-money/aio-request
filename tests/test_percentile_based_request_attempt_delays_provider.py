@@ -15,6 +15,7 @@ from .conftest import MockPerfCounter
         ({"percentile": 1.0}, "percentile must be in"),
         ({"window_size_seconds": 0}, "window_size_seconds must be positive"),
         ({"buckets_count": 0}, "buckets_count must be positive"),
+        ({"refresh_interval_seconds": -1}, "refresh_interval_seconds must be non-negative"),
     ],
 )
 def test_validation(kwargs: dict, match: str) -> None:
@@ -123,6 +124,29 @@ def test_buckets_expire(mock_perf_counter: MockPerfCounter) -> None:
 
     mock_perf_counter.value = 1002.0
     assert provider(request, attempt=1) == 0.05
+
+
+def test_refreshes_percentile_after_interval(mock_perf_counter: MockPerfCounter) -> None:
+    provider = aio_request.PercentileBasedRequestAttemptDelaysProvider(
+        percentile=0.5,
+        min_delay_seconds=0.01,
+        max_delay_seconds=2.0,
+        refresh_interval_seconds=1.0,
+    )
+    request = aio_request.get("test")
+
+    mock_perf_counter.value = 1000.0
+    provider.observe(request, aio_request.EmptyResponse(status=200, elapsed=1.0))
+    assert provider(request, attempt=1) == 1.0
+
+    for _ in range(10):
+        provider.observe(request, aio_request.EmptyResponse(status=200, elapsed=3.0))
+
+    mock_perf_counter.value = 1000.5
+    assert provider(request, attempt=1) == 1.0
+
+    mock_perf_counter.value = 1001.0
+    assert provider(request, attempt=1) == 2.0
 
 
 def test_empty_response_elapsed() -> None:

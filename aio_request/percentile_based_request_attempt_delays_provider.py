@@ -17,6 +17,7 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
         "__metrics_by_endpoint",
         "__min_delay_seconds",
         "__percentile",
+        "__refresh_interval_seconds",
     )
 
     def __init__(
@@ -27,6 +28,7 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
         max_delay_seconds: float = 10,
         window_size_seconds: float = 5 * 60,
         buckets_count: int = 2,
+        refresh_interval_seconds: float = 1,
     ):
         if min_delay_seconds < 0 or max_delay_seconds < 0:
             raise ValueError("Delays must be non-negative")
@@ -38,12 +40,15 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
             raise ValueError("window_size_seconds must be positive")
         if buckets_count <= 0:
             raise ValueError("buckets_count must be positive")
+        if refresh_interval_seconds < 0:
+            raise ValueError("refresh_interval_seconds must be non-negative")
 
         self.__bucket_size_seconds = window_size_seconds / buckets_count
         self.__bucket_ttl = window_size_seconds + self.__bucket_size_seconds
         self.__percentile = percentile * 100
         self.__max_delay_seconds = max_delay_seconds
         self.__min_delay_seconds = min_delay_seconds
+        self.__refresh_interval_seconds = refresh_interval_seconds
         self.__metrics_by_endpoint = collections.defaultdict(collections.deque)
 
     def __call__(self, request: Request, attempt: int) -> float:
@@ -57,9 +62,14 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
             return self.__min_delay_seconds
 
         oldest_bucket = buckets[0]
-        per_attempt_delay = min(
-            self.__max_delay_seconds, max(self.__min_delay_seconds, oldest_bucket.digest.percentile(self.__percentile))
-        )
+        if (
+            oldest_bucket.percentile_computed_at is None
+            or (now - oldest_bucket.percentile_computed_at) >= self.__refresh_interval_seconds
+        ):
+            oldest_bucket.percentile = oldest_bucket.digest.percentile(self.__percentile)
+            oldest_bucket.percentile_computed_at = now
+
+        per_attempt_delay = min(self.__max_delay_seconds, max(self.__min_delay_seconds, oldest_bucket.percentile))
         return per_attempt_delay * attempt
 
     def observe(self, request: Request, response: Response) -> None:
@@ -87,7 +97,9 @@ class PercentileBasedRequestAttemptDelaysProvider(RequestAttemptDelaysProvider, 
             bucket.digest.update(response.elapsed)
 
 
-@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+@dataclasses.dataclass(slots=True, kw_only=True)
 class _DigestBucket:
     started_at: float
     digest: tdigest.TDigest
+    percentile: float = 0
+    percentile_computed_at: float | None = None
