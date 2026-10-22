@@ -1,3 +1,8 @@
+## v0.2.10 (2026-10-22)
+
+* [Cache the percentile in PercentileBasedRequestAttemptDelaysProvider](https://github.com/anna-money/aio-request/pull/320)
+
+
 ## v0.2.9 (2026-01-08)
 
 * [Fix dumps callable signature and add bytes support in request_json](https://github.com/anna-money/aio-request/pull/314)
